@@ -13,6 +13,9 @@ ARG EXTRA_OPTIMIZE
 ARG BUILD_CONFIGURATION=Release
 ARG CACHEBUST
 
+# Force cache invalidation when SHA changes
+RUN echo "CACHEBUST=${CACHEBUST}"
+
 WORKDIR /src
 
 # ── DataConverter ──
