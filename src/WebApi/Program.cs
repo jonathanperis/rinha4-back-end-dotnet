@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -100,6 +101,8 @@ var mccRisk = new Dictionary<string, float>(StringComparer.Ordinal);
 foreach (var prop in mccDoc.RootElement.EnumerateObject())
     mccRisk[prop.Name] = prop.Value.GetSingle();
 
+
+
 // ── Endpoints ──
 app.MapGet("/ready", () => Results.Ok());
 
@@ -156,7 +159,8 @@ app.MapPost("/fraud-score", (FraudRequest req) =>
         cdists[c] = dist;
     }
 
-    // 2. Find top-nprobe centroids (simple selection sort for small K)
+    // 2. Find top-nprobe centroids using quickselect-like approach
+    // For small K, simple partial sort is fine
     Span<int> bestC = stackalloc int[nprobe];
     for (int i = 0; i < nprobe; i++)
     {
@@ -171,30 +175,77 @@ app.MapPost("/fraud-score", (FraudRequest req) =>
             }
         }
         bestC[i] = bestIdx;
-        cdists[bestIdx] = float.MaxValue; // mark as used
+        cdists[bestIdx] = float.MaxValue;
     }
 
-    // 3. Scan posting lists of selected centroids
+    // 3. Scan posting lists - two-stage nprobe
     var top = new Top5();
+    int stage1Count = Math.Min(3, nprobe);
 
-    for (int i = 0; i < nprobe; i++)
+    // Stage 1: scan first 3 clusters
+    for (int i = 0; i < stage1Count; i++)
     {
-        int c = bestC[i];
-        int offset = plOffsets[c];
-        int length = plLengths[c];
+        int coff = bestC[i];
+        int offset = plOffsets[coff];
+        int length = plLengths[coff];
 
         for (int vi = offset; vi < offset + length; vi++)
         {
             int voff = vi * dims;
             float dist = 0;
 
-            for (int d = 0; d < dims; d++)
-            {
-                float diff = qv[d] - vectors[voff + d];
-                dist += diff * diff;
-            }
+            float d0 = qv[0] - vectors[voff + 0]; dist += d0 * d0;
+            float d1 = qv[1] - vectors[voff + 1]; dist += d1 * d1;
+            float d2 = qv[2] - vectors[voff + 2]; dist += d2 * d2;
+            float d3 = qv[3] - vectors[voff + 3]; dist += d3 * d3;
+            float d4 = qv[4] - vectors[voff + 4]; dist += d4 * d4;
+            float d5 = qv[5] - vectors[voff + 5]; dist += d5 * d5;
+            float d6 = qv[6] - vectors[voff + 6]; dist += d6 * d6;
+            float d7 = qv[7] - vectors[voff + 7]; dist += d7 * d7;
+            float d8 = qv[8] - vectors[voff + 8]; dist += d8 * d8;
+            float d9 = qv[9] - vectors[voff + 9]; dist += d9 * d9;
+            float d10 = qv[10] - vectors[voff + 10]; dist += d10 * d10;
+            float d11 = qv[11] - vectors[voff + 11]; dist += d11 * d11;
+            float d12 = qv[12] - vectors[voff + 12]; dist += d12 * d12;
+            float d13 = qv[13] - vectors[voff + 13]; dist += d13 * d13;
 
             top.TryInsert(dist, labels[vi]);
+        }
+    }
+
+    int fraudsStage1 = top.FraudCount();
+
+    // Stage 2: expand if ambiguous (2 or 3 frauds among top 5)
+    if (fraudsStage1 >= 2 && fraudsStage1 <= 3 && nprobe > stage1Count)
+    {
+        for (int i = stage1Count; i < nprobe; i++)
+        {
+            int coff = bestC[i];
+            int offset = plOffsets[coff];
+            int length = plLengths[coff];
+
+            for (int vi = offset; vi < offset + length; vi++)
+            {
+                int voff = vi * dims;
+                float dist = 0;
+
+                float d0 = qv[0] - vectors[voff + 0]; dist += d0 * d0;
+                float d1 = qv[1] - vectors[voff + 1]; dist += d1 * d1;
+                float d2 = qv[2] - vectors[voff + 2]; dist += d2 * d2;
+                float d3 = qv[3] - vectors[voff + 3]; dist += d3 * d3;
+                float d4 = qv[4] - vectors[voff + 4]; dist += d4 * d4;
+                float d5 = qv[5] - vectors[voff + 5]; dist += d5 * d5;
+                float d6 = qv[6] - vectors[voff + 6]; dist += d6 * d6;
+                float d7 = qv[7] - vectors[voff + 7]; dist += d7 * d7;
+                float d8 = qv[8] - vectors[voff + 8]; dist += d8 * d8;
+                float d9 = qv[9] - vectors[voff + 9]; dist += d9 * d9;
+                float d10 = qv[10] - vectors[voff + 10]; dist += d10 * d10;
+                float d11 = qv[11] - vectors[voff + 11]; dist += d11 * d11;
+                float d12 = qv[12] - vectors[voff + 12]; dist += d12 * d12;
+                float d13 = qv[13] - vectors[voff + 13]; dist += d13 * d13;
+
+                top.TryInsert(dist, labels[vi]);
+            }
         }
     }
 
@@ -205,6 +256,8 @@ app.MapPost("/fraud-score", (FraudRequest req) =>
 app.Run();
 
 static float Clamp(float v) => v < 0f ? 0f : (v > 1f ? 1f : v);
+
+
 
 static int ReadInt32(ReadOnlySpan<byte> span, ref int pos)
 {
@@ -221,7 +274,7 @@ static short ReadInt16(ReadOnlySpan<byte> span, ref int pos)
 }
 
 // ── Top-5 tracker ──
-struct Top5
+ref struct Top5
 {
     private float D0, D1, D2, D3, D4;
     private byte L0, L1, L2, L3, L4;
