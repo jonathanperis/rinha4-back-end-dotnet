@@ -7,8 +7,8 @@ string outputPath = Path.Combine(inputDir, "references.bin");
 
 const short Scale = 10000;
 const int Dims = 14;
-const int K = 128;
-const int Nprobe = 5;
+const int K = 512;
+const int Nprobe = 3;
 const int KmeansIters = 3;
 
 Console.WriteLine("Loading references.json.gz...");
