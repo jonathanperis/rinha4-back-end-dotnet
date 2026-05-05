@@ -1,18 +1,12 @@
-# Build stage: Alpine with .NET SDK and clang
-FROM alpine:3.21 AS build
+# Build stage: .NET SDK Alpine with clang
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 
-# Install build dependencies
+# Install build dependencies for NativeAOT
 RUN apk add --no-cache \
     clang \
     lld \
     zlib-dev \
-    musl-dev \
-    curl \
-    bash
-
-# Install .NET SDK
-RUN curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 10.0 --install-dir /usr/share/dotnet && \
-    ln -s /usr/share/dotnet/dotnet /usr/local/bin/dotnet
+    musl-dev
 
 ARG AOT
 ARG EXTRA_OPTIMIZE
