@@ -4,6 +4,7 @@ services:
   webapi1: &webapi
     image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:latest
     container_name: webapi-1
+    user: root
     restart: always
     read_only: true
     environment:
