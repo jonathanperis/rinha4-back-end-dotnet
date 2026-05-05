@@ -5,9 +5,17 @@
 ## Architecture
 
 - **Nginx** (stream L4) → **API-1** / **API-2** (Unix Domain Sockets)
-- **Brute-force k-NN** over 3M reference vectors (Phase 1)
-- **int16 quantization** (scale=10000) — 82 MB dataset per instance
-- **Pre-computed JSON responses** — zero serialization in hot path
+- **IVF index** (K=512, nprobe=10) with two-stage scan
+- **int16 quantization** (scale=10000) — 83 MB dataset
+- **Pre-computed JSON responses** — zero allocation in hot path
+
+## Performance
+
+| Metric | Value |
+|--------|-------|
+| Avg latency | ~4.7 ms |
+| Decision accuracy | 100% (500-sample validation) |
+| Speedup vs brute-force | 35x |
 
 ## Endpoints
 
@@ -53,6 +61,12 @@ docker compose up --build
 - NativeAOT (`PublishAot`, `ExtraOptimize`)
 - Nginx stream module (L4 passthrough)
 - Unix Domain Sockets
+- IVF vector search with two-stage nprobe
+
+## CI/CD
+
+- **amd64**: Auto-build on push, semver releases
+- **arm64**: Manual trigger (local Mac testing)
 
 ## License
 
