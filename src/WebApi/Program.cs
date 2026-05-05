@@ -58,15 +58,10 @@ for (int c = 0; c < K; c++)
     plLengths[c] = ReadInt32(span, ref pos);
 }
 
-// Vectors: count * dims int16
-short[] vectors = new short[count * dims];
-for (int i = 0; i < count * dims; i++)
-    vectors[i] = ReadInt16(span, ref pos);
-
-// Labels: count bytes
-byte[] labels = new byte[count];
-for (int i = 0; i < count; i++)
-    labels[i] = span[pos++];
+// Vectors and labels stay in fileBytes — no separate copies
+int vectorsByteOffset = pos;
+int labelsByteOffset = pos + count * dims * 2;
+int fileSize = fileBytes.Length;
 
 Console.WriteLine("Dataset loaded. Ready to serve.");
 
@@ -181,6 +176,11 @@ app.MapPost("/fraud-score", (FraudRequest req) =>
     var top = new Top5();
     int stage1Count = Math.Min(3, nprobe);
 
+    // Access vectors and labels directly from fileBytes via MemoryMarshal
+    ReadOnlySpan<short> allVectors = MemoryMarshal.Cast<byte, short>(
+        fileBytes.AsSpan(vectorsByteOffset, count * dims * 2));
+    ReadOnlySpan<byte> allLabels = fileBytes.AsSpan(labelsByteOffset, count);
+
     // Stage 1: scan first 3 clusters
     for (int i = 0; i < stage1Count; i++)
     {
@@ -193,22 +193,22 @@ app.MapPost("/fraud-score", (FraudRequest req) =>
             int voff = vi * dims;
             float dist = 0;
 
-            float d0 = qv[0] - vectors[voff + 0]; dist += d0 * d0;
-            float d1 = qv[1] - vectors[voff + 1]; dist += d1 * d1;
-            float d2 = qv[2] - vectors[voff + 2]; dist += d2 * d2;
-            float d3 = qv[3] - vectors[voff + 3]; dist += d3 * d3;
-            float d4 = qv[4] - vectors[voff + 4]; dist += d4 * d4;
-            float d5 = qv[5] - vectors[voff + 5]; dist += d5 * d5;
-            float d6 = qv[6] - vectors[voff + 6]; dist += d6 * d6;
-            float d7 = qv[7] - vectors[voff + 7]; dist += d7 * d7;
-            float d8 = qv[8] - vectors[voff + 8]; dist += d8 * d8;
-            float d9 = qv[9] - vectors[voff + 9]; dist += d9 * d9;
-            float d10 = qv[10] - vectors[voff + 10]; dist += d10 * d10;
-            float d11 = qv[11] - vectors[voff + 11]; dist += d11 * d11;
-            float d12 = qv[12] - vectors[voff + 12]; dist += d12 * d12;
-            float d13 = qv[13] - vectors[voff + 13]; dist += d13 * d13;
+            float d0 = qv[0] - allVectors[voff + 0]; dist += d0 * d0;
+            float d1 = qv[1] - allVectors[voff + 1]; dist += d1 * d1;
+            float d2 = qv[2] - allVectors[voff + 2]; dist += d2 * d2;
+            float d3 = qv[3] - allVectors[voff + 3]; dist += d3 * d3;
+            float d4 = qv[4] - allVectors[voff + 4]; dist += d4 * d4;
+            float d5 = qv[5] - allVectors[voff + 5]; dist += d5 * d5;
+            float d6 = qv[6] - allVectors[voff + 6]; dist += d6 * d6;
+            float d7 = qv[7] - allVectors[voff + 7]; dist += d7 * d7;
+            float d8 = qv[8] - allVectors[voff + 8]; dist += d8 * d8;
+            float d9 = qv[9] - allVectors[voff + 9]; dist += d9 * d9;
+            float d10 = qv[10] - allVectors[voff + 10]; dist += d10 * d10;
+            float d11 = qv[11] - allVectors[voff + 11]; dist += d11 * d11;
+            float d12 = qv[12] - allVectors[voff + 12]; dist += d12 * d12;
+            float d13 = qv[13] - allVectors[voff + 13]; dist += d13 * d13;
 
-            top.TryInsert(dist, labels[vi]);
+            top.TryInsert(dist, allLabels[vi]);
         }
     }
 
@@ -228,22 +228,22 @@ app.MapPost("/fraud-score", (FraudRequest req) =>
                 int voff = vi * dims;
                 float dist = 0;
 
-                float d0 = qv[0] - vectors[voff + 0]; dist += d0 * d0;
-                float d1 = qv[1] - vectors[voff + 1]; dist += d1 * d1;
-                float d2 = qv[2] - vectors[voff + 2]; dist += d2 * d2;
-                float d3 = qv[3] - vectors[voff + 3]; dist += d3 * d3;
-                float d4 = qv[4] - vectors[voff + 4]; dist += d4 * d4;
-                float d5 = qv[5] - vectors[voff + 5]; dist += d5 * d5;
-                float d6 = qv[6] - vectors[voff + 6]; dist += d6 * d6;
-                float d7 = qv[7] - vectors[voff + 7]; dist += d7 * d7;
-                float d8 = qv[8] - vectors[voff + 8]; dist += d8 * d8;
-                float d9 = qv[9] - vectors[voff + 9]; dist += d9 * d9;
-                float d10 = qv[10] - vectors[voff + 10]; dist += d10 * d10;
-                float d11 = qv[11] - vectors[voff + 11]; dist += d11 * d11;
-                float d12 = qv[12] - vectors[voff + 12]; dist += d12 * d12;
-                float d13 = qv[13] - vectors[voff + 13]; dist += d13 * d13;
+                float d0 = qv[0] - allVectors[voff + 0]; dist += d0 * d0;
+                float d1 = qv[1] - allVectors[voff + 1]; dist += d1 * d1;
+                float d2 = qv[2] - allVectors[voff + 2]; dist += d2 * d2;
+                float d3 = qv[3] - allVectors[voff + 3]; dist += d3 * d3;
+                float d4 = qv[4] - allVectors[voff + 4]; dist += d4 * d4;
+                float d5 = qv[5] - allVectors[voff + 5]; dist += d5 * d5;
+                float d6 = qv[6] - allVectors[voff + 6]; dist += d6 * d6;
+                float d7 = qv[7] - allVectors[voff + 7]; dist += d7 * d7;
+                float d8 = qv[8] - allVectors[voff + 8]; dist += d8 * d8;
+                float d9 = qv[9] - allVectors[voff + 9]; dist += d9 * d9;
+                float d10 = qv[10] - allVectors[voff + 10]; dist += d10 * d10;
+                float d11 = qv[11] - allVectors[voff + 11]; dist += d11 * d11;
+                float d12 = qv[12] - allVectors[voff + 12]; dist += d12 * d12;
+                float d13 = qv[13] - allVectors[voff + 13]; dist += d13 * d13;
 
-                top.TryInsert(dist, labels[vi]);
+                top.TryInsert(dist, allLabels[vi]);
             }
         }
     }
