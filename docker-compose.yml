@@ -2,13 +2,7 @@ name: 'rinha-2026-dotnet'
 
 services:
   webapi1: &webapi
-    build:
-      context: .
-      dockerfile: ./src/WebApi/Dockerfile
-      args:
-        AOT: true
-        EXTRA_OPTIMIZE: true
-        BUILD_CONFIGURATION: Release
+    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:latest
     container_name: webapi-1
     user: root
     restart: always
