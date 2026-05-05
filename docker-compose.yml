@@ -3,7 +3,6 @@ name: 'rinha-2026-dotnet'
 services:
   webapi1: &webapi
     image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:latest
-      context: .
     container_name: webapi-1
     restart: always
     read_only: true
@@ -26,8 +25,12 @@ services:
     <<: *webapi
     container_name: webapi-2
     environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
       SOCKET_PATH: /sockets/api2.sock
       DATA_PATH: /data/references.bin
+    tmpfs:
+      - /tmp
     volumes:
       - sockets:/sockets
 
