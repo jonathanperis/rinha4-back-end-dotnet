@@ -1,0 +1,15 @@
+/Users/jonathanperis/Projects/jonathanperis/rinha4-back-end-dotnet/tools/Validator/bin/Debug/net10.0/Validator
+/Users/jonathanperis/Projects/jonathanperis/rinha4-back-end-dotnet/tools/Validator/bin/Debug/net10.0/Validator.deps.json
+/Users/jonathanperis/Projects/jonathanperis/rinha4-back-end-dotnet/tools/Validator/bin/Debug/net10.0/Validator.runtimeconfig.json
+/Users/jonathanperis/Projects/jonathanperis/rinha4-back-end-dotnet/tools/Validator/bin/Debug/net10.0/Validator.dll
+/Users/jonathanperis/Projects/jonathanperis/rinha4-back-end-dotnet/tools/Validator/bin/Debug/net10.0/Validator.pdb
+/Users/jonathanperis/Projects/jonathanperis/rinha4-back-end-dotnet/tools/Validator/obj/Debug/net10.0/Validator.GeneratedMSBuildEditorConfig.editorconfig
+/Users/jonathanperis/Projects/jonathanperis/rinha4-back-end-dotnet/tools/Validator/obj/Debug/net10.0/Validator.AssemblyInfoInputs.cache
+/Users/jonathanperis/Projects/jonathanperis/rinha4-back-end-dotnet/tools/Validator/obj/Debug/net10.0/Validator.AssemblyInfo.cs
+/Users/jonathanperis/Projects/jonathanperis/rinha4-back-end-dotnet/tools/Validator/obj/Debug/net10.0/Validator.csproj.CoreCompileInputs.cache
+/Users/jonathanperis/Projects/jonathanperis/rinha4-back-end-dotnet/tools/Validator/obj/Debug/net10.0/Validator.sourcelink.json
+/Users/jonathanperis/Projects/jonathanperis/rinha4-back-end-dotnet/tools/Validator/obj/Debug/net10.0/Validator.dll
+/Users/jonathanperis/Projects/jonathanperis/rinha4-back-end-dotnet/tools/Validator/obj/Debug/net10.0/refint/Validator.dll
+/Users/jonathanperis/Projects/jonathanperis/rinha4-back-end-dotnet/tools/Validator/obj/Debug/net10.0/Validator.pdb
+/Users/jonathanperis/Projects/jonathanperis/rinha4-back-end-dotnet/tools/Validator/obj/Debug/net10.0/Validator.genruntimeconfig.cache
+/Users/jonathanperis/Projects/jonathanperis/rinha4-back-end-dotnet/tools/Validator/obj/Debug/net10.0/ref/Validator.dll
