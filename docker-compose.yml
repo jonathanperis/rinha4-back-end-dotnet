@@ -25,7 +25,7 @@ services:
       resources:
         limits:
           cpus: "0.40"
-          memory: "130MB"
+          memory: "150MB"
 
   webapi2:
     <<: *webapi
