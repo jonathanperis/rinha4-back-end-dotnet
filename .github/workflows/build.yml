@@ -67,12 +67,11 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           build-args: |
             AOT=true
             EXTRA_OPTIMIZE=true
             BUILD_CONFIGURATION=Release
+            CACHEBUST=${{ github.sha }}
 
       - name: Create Release
         if: github.event_name != 'pull_request'
@@ -115,9 +114,8 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:arm64-latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           build-args: |
             AOT=true
             EXTRA_OPTIMIZE=true
             BUILD_CONFIGURATION=Release
+            CACHEBUST=${{ github.sha }}
