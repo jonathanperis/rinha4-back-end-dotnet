@@ -1,0 +1,27 @@
+# Git
+.git/
+.gitignore
+
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+# IDE
+.vs/
+.vscode/
+*.user
+
+# OS
+.DS_Store
+
+# Docs
+*.md
+LICENSE
+
+# CI
+.github/
+
+# Generated data (will be generated inside Docker)
+data/references.bin
