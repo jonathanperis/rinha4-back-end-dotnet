@@ -6,11 +6,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RuntimeIdentifiers>linux-x64;linux-arm64</RuntimeIdentifiers>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(AOT)' == 'true'">
     <PublishAot>true</PublishAot>
     <OptimizationPreference>Speed</OptimizationPreference>
+    <IlcInstructionSet>avx2</IlcInstructionSet>
+    <IlcOptimizationPreference>Speed</IlcOptimizationPreference>
+    <StaticExecutable>true</StaticExecutable>
+    <StripSymbols>true</StripSymbols>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(ExtraOptimize)' == 'true'">

@@ -13,9 +13,13 @@ services:
     user: root
     restart: always
     read_only: true
+    cpuset: "0,1"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
+      DOTNET_PROCESSOR_COUNT: "1"
+      DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
+      DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       SOCKET_PATH: /sockets/api1.sock
       DATA_PATH: /data/references.bin
     tmpfs:
@@ -31,9 +35,13 @@ services:
   webapi2:
     <<: *webapi
     container_name: webapi-2
+    cpuset: "2,3"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
+      DOTNET_PROCESSOR_COUNT: "1"
+      DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
+      DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       SOCKET_PATH: /sockets/api2.sock
       DATA_PATH: /data/references.bin
     tmpfs:
@@ -45,6 +53,7 @@ services:
     image: nginx:alpine
     container_name: nginx-lb
     user: root
+    cpuset: "0,2"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - sockets:/sockets
@@ -57,8 +66,12 @@ services:
       resources:
         limits:
           cpus: "0.20"
-          memory: "20MB"
+          memory: "30MB"
 
 volumes:
   sockets:
     driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=4m,mode=0777

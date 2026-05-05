@@ -1,4 +1,9 @@
+using System.Buffers.Text;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -31,37 +36,39 @@ if (!File.Exists(dataPath))
 }
 
 Console.WriteLine("Loading dataset...");
+
 var fileBytes = File.ReadAllBytes(dataPath);
 ReadOnlySpan<byte> span = fileBytes;
-
 int pos = 0;
+
 int count = ReadInt32(span, ref pos);
 int dims = ReadInt32(span, ref pos);
+int paddedDims = ReadInt32(span, ref pos);
 int scale = ReadInt32(span, ref pos);
-int K = ReadInt32(span, ref pos);
-int nprobe = ReadInt32(span, ref pos);
 
-Console.WriteLine($"Dataset: {count:N0} vectors, {dims} dims, scale {scale}, K={K}, nprobe={nprobe}");
+Console.WriteLine($"Dataset: {count:N0} vectors, {dims} dims (padded to {paddedDims}), scale {scale}");
 
-// Centroids: K * dims int16
-short[] centroids = new short[K * dims];
-for (int c = 0; c < K; c++)
-    for (int d = 0; d < dims; d++)
-        centroids[c * dims + d] = ReadInt16(span, ref pos);
+// Calculate offsets
+int vectorsByteOffset = pos;
+int labelsByteOffset = pos + count * paddedDims * 2;
+int totalFileSize = fileBytes.Length;
 
-// Posting list metadata
-int[] plOffsets = new int[K];
-int[] plLengths = new int[K];
-for (int c = 0; c < K; c++)
+if (labelsByteOffset + count > totalFileSize)
 {
-    plOffsets[c] = ReadInt32(span, ref pos);
-    plLengths[c] = ReadInt32(span, ref pos);
+    Console.WriteLine($"Invalid file size. Expected at least {labelsByteOffset + count}, got {totalFileSize}");
+    Environment.Exit(1);
 }
 
-// Vectors and labels stay in fileBytes — no separate copies
-int vectorsByteOffset = pos;
-int labelsByteOffset = pos + count * dims * 2;
-int fileSize = fileBytes.Length;
+// Pin arrays for AVX2
+var vectorsArray = GC.AllocateUninitializedArray<short>(count * paddedDims, pinned: true);
+var labelsArray = GC.AllocateUninitializedArray<byte>(count, pinned: true);
+
+// Copy data into pinned arrays
+Buffer.BlockCopy(fileBytes, vectorsByteOffset, vectorsArray, 0, count * paddedDims * 2);
+Buffer.BlockCopy(fileBytes, labelsByteOffset, labelsArray, 0, count);
+
+// Release fileBytes - vectorsArray and labelsArray now own the data
+fileBytes = null!;
 
 Console.WriteLine("Dataset loaded. Ready to serve.");
 
@@ -71,8 +78,8 @@ for (int i = 0; i <= 5; i++)
 {
     float score = i / 5.0f;
     bool approved = score < 0.6f;
-    var json = $$"""{"approved":{{(approved ? "true" : "false")}},"fraud_score":{{score.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}}}""";
-    responses[i] = System.Text.Encoding.UTF8.GetBytes(json);
+    var json = $"{{\"approved\":{(approved ? "true" : "false")},\"fraud_score\":{score.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}}}";
+    responses[i] = Encoding.UTF8.GetBytes(json);
 }
 
 // ── Load normalization constants ──
@@ -88,14 +95,15 @@ int maxKm = norms.GetProperty("max_km").GetInt32();
 int maxTxCount24h = norms.GetProperty("max_tx_count_24h").GetInt32();
 int maxMerchantAvgAmount = norms.GetProperty("max_merchant_avg_amount").GetInt32();
 
-// ── Load MCC risk ──
+// ── Load MCC risk into flat array ──
 var mccPath = Path.Combine(Path.GetDirectoryName(dataPath)!, "mcc_risk.json");
 var mccDoc = JsonDocument.Parse(File.ReadAllText(mccPath));
-var mccRisk = new Dictionary<string, float>(StringComparer.Ordinal);
+var mccRisk = new float[10000];
 foreach (var prop in mccDoc.RootElement.EnumerateObject())
-    mccRisk[prop.Name] = prop.Value.GetSingle();
-
-
+{
+    if (int.TryParse(prop.Name, out int mccCode) && mccCode >= 0 && mccCode < 10000)
+        mccRisk[mccCode] = prop.Value.GetSingle();
+}
 
 // ── Endpoints ──
 app.MapGet("/ready", () => Results.Ok());
@@ -130,120 +138,38 @@ app.MapPost("/fraud-score", (FraudRequest req) =>
     fv[9] = req.Terminal.IsOnline ? 1.0f : 0.0f;
     fv[10] = req.Terminal.CardPresent ? 1.0f : 0.0f;
     fv[11] = req.Customer.KnownMerchants.Contains(req.Merchant.Id) ? 0.0f : 1.0f;
-    fv[12] = mccRisk.TryGetValue(req.Merchant.Mcc, out var risk) ? risk : 0.5f;
+
+    // Parse MCC and look up risk
+    float mccValue = 0.5f;
+    if (int.TryParse(req.Merchant.Mcc, out int mccCode2) && mccCode2 >= 0 && mccCode2 < 10000)
+        mccValue = mccRisk[mccCode2];
+    fv[12] = mccValue;
+
     fv[13] = Clamp(req.Merchant.AvgAmount / maxMerchantAvgAmount);
 
     // Quantize query to int16
-    Span<short> qv = stackalloc short[dims];
+    Span<short> qv = stackalloc short[paddedDims];
     for (int i = 0; i < dims; i++)
         qv[i] = (short)(fv[i] * scale);
+    qv[dims] = 0;
+    qv[dims + 1] = 0;
 
-    // ── IVF Search ──
-    // 1. Compute distance to all centroids
-    Span<float> cdists = stackalloc float[K];
-    for (int c = 0; c < K; c++)
-    {
-        float dist = 0;
-        int coff = c * dims;
-        for (int d = 0; d < dims; d++)
-        {
-            float diff = qv[d] - centroids[coff + d];
-            dist += diff * diff;
-        }
-        cdists[c] = dist;
-    }
-
-    // 2. Find top-nprobe centroids using quickselect-like approach
-    // For small K, simple partial sort is fine
-    Span<int> bestC = stackalloc int[nprobe];
-    for (int i = 0; i < nprobe; i++)
-    {
-        float best = float.MaxValue;
-        int bestIdx = -1;
-        for (int c = 0; c < K; c++)
-        {
-            if (cdists[c] < best)
-            {
-                best = cdists[c];
-                bestIdx = c;
-            }
-        }
-        bestC[i] = bestIdx;
-        cdists[bestIdx] = float.MaxValue;
-    }
-
-    // 3. Scan posting lists - two-stage nprobe
+    // ── Brute-force AVX2 Search ──
     var top = new Top5();
-    int stage1Count = Math.Min(3, nprobe);
 
-    // Access vectors and labels directly from fileBytes via MemoryMarshal
-    ReadOnlySpan<short> allVectors = MemoryMarshal.Cast<byte, short>(
-        fileBytes.AsSpan(vectorsByteOffset, count * dims * 2));
-    ReadOnlySpan<byte> allLabels = fileBytes.AsSpan(labelsByteOffset, count);
-
-    // Stage 1: scan first 3 clusters
-    for (int i = 0; i < stage1Count; i++)
+    unsafe
     {
-        int coff = bestC[i];
-        int offset = plOffsets[coff];
-        int length = plLengths[coff];
-
-        for (int vi = offset; vi < offset + length; vi++)
+        fixed (short* vecPtr = vectorsArray)
+        fixed (byte* labelPtr = labelsArray)
+        fixed (short* qPtr = qv)
         {
-            int voff = vi * dims;
-            float dist = 0;
-
-            float d0 = qv[0] - allVectors[voff + 0]; dist += d0 * d0;
-            float d1 = qv[1] - allVectors[voff + 1]; dist += d1 * d1;
-            float d2 = qv[2] - allVectors[voff + 2]; dist += d2 * d2;
-            float d3 = qv[3] - allVectors[voff + 3]; dist += d3 * d3;
-            float d4 = qv[4] - allVectors[voff + 4]; dist += d4 * d4;
-            float d5 = qv[5] - allVectors[voff + 5]; dist += d5 * d5;
-            float d6 = qv[6] - allVectors[voff + 6]; dist += d6 * d6;
-            float d7 = qv[7] - allVectors[voff + 7]; dist += d7 * d7;
-            float d8 = qv[8] - allVectors[voff + 8]; dist += d8 * d8;
-            float d9 = qv[9] - allVectors[voff + 9]; dist += d9 * d9;
-            float d10 = qv[10] - allVectors[voff + 10]; dist += d10 * d10;
-            float d11 = qv[11] - allVectors[voff + 11]; dist += d11 * d11;
-            float d12 = qv[12] - allVectors[voff + 12]; dist += d12 * d12;
-            float d13 = qv[13] - allVectors[voff + 13]; dist += d13 * d13;
-
-            top.TryInsert(dist, allLabels[vi]);
-        }
-    }
-
-    int fraudsStage1 = top.FraudCount();
-
-    // Stage 2: expand if ambiguous (2 or 3 frauds among top 5)
-    if (fraudsStage1 >= 2 && fraudsStage1 <= 3 && nprobe > stage1Count)
-    {
-        for (int i = stage1Count; i < nprobe; i++)
-        {
-            int coff = bestC[i];
-            int offset = plOffsets[coff];
-            int length = plLengths[coff];
-
-            for (int vi = offset; vi < offset + length; vi++)
+            if (Avx2.IsSupported)
             {
-                int voff = vi * dims;
-                float dist = 0;
-
-                float d0 = qv[0] - allVectors[voff + 0]; dist += d0 * d0;
-                float d1 = qv[1] - allVectors[voff + 1]; dist += d1 * d1;
-                float d2 = qv[2] - allVectors[voff + 2]; dist += d2 * d2;
-                float d3 = qv[3] - allVectors[voff + 3]; dist += d3 * d3;
-                float d4 = qv[4] - allVectors[voff + 4]; dist += d4 * d4;
-                float d5 = qv[5] - allVectors[voff + 5]; dist += d5 * d5;
-                float d6 = qv[6] - allVectors[voff + 6]; dist += d6 * d6;
-                float d7 = qv[7] - allVectors[voff + 7]; dist += d7 * d7;
-                float d8 = qv[8] - allVectors[voff + 8]; dist += d8 * d8;
-                float d9 = qv[9] - allVectors[voff + 9]; dist += d9 * d9;
-                float d10 = qv[10] - allVectors[voff + 10]; dist += d10 * d10;
-                float d11 = qv[11] - allVectors[voff + 11]; dist += d11 * d11;
-                float d12 = qv[12] - allVectors[voff + 12]; dist += d12 * d12;
-                float d13 = qv[13] - allVectors[voff + 13]; dist += d13 * d13;
-
-                top.TryInsert(dist, allLabels[vi]);
+                SearchAvx2(vecPtr, labelPtr, count, qPtr, ref top);
+            }
+            else
+            {
+                SearchScalar(vecPtr, labelPtr, count, qPtr, ref top);
             }
         }
     }
@@ -254,21 +180,85 @@ app.MapPost("/fraud-score", (FraudRequest req) =>
 
 app.Run();
 
+// ── AVX2 Brute-force Search ──
+static unsafe void SearchAvx2(short* vecPtr, byte* labelPtr, int count, short* qPtr, ref Top5 top)
+{
+    const int PaddedDims = 16;
+    var qVec = Avx.LoadVector256(qPtr);
+
+    for (int i = 0; i < count; i++)
+    {
+        short* vPtr = vecPtr + i * PaddedDims;
+        var vVec = Avx.LoadVector256(vPtr);
+
+        var diff = Avx2.Subtract(qVec, vVec);
+
+        // Widen to int32
+        var (diffLo, diffHi) = Vector256.Widen(diff);
+
+        // Square
+        var sqLo = Avx2.MultiplyLow(diffLo, diffLo);
+        var sqHi = Avx2.MultiplyLow(diffHi, diffHi);
+
+        // Sum
+        var sum = Avx2.Add(sqLo, sqHi);
+
+        // Horizontal sum
+        float dist = HorizontalSum256(sum);
+
+        if (dist < top.WorstBound)
+            top.TryInsert(dist, labelPtr[i]);
+    }
+}
+
+// ── Scalar Fallback ──
+static unsafe void SearchScalar(short* vecPtr, byte* labelPtr, int count, short* qPtr, ref Top5 top)
+{
+    const int PaddedDims = 16;
+    for (int i = 0; i < count; i++)
+    {
+        short* vPtr = vecPtr + i * PaddedDims;
+        float dist = 0;
+
+        for (int d = 0; d < 14; d++)
+        {
+            float diff = qPtr[d] - vPtr[d];
+            dist += diff * diff;
+        }
+
+        if (dist < top.WorstBound)
+            top.TryInsert(dist, labelPtr[i]);
+    }
+}
+
+// ── AVX2 Horizontal Sum ──
+[MethodImpl(MethodImplOptions.AggressiveInlining)]
+static float HorizontalSum256(Vector256<int> v)
+{
+    // Extract upper and lower 128-bit halves
+    var lower = v.GetLower();
+    var upper = v.GetUpper();
+
+    // Add them
+    var sum128 = Sse2.Add(lower, upper);
+
+    // Shuffle and add: [a,b,c,d] → [a+c, b+d, a+c, b+d]
+    var shuffled = Sse2.Shuffle(sum128, 0b_11_10_11_10);
+    var sum64 = Sse2.Add(sum128, shuffled);
+
+    // Shuffle and add: [x,y,x,y] → [x+y, x+y, x+y, x+y]
+    var shuffled2 = Sse2.Shuffle(sum64, 0b_01_00_01_00);
+    var sum32 = Sse2.Add(sum64, shuffled2);
+
+    return Sse2.ConvertToInt32(sum32);
+}
+
 static float Clamp(float v) => v < 0f ? 0f : (v > 1f ? 1f : v);
-
-
 
 static int ReadInt32(ReadOnlySpan<byte> span, ref int pos)
 {
     int val = MemoryMarshal.Read<int>(span.Slice(pos, 4));
     pos += 4;
-    return val;
-}
-
-static short ReadInt16(ReadOnlySpan<byte> span, ref int pos)
-{
-    short val = MemoryMarshal.Read<short>(span.Slice(pos, 2));
-    pos += 2;
     return val;
 }
 
@@ -283,6 +273,9 @@ ref struct Top5
         D0 = D1 = D2 = D3 = D4 = float.MaxValue;
     }
 
+    public float WorstBound => D4;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void TryInsert(float dist, byte label)
     {
         if (dist >= D4) return;
