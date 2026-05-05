@@ -11,8 +11,8 @@ RUN apk add --no-cache \
     bash
 
 # Install .NET SDK
-RUN curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 10.0 --install-dir /usr/share/dotnet && \
-    ln -s /usr/share/dotnet/dotnet /usr/local/bin/dotnet
+RUN curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 10.0 --install-dir ~/.dotnet
+ENV PATH="${HOME}/.dotnet:${PATH}"
 
 ARG AOT
 ARG EXTRA_OPTIMIZE
