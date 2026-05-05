@@ -11,23 +11,23 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # ── DataConverter ──
-COPY ["DataConverter/DataConverter.csproj", "DataConverter/"]
-RUN dotnet restore "DataConverter/DataConverter.csproj"
-COPY ["DataConverter/Program.cs", "DataConverter/"]
+COPY ["src/DataConverter/DataConverter.csproj", "src/DataConverter/"]
+RUN dotnet restore "src/DataConverter/DataConverter.csproj"
+COPY ["src/DataConverter/Program.cs", "src/DataConverter/"]
 
 # Copy dataset files
 COPY ["data/references.json.gz", "data/"]
 COPY ["data/mcc_risk.json", "data/"]
 COPY ["data/normalization.json", "data/"]
 
-RUN dotnet build "DataConverter/DataConverter.csproj" -c Release -o /app/build-converter
-RUN /app/build-converter/DataConverter
+RUN dotnet build "src/DataConverter/DataConverter.csproj" -c Release -o /app/build-converter
+RUN /app/build-converter/DataConverter data/
 
 # ── WebApi ──
-COPY ["WebApi/WebApi.csproj", "WebApi/"]
-RUN dotnet restore "WebApi/WebApi.csproj" -p:Configuration=${BUILD_CONFIGURATION} -p:AOT=${AOT}
+COPY ["src/WebApi/WebApi.csproj", "src/WebApi/"]
+RUN dotnet restore "src/WebApi/WebApi.csproj" -p:Configuration=${BUILD_CONFIGURATION} -p:AOT=${AOT}
 
-COPY ["WebApi/Program.cs", "WebApi/"]
+COPY ["src/WebApi/Program.cs", "src/WebApi/"]
 WORKDIR "/src/WebApi"
 RUN dotnet publish "WebApi.csproj" -c $BUILD_CONFIGURATION -p:AOT=${AOT} -p:ExtraOptimize=${EXTRA_OPTIMIZE} -o /app/publish
 

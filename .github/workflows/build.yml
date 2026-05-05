@@ -1,4 +1,4 @@
-name: Build and Push Multi-Platform Image
+name: Build, Push and Release
 
 on:
   push:
@@ -14,12 +14,26 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Semantic Version
+        id: semver
+        if: github.event_name != 'pull_request'
+        run: |
+          latest=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          latest=${latest#v}
+          IFS='.' read -r major minor patch <<< "$latest"
+          new_patch=$((patch + 1))
+          version="v${major}.${minor}.${new_patch}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Version: $version"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -42,6 +56,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ steps.semver.outputs.version }},enable=${{ github.event_name != 'pull_request' }}
             type=sha
 
       - name: Build and push
@@ -59,3 +74,13 @@ jobs:
             AOT=true
             EXTRA_OPTIMIZE=true
             BUILD_CONFIGURATION=Release
+
+      - name: Create Release
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.semver.outputs.version }}
+          name: ${{ steps.semver.outputs.version }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
