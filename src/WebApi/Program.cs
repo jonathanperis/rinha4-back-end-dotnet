@@ -1,5 +1,3 @@
-using System.IO.Compression;
-using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -10,13 +8,9 @@ builder.WebHost.ConfigureKestrel(options =>
 {
     var socketPath = Environment.GetEnvironmentVariable("SOCKET_PATH");
     if (!string.IsNullOrEmpty(socketPath))
-    {
         options.ListenUnixSocket(socketPath);
-    }
     else
-    {
         options.ListenAnyIP(8080);
-    }
 });
 
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -28,9 +22,6 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 var app = builder.Build();
 
 // ── Load dataset ──
-const short Scale = 10000;
-const int Dims = 14;
-
 string dataPath = Environment.GetEnvironmentVariable("DATA_PATH") ?? "/data/references.bin";
 
 if (!File.Exists(dataPath))
@@ -41,23 +32,45 @@ if (!File.Exists(dataPath))
 
 Console.WriteLine("Loading dataset...");
 var fileBytes = File.ReadAllBytes(dataPath);
-
 ReadOnlySpan<byte> span = fileBytes;
-int count = MemoryMarshal.Read<int>(span.Slice(0, 4));
-int dims = MemoryMarshal.Read<int>(span.Slice(4, 4));
-int scale = MemoryMarshal.Read<int>(span.Slice(8, 4));
 
-Console.WriteLine($"Dataset: {count} vectors, {dims} dims, scale {scale}");
+int pos = 0;
+int count = ReadInt32(span, ref pos);
+int dims = ReadInt32(span, ref pos);
+int scale = ReadInt32(span, ref pos);
+int K = ReadInt32(span, ref pos);
+int nprobe = ReadInt32(span, ref pos);
 
-int headerSize = 12;
+Console.WriteLine($"Dataset: {count:N0} vectors, {dims} dims, scale {scale}, K={K}, nprobe={nprobe}");
 
-short[] vectors = MemoryMarshal.Cast<byte, short>(span.Slice(headerSize, count * Dims * 2)).ToArray();
-byte[] labels = span.Slice(headerSize + count * Dims * 2, count).ToArray();
+// Centroids: K * dims int16
+short[] centroids = new short[K * dims];
+for (int c = 0; c < K; c++)
+    for (int d = 0; d < dims; d++)
+        centroids[c * dims + d] = ReadInt16(span, ref pos);
+
+// Posting list metadata
+int[] plOffsets = new int[K];
+int[] plLengths = new int[K];
+for (int c = 0; c < K; c++)
+{
+    plOffsets[c] = ReadInt32(span, ref pos);
+    plLengths[c] = ReadInt32(span, ref pos);
+}
+
+// Vectors: count * dims int16
+short[] vectors = new short[count * dims];
+for (int i = 0; i < count * dims; i++)
+    vectors[i] = ReadInt16(span, ref pos);
+
+// Labels: count bytes
+byte[] labels = new byte[count];
+for (int i = 0; i < count; i++)
+    labels[i] = span[pos++];
 
 Console.WriteLine("Dataset loaded. Ready to serve.");
 
 // ── Pre-computed responses ──
-// 6 possible fraud scores: 0.0, 0.2, 0.4, 0.6, 0.8, 1.0
 ReadOnlyMemory<byte>[] responses = new ReadOnlyMemory<byte>[6];
 for (int i = 0; i <= 5; i++)
 {
@@ -85,9 +98,7 @@ var mccPath = Path.Combine(Path.GetDirectoryName(dataPath)!, "mcc_risk.json");
 var mccDoc = JsonDocument.Parse(File.ReadAllText(mccPath));
 var mccRisk = new Dictionary<string, float>(StringComparer.Ordinal);
 foreach (var prop in mccDoc.RootElement.EnumerateObject())
-{
     mccRisk[prop.Name] = prop.Value.GetSingle();
-}
 
 // ── Endpoints ──
 app.MapGet("/ready", () => Results.Ok());
@@ -95,7 +106,7 @@ app.MapGet("/ready", () => Results.Ok());
 app.MapPost("/fraud-score", (FraudRequest req) =>
 {
     // ── Vectorize ──
-    Span<float> fv = stackalloc float[Dims];
+    Span<float> fv = stackalloc float[dims];
 
     fv[0] = Clamp(req.Transaction.Amount / maxAmount);
     fv[1] = Clamp(req.Transaction.Installments / (float)maxInstallments);
@@ -126,41 +137,90 @@ app.MapPost("/fraud-score", (FraudRequest req) =>
     fv[13] = Clamp(req.Merchant.AvgAmount / maxMerchantAvgAmount);
 
     // Quantize query to int16
-    Span<short> qv = stackalloc short[Dims];
-    for (int i = 0; i < Dims; i++)
-        qv[i] = (short)(fv[i] * Scale);
+    Span<short> qv = stackalloc short[dims];
+    for (int i = 0; i < dims; i++)
+        qv[i] = (short)(fv[i] * scale);
 
-    // ── Brute-force top-5 ──
-    // Fixed-size array, no heap alloc
+    // ── IVF Search ──
+    // 1. Compute distance to all centroids
+    Span<float> cdists = stackalloc float[K];
+    for (int c = 0; c < K; c++)
+    {
+        float dist = 0;
+        int coff = c * dims;
+        for (int d = 0; d < dims; d++)
+        {
+            float diff = qv[d] - centroids[coff + d];
+            dist += diff * diff;
+        }
+        cdists[c] = dist;
+    }
+
+    // 2. Find top-nprobe centroids (simple selection sort for small K)
+    Span<int> bestC = stackalloc int[nprobe];
+    for (int i = 0; i < nprobe; i++)
+    {
+        float best = float.MaxValue;
+        int bestIdx = -1;
+        for (int c = 0; c < K; c++)
+        {
+            if (cdists[c] < best)
+            {
+                best = cdists[c];
+                bestIdx = c;
+            }
+        }
+        bestC[i] = bestIdx;
+        cdists[bestIdx] = float.MaxValue; // mark as used
+    }
+
+    // 3. Scan posting lists of selected centroids
     var top = new Top5();
 
-    for (int vi = 0; vi < count; vi++)
+    for (int i = 0; i < nprobe; i++)
     {
-        int offset = vi * Dims;
-        float dist = 0f;
+        int c = bestC[i];
+        int offset = plOffsets[c];
+        int length = plLengths[c];
 
-        // Unrolled distance for 14 dims
-        for (int i = 0; i < Dims; i++)
+        for (int vi = offset; vi < offset + length; vi++)
         {
-            float d = qv[i] - vectors[offset + i];
-            dist += d * d;
-        }
+            int voff = vi * dims;
+            float dist = 0;
 
-        top.TryInsert(dist, labels[vi]);
+            for (int d = 0; d < dims; d++)
+            {
+                float diff = qv[d] - vectors[voff + d];
+                dist += diff * diff;
+            }
+
+            top.TryInsert(dist, labels[vi]);
+        }
     }
 
     int frauds = top.FraudCount();
-    float fraudScore = frauds / 5.0f;
-    int responseIndex = frauds; // 0..5 maps directly
-
-    return Results.Bytes(responses[responseIndex].ToArray(), "application/json");
+    return Results.Bytes(responses[frauds].ToArray(), "application/json");
 });
 
 app.Run();
 
 static float Clamp(float v) => v < 0f ? 0f : (v > 1f ? 1f : v);
 
-// ── Top-5 tracker (fixed array, zero alloc) ──
+static int ReadInt32(ReadOnlySpan<byte> span, ref int pos)
+{
+    int val = MemoryMarshal.Read<int>(span.Slice(pos, 4));
+    pos += 4;
+    return val;
+}
+
+static short ReadInt16(ReadOnlySpan<byte> span, ref int pos)
+{
+    short val = MemoryMarshal.Read<short>(span.Slice(pos, 2));
+    pos += 2;
+    return val;
+}
+
+// ── Top-5 tracker ──
 struct Top5
 {
     private float D0, D1, D2, D3, D4;
@@ -175,7 +235,6 @@ struct Top5
     {
         if (dist >= D4) return;
 
-        // Shift and insert
         if (dist < D0)
         {
             D4 = D3; L4 = L3;
@@ -221,7 +280,7 @@ struct Top5
 }
 
 // ── JSON contracts ──
-internal record FraudRequest(
+internal sealed record FraudRequest(
     string Id,
     Transaction Transaction,
     Customer Customer,
@@ -230,11 +289,11 @@ internal record FraudRequest(
     LastTransaction? LastTransaction
 );
 
-internal record Transaction(float Amount, int Installments, DateTime RequestedAt);
-internal record Customer(float AvgAmount, int TxCount24h, List<string> KnownMerchants);
-internal record Merchant(string Id, string Mcc, float AvgAmount);
-internal record Terminal(bool IsOnline, bool CardPresent, float KmFromHome);
-internal record LastTransaction(DateTime Timestamp, float KmFromCurrent);
+internal sealed record Transaction(float Amount, int Installments, DateTime RequestedAt);
+internal sealed record Customer(float AvgAmount, int TxCount24h, List<string> KnownMerchants);
+internal sealed record Merchant(string Id, string Mcc, float AvgAmount);
+internal sealed record Terminal(bool IsOnline, bool CardPresent, float KmFromHome);
+internal sealed record LastTransaction(DateTime Timestamp, float KmFromCurrent);
 
 [JsonSerializable(typeof(FraudRequest))]
 internal partial class AppJsonContext : JsonSerializerContext { }

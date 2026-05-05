@@ -7,9 +7,9 @@ string outputPath = Path.Combine(inputDir, "references.bin");
 
 const short Scale = 10000;
 const int Dims = 14;
-const int K = 256;
-const int Nprobe = 3;
-const int KmeansIters = 5;
+const int K = 128;
+const int Nprobe = 5;
+const int KmeansIters = 3;
 
 Console.WriteLine("Loading references.json.gz...");
 
@@ -43,43 +43,15 @@ using (var doc = JsonDocument.Parse(gz))
     }
 }
 
-Console.WriteLine("Running k-means++...");
+Console.WriteLine("Initializing random centroids...");
 
 var centroids = new short[K][];
 var rand = new Random(42);
 
-// First centroid: random
-centroids[0] = new short[Dims];
-Buffer.BlockCopy(vectors[rand.Next(count)], 0, centroids[0], 0, Dims * sizeof(short));
-
-float[] minDistSq = new float[count];
-
-for (int c = 1; c < K; c++)
+for (int c = 0; c < K; c++)
 {
-    float totalDist = 0;
-    for (int i = 0; i < count; i++)
-    {
-        float best = float.MaxValue;
-        for (int j = 0; j < c; j++)
-        {
-            float d = DistSq(vectors[i], centroids[j]);
-            if (d < best) best = d;
-        }
-        minDistSq[i] = best;
-        totalDist += best;
-    }
-
-    float threshold = (float)(rand.NextDouble() * totalDist);
-    float cum = 0;
-    int chosen = 0;
-    for (int i = 0; i < count; i++)
-    {
-        cum += minDistSq[i];
-        if (cum >= threshold) { chosen = i; break; }
-    }
-
     centroids[c] = new short[Dims];
-    Buffer.BlockCopy(vectors[chosen], 0, centroids[c], 0, Dims * sizeof(short));
+    Buffer.BlockCopy(vectors[rand.Next(count)], 0, centroids[c], 0, Dims * sizeof(short));
 }
 
 // ── Lloyd's algorithm ──
