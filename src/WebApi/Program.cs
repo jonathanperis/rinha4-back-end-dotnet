@@ -1,4 +1,3 @@
-using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -250,7 +249,7 @@ app.MapPost("/fraud-score", (FraudRequest req) =>
     }
 
     int frauds = top.FraudCount();
-    return Results.Bytes(responses[frauds].ToArray(), "application/json");
+    return Results.Bytes(responses[frauds], "application/json");
 });
 
 app.Run();
