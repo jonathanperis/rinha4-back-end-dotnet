@@ -11,9 +11,14 @@ services:
         BUILD_CONFIGURATION: Release
     container_name: webapi-1
     restart: always
+    read_only: true
     environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
       SOCKET_PATH: /sockets/api1.sock
       DATA_PATH: /data/references.bin
+    tmpfs:
+      - /tmp
     volumes:
       - sockets:/sockets
     deploy:
