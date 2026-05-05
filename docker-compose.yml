@@ -10,6 +10,7 @@ services:
         EXTRA_OPTIMIZE: true
         BUILD_CONFIGURATION: Release
     container_name: webapi-1
+    user: root
     restart: always
     read_only: true
     environment:
@@ -31,8 +32,12 @@ services:
     <<: *webapi
     container_name: webapi-2
     environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
       SOCKET_PATH: /sockets/api2.sock
       DATA_PATH: /data/references.bin
+    tmpfs:
+      - /tmp
     volumes:
       - sockets:/sockets
 
