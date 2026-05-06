@@ -45,8 +45,8 @@ RUN dotnet publish "WebApi.csproj" \
     -o /app/publish \
     --self-contained
 
-# ── Runtime: alpine (has /etc/passwd for user: root) ──
-FROM alpine:3.21 AS runtime
+# ── Runtime: .NET runtime-deps Alpine (has /etc/passwd + native deps) ──
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine AS runtime
 
 WORKDIR /app
 
