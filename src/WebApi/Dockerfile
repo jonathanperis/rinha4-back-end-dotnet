@@ -45,8 +45,8 @@ RUN dotnet publish "WebApi.csproj" \
     -o /app/publish \
     --self-contained
 
-# ── Runtime: scratch ──
-FROM scratch AS runtime
+# ── Runtime: alpine (has /etc/passwd for user: root) ──
+FROM alpine:3.21 AS runtime
 
 WORKDIR /app
 
