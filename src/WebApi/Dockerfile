@@ -45,8 +45,8 @@ RUN dotnet publish "WebApi.csproj" \
     -o /app/publish \
     --self-contained
 
-# ── Runtime: .NET ASP.NET Alpine (full deps for .NET 10 preview) ──
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
+# ── Runtime: .NET runtime-deps Alpine (minimal native libs) ──
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine AS runtime
 
 WORKDIR /app
 

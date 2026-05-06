@@ -8,7 +8,6 @@ services:
     user: root
     restart: always
     read_only: true
-    cpuset: "0,1"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
@@ -30,7 +29,6 @@ services:
   webapi2:
     <<: *webapi
     container_name: webapi-2
-    cpuset: "2,3"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
@@ -48,7 +46,6 @@ services:
     image: nginx:alpine
     container_name: nginx-lb
     user: root
-    cpuset: "0,2"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - sockets:/sockets
