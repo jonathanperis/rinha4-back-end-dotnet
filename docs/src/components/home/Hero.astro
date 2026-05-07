@@ -1,12 +1,17 @@
 ---
 const latest = await import('../../../public/reports/latest-candidate.json');
 const result = latest.default.result;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const asset = (path: string) => `${base}${path}`;
 ---
 
 <section class="hero">
   <div class="hero-content">
     <p class="eyebrow">RINHA 2026 // .NET 10 NATIVEAOT</p>
-    <h1>FRAUD SIGNAL<br />UNDER LOAD.</h1>
+    <div class="title-lockup">
+      <img class="title-mark" src={asset('/title-mark.svg')} alt="Rinha4 fraud signal mark" />
+      <h1>FRAUD SIGNAL<br />UNDER LOAD.</h1>
+    </div>
     <p class="tagline">
       Raw HTTP/1 over Unix sockets, precomputed byte responses, and a fine-bucket classifier built to keep p99 close to the floor while chasing 0% failures.
     </p>
