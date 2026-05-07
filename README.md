@@ -444,24 +444,6 @@ rinha/test jonathanperis-dotnet
 
 Preview issues are opened in the official Rinha repository after `main` image build and `submission` branch push finish.
 
-## Cysharp Library Evaluation
-
-Evaluated candidates:
-
-- [ZLogger](https://github.com/Cysharp/ZLogger)
-- [Utf8StringInterpolation](https://github.com/Cysharp/Utf8StringInterpolation)
-- [Utf8StreamReader](https://github.com/Cysharp/Utf8StreamReader)
-
-Current decision: do not add these dependencies yet.
-
-Rationale:
-
-- `ZLogger`: no hot-path logging exists. Startup logs are not a ranking bottleneck.
-- `Utf8StringInterpolation`: full HTTP responses are precomputed once at startup, so UTF-8 formatting is not per-request work.
-- `Utf8StreamReader`: request parsing uses raw socket buffers plus `Utf8JsonReader`; no text stream decoding exists in the hot path.
-
-Revisit only if profiling shows logging, UTF-8 formatting, or stream decoding consuming measurable time.
-
 ## Next Work
 
 Main blocker for top-10 target:
@@ -475,7 +457,6 @@ Likely next moves:
 1. Harden raw HTTP/1 connection handling until repeated full runs show 0 EOF.
 2. Continue nginx stream tuning around backlog, upstream retry, and connection churn.
 3. Compare with official-style load locally.
-4. Re-run Cysharp A/B only if a measured bottleneck maps to those libraries.
 
 ## License
 
