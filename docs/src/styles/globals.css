@@ -1,12 +1,12 @@
 :root {
-  --bg-deep: #050f05;
-  --bg-metal: #0a1a0a;
-  --term-green: #00ff41;
-  --term-green-soft: #33ff66;
-  --term-green-dim: rgba(0, 255, 65, 0.2);
-  --term-green-glow: rgba(0, 255, 65, 0.5);
-  --text-main: #b8ffcc;
-  --text-muted: #6abf7a;
+  --bg-deep: #04120e;
+  --bg-metal: #071b14;
+  --term-green: #5cffb1;
+  --term-green-soft: #a7ffd6;
+  --term-green-dim: rgba(92, 255, 177, 0.2);
+  --term-green-glow: rgba(92, 255, 177, 0.46);
+  --text-main: #d6ffea;
+  --text-muted: #87cfae;
   --warn-amber: #ffb300;
   --kill-red: #ff2d55;
   --violet-signal: #7d64ff;
@@ -26,7 +26,7 @@ body {
   background:
     radial-gradient(circle at 12% 15%, rgba(125, 100, 255, 0.12), transparent 26rem),
     radial-gradient(circle at 85% 5%, rgba(255, 45, 85, 0.08), transparent 22rem),
-    linear-gradient(180deg, var(--bg-deep), #020602 70%);
+    linear-gradient(180deg, var(--bg-deep), #020806 70%);
   color: var(--term-green);
   font-family: var(--font-mono);
   line-height: 1.6;
@@ -48,7 +48,7 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background: rgba(0, 255, 65, 0.025);
+  background: rgba(92, 255, 177, 0.025);
   z-index: 50;
   pointer-events: none;
   animation: flicker 0.16s infinite;
