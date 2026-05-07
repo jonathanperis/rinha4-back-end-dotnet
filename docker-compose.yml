@@ -20,6 +20,7 @@ services:
       DOTNET_PROCESSOR_COUNT: "1"
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
+      ACCEPT_LOOPS: "1"
       SOCKET_PATH: /sockets/api1.sock
       DATA_PATH: /data/references.bin
     tmpfs:
@@ -45,6 +46,7 @@ services:
       DOTNET_PROCESSOR_COUNT: "1"
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
+      ACCEPT_LOOPS: "1"
       SOCKET_PATH: /sockets/api2.sock
       DATA_PATH: /data/references.bin
     tmpfs:

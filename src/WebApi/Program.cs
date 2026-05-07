@@ -202,6 +202,9 @@ ReadOnlyMemory<byte> ScoreFraudRequest(ReadOnlySpan<byte> body)
 
 async Task RunRawHttpServerAsync()
 {
+    const int ListenBacklog = 16384;
+    const int DefaultAcceptLoops = 1;
+
     // Bind directly to the same endpoint Kestrel used: UDS in Docker, TCP for
     // local single-process runs.
     using var listener = string.IsNullOrEmpty(socketPath)
@@ -220,7 +223,7 @@ async Task RunRawHttpServerAsync()
         listener.Bind(new UnixDomainSocketEndPoint(socketPath));
     }
 
-    listener.Listen(8192);
+    listener.Listen(ListenBacklog);
 
     if (!string.IsNullOrEmpty(socketPath) && OperatingSystem.IsLinux())
         AllowSocketClients(socketPath);
@@ -229,11 +232,27 @@ async Task RunRawHttpServerAsync()
         ? "Raw HTTP/1 server listening on 0.0.0.0:8080"
         : $"Raw HTTP/1 server listening on {socketPath}");
 
+    int acceptLoopCount = GetPositiveIntEnvironment("ACCEPT_LOOPS", DefaultAcceptLoops);
+    var acceptLoops = new Task[acceptLoopCount];
+    for (int i = 0; i < acceptLoops.Length; i++)
+        acceptLoops[i] = AcceptLoopAsync(listener);
+
+    await Task.WhenAll(acceptLoops);
+}
+
+async Task AcceptLoopAsync(Socket listener)
+{
     while (true)
     {
         Socket client = await listener.AcceptAsync();
         _ = HandleConnectionAsync(client);
     }
+}
+
+static int GetPositiveIntEnvironment(string name, int fallback)
+{
+    string? value = Environment.GetEnvironmentVariable(name);
+    return int.TryParse(value, out int parsed) && parsed > 0 ? parsed : fallback;
 }
 
 async Task HandleConnectionAsync(Socket socket)

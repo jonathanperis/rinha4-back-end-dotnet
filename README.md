@@ -207,7 +207,8 @@ Implemented:
 
 - .NET 10 NativeAOT
 - raw socket HTTP/1 server
-- async accept loop with one task per client connection
+- tunable async accept loop count via `ACCEPT_LOOPS`
+- one task per client connection
 - keep-alive request loop
 - pooled per-connection read buffers
 - Unix Domain Sockets between proxy and APIs
@@ -273,6 +274,7 @@ Latest local A/B observations:
 | --- | ---: | ---: | --- | ---: | --- |
 | nginx stream + raw API | 200 VU debug | `0.00%` | p95 `71.38ms` | `6.75k req/s` | current raw-server baseline |
 | nginx stream + raw API | 500 VU full | `0.00%` reported, 4 EOF | p99 `107.56ms` | `6.95k req/s` | far fewer failures than Kestrel path |
+| nginx stream + raw API + larger backlog | 500 VU full | `0.00%` reported, 2 EOF | p99 `113.34ms` | `6.72k req/s` | fewer EOFs, slight latency cost |
 | nginx stream + Kestrel parser | 200 VU debug | `0.00%` | p95 `67.56ms` | `7.2k req/s` | faster at 200 VU |
 | nginx stream + Kestrel parser | 500 VU full | `0.60%` | p99 `105.19ms` | `6.8k req/s` | too many failures |
 | Envoy HTTP/UDS | 200 VU debug | `0.97%` | p95 `186.96ms` | `1.25k req/s` | worse locally |
@@ -394,21 +396,23 @@ rinha/test jonathanperis-dotnet
 
 Preview issues are opened in the official Rinha repository after `main` image build and `submission` branch push finish.
 
-## Cysharp Library Backlog
+## Cysharp Library Evaluation
 
-Potential A/B candidates:
+Evaluated candidates:
 
 - [ZLogger](https://github.com/Cysharp/ZLogger)
 - [Utf8StringInterpolation](https://github.com/Cysharp/Utf8StringInterpolation)
 - [Utf8StreamReader](https://github.com/Cysharp/Utf8StreamReader)
 
-Current expectation:
+Current decision: do not add these dependencies yet.
 
-- `ZLogger`: likely low value because hot-path logging is disabled.
-- `Utf8StringInterpolation`: likely low value because responses are precomputed UTF-8 bytes.
-- `Utf8StreamReader`: likely low value because request parsing already uses raw socket buffers plus `Utf8JsonReader`.
+Rationale:
 
-Still worth benchmarking only if profiling shows logging, UTF-8 formatting, or stream decoding becomes measurable.
+- `ZLogger`: no hot-path logging exists. Startup logs are not a ranking bottleneck.
+- `Utf8StringInterpolation`: full HTTP responses are precomputed once at startup, so UTF-8 formatting is not per-request work.
+- `Utf8StreamReader`: request parsing uses raw socket buffers plus `Utf8JsonReader`; no text stream decoding exists in the hot path.
+
+Revisit only if profiling shows logging, UTF-8 formatting, or stream decoding consuming measurable time.
 
 ## Next Work
 
@@ -421,9 +425,9 @@ Main blocker for top-10 target:
 Likely next moves:
 
 1. Harden raw HTTP/1 connection handling until repeated full runs show 0 EOF.
-2. Tune stream connection behavior and per-connection balancing.
+2. Continue nginx stream tuning around backlog, upstream retry, and connection churn.
 3. Compare with official-style load locally.
-4. Re-run Cysharp A/B only if it targets a measured bottleneck.
+4. Re-run Cysharp A/B only if a measured bottleneck maps to those libraries.
 
 ## License
 
