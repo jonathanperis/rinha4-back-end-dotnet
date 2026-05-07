@@ -75,8 +75,8 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
                 <td class="num">{row.http_errors}</td>
                 <td>
                   <span class="file-links">
-                    <a href={`../reports/${row.file}`}>json</a>
-                    {row.html_report && <a href={`../reports/${row.html_report}`}>html</a>}
+                    <a href={`../reports/${row.file}`} target="_blank" rel="noopener noreferrer">json</a>
+                    {row.html_report && <a href={`../reports/${row.html_report}`} target="_blank" rel="noopener noreferrer">html</a>}
                   </span>
                 </td>
               </tr>
@@ -121,8 +121,8 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
                   <td class="num">{row.http_errors}</td>
                   <td>
                     <span class="file-links">
-                      <a href={`../reports/${row.file}`}>json</a>
-                      {row.html_report && <a href={`../reports/${row.html_report}`}>html</a>}
+                      <a href={`../reports/${row.file}`} target="_blank" rel="noopener noreferrer">json</a>
+                      {row.html_report && <a href={`../reports/${row.html_report}`} target="_blank" rel="noopener noreferrer">html</a>}
                     </span>
                   </td>
                 </tr>
