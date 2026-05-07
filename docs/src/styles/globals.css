@@ -93,6 +93,16 @@ footer {
   text-shadow: 0 0 10px var(--term-green-glow);
 }
 
+.logo::before {
+  content: '';
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: var(--term-green);
+  box-shadow: 0 0 14px var(--term-green-glow);
+  flex: 0 0 auto;
+}
+
 .nav-links { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: flex-end; }
 
 .nav-links a {
