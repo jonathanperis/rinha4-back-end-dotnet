@@ -1,5 +1,23 @@
 [
   {
+    "file": "rinha-benchmark-20260507224349-2546b8a3bfbc.json",
+    "timestamp": "2026-05-07T19:43:49-03:00",
+    "sha": "2546b8a3bfbcbedc318e4326b0824c94f18c744a",
+    "short_sha": "2546b8a3bfbc",
+    "run_id": "25526119196",
+    "run_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25526119196",
+    "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-2546b8a3bfbcbedc318e4326b0824c94f18c744a",
+    "compose_file": "docker-compose.yml",
+    "report_kind": "candidate",
+    "html_report": "rinha-benchmark-20260507224349-2546b8a3bfbc.html",
+    "p99": "1.35ms",
+    "failure_rate": "2.35%",
+    "final_score": 3204.75,
+    "http_errors": 0,
+    "false_positive_detections": 695,
+    "false_negative_detections": 572
+  },
+  {
     "file": "rinha-benchmark-20260507223349-1974ca7bceec.json",
     "timestamp": "2026-05-07T19:33:49-03:00",
     "sha": "1974ca7bceecc4cee879d30259e10559b9765022",
