@@ -25,6 +25,8 @@ IVF_FAST_NPROBE="${IVF_FAST_NPROBE:-}"
 IVF_FULL_NPROBE="${IVF_FULL_NPROBE:-}"
 IVF_BOUNDARY_FULL="${IVF_BOUNDARY_FULL:-}"
 IVF_BBOX_REPAIR="${IVF_BBOX_REPAIR:-}"
+IVF_EXACT_RERANK="${IVF_EXACT_RERANK:-}"
+IVF_RERANK_CANDIDATES="${IVF_RERANK_CANDIDATES:-}"
 IVF_REPAIR_MIN_FRAUDS="${IVF_REPAIR_MIN_FRAUDS:-}"
 IVF_REPAIR_MAX_FRAUDS="${IVF_REPAIR_MAX_FRAUDS:-}"
 
@@ -79,6 +81,8 @@ jq -n \
     --arg ivf_full_nprobe "$IVF_FULL_NPROBE" \
     --arg ivf_boundary_full "$IVF_BOUNDARY_FULL" \
     --arg ivf_bbox_repair "$IVF_BBOX_REPAIR" \
+    --arg ivf_exact_rerank "$IVF_EXACT_RERANK" \
+    --arg ivf_rerank_candidates "$IVF_RERANK_CANDIDATES" \
     --arg ivf_repair_min_frauds "$IVF_REPAIR_MIN_FRAUDS" \
     --arg ivf_repair_max_frauds "$IVF_REPAIR_MAX_FRAUDS" \
     --arg source "zanfranceschi/rinha-de-backend-2026:test/test.js" \
@@ -108,6 +112,8 @@ jq -n \
                 ivf_full_nprobe: $ivf_full_nprobe,
                 ivf_boundary_full: $ivf_boundary_full,
                 ivf_bbox_repair: $ivf_bbox_repair,
+                ivf_exact_rerank: $ivf_exact_rerank,
+                ivf_rerank_candidates: $ivf_rerank_candidates,
                 ivf_repair_min_frauds: $ivf_repair_min_frauds,
                 ivf_repair_max_frauds: $ivf_repair_max_frauds
             }
@@ -133,6 +139,8 @@ for report in "$REPORTS_DIR"/${REPORT_PREFIX}-*.json; do
         build_ivf: (.metadata.benchmark_config.build_ivf // "false"),
         ivf_fast_nprobe: (.metadata.benchmark_config.ivf_fast_nprobe // ""),
         ivf_full_nprobe: (.metadata.benchmark_config.ivf_full_nprobe // ""),
+        ivf_exact_rerank: (.metadata.benchmark_config.ivf_exact_rerank // ""),
+        ivf_rerank_candidates: (.metadata.benchmark_config.ivf_rerank_candidates // ""),
         html_report: .metadata.html_report,
         p99: .result.p99,
         failure_rate: .result.scoring.failure_rate,

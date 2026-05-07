@@ -46,7 +46,7 @@ RUN if [ "$BUILD_IVF" = "true" ]; then \
         BUILD_IVF=true IVF_CLUSTERS=$IVF_CLUSTERS IVF_TRAIN_SAMPLE=$IVF_TRAIN_SAMPLE IVF_ITERATIONS=$IVF_ITERATIONS \
         /app/build-converter/DataConverter data/ --ivf; \
     else \
-        /app/build-converter/DataConverter data/ && : > data/references.ivf.bin; \
+        /app/build-converter/DataConverter data/ && : > data/references.ivf.bin && : > data/references.exact.bin; \
     fi
 
 # ── WebApi ──
@@ -74,6 +74,7 @@ WORKDIR /app
 COPY --from=build /app/publish/WebApi /WebApi
 COPY --from=build /src/data/references.bin /data/
 COPY --from=build /src/data/references.ivf.bin /data/
+COPY --from=build /src/data/references.exact.bin /data/
 COPY --from=build /src/data/mcc_risk.json /data/
 COPY --from=build /src/data/normalization.json /data/
 

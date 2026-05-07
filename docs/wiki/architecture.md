@@ -27,7 +27,8 @@ nginx stream :9999
 `src/DataConverter` converts `data/references.json.gz` into `data/references.bin` during image build.
 
 When `BUILD_IVF=true` or `--ivf` is enabled, the converter also writes
-`data/references.ivf.bin` for the experimental search path.
+`data/references.ivf.bin` for the experimental search path and
+`data/references.exact.bin` for optional exact float32 rerank.
 
 The binary format stores:
 
@@ -46,6 +47,7 @@ The optional `references.ivf.bin` stores:
 - per-cluster bounding boxes
 - packed int16 vector blocks
 - labels and original ids for deterministic top-five tie-breaking
+- optional exact float32 rows for reranking retained candidates
 
 ## Classifier
 
@@ -53,8 +55,9 @@ Default mode uses fine-bucket majority lookup. It remains the production fallbac
 
 `SCORER_MODE=ivf` loads the optional IVF index and runs nearest-cluster search.
 Current experiment settings target `nprobe=1`, bbox repair, and second-pass
-repair on fraud counts `1..4`. If the IVF file is missing or invalid, startup
-falls back to bucket scoring.
+repair on fraud counts `1..4`. When `references.exact.bin` exists, the retained
+int16 candidates are reranked in float32. If the IVF file is missing or invalid,
+startup falls back to bucket scoring.
 
 ## Startup readiness
 

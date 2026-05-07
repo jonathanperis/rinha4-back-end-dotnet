@@ -30,6 +30,7 @@ The current experimental lane is IVF approximate nearest-neighbor search:
 - load `references.ivf.bin` only when `SCORER_MODE=ivf`
 - scan the nearest cluster first with `IVF_FAST_NPROBE=1`
 - use bbox repair to scan clusters whose bounding box can still beat the current top-five bound
+- exact-rerank retained int16 candidates when `IVF_EXACT_RERANK=true`
 - rerun boundary fraud counts `1..4` through the repair path
 - keep the current bucket classifier as fallback until CI proves score improvement
 

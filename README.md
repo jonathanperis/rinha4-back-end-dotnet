@@ -98,7 +98,8 @@ Input data lives in `data/references.json.gz`.
 
 `src/DataConverter` converts it to `data/references.bin` at image build time.
 When `--ivf` or `BUILD_IVF=true` is enabled, the same converter also writes the
-experimental `data/references.ivf.bin` index.
+experimental `data/references.ivf.bin` index and `data/references.exact.bin`
+float32 vectors for optional exact rerank.
 
 The binary file is embedded in the Docker image. The runtime container does not need to download or transform data before serving.
 
@@ -137,6 +138,15 @@ int32 offsets[clusters + 1]
 byte labels[padded_rows]
 int32 ids[padded_rows]
 int16 blocks[total_blocks * dims * block_lanes]
+```
+
+Exact rerank format:
+
+```text
+int32 magic = "EXF1"
+int32 count
+int32 dims
+float32 vectors[count * dims]
 ```
 
 The IVF file is opt-in and separate from `references.bin`. It lets CI AB-test
@@ -208,6 +218,7 @@ Experimental classifier:
 - scans nearest IVF centroid clusters with `IVF_FAST_NPROBE`
 - reruns boundary fraud counts with `IVF_FULL_NPROBE` when enabled
 - uses bounding-box lower bounds to repair missed clusters when enabled
+- reranks retained int16 candidates with exact float32 vectors when `IVF_EXACT_RERANK=true`
 - falls back to the bucket classifier if the IVF file is absent or invalid
 
 Tradeoff:
@@ -322,7 +333,8 @@ BUILD_IVF=true SCORER_MODE=ivf docker compose up --build
 ```
 
 Docker IVF build parameters are also tunable with `IVF_CLUSTERS`,
-`IVF_TRAIN_SAMPLE`, and `IVF_ITERATIONS`.
+`IVF_TRAIN_SAMPLE`, `IVF_ITERATIONS`, `IVF_EXACT_RERANK`, and
+`IVF_RERANK_CANDIDATES`.
 
 ## Benchmarks
 
@@ -413,7 +425,7 @@ Build details:
 
 - SDK image builds converter and API.
 - converter creates `references.bin`.
-- `BUILD_IVF=true` makes the converter create `references.ivf.bin`; default is an empty placeholder.
+- `BUILD_IVF=true` makes the converter create `references.ivf.bin` and `references.exact.bin`; default is empty placeholders.
 - IVF image builds accept `IVF_CLUSTERS`, `IVF_TRAIN_SAMPLE`, and `IVF_ITERATIONS` build args.
 - API is published with NativeAOT.
 - runtime image contains only API binary plus data files.
@@ -443,7 +455,7 @@ Main blocker for top-10 target:
 Likely next moves:
 
 1. Build the full IVF image in CI with `BUILD_IVF=true`.
-2. Run official-like benchmark with `SCORER_MODE=ivf`, `IVF_FAST_NPROBE=1`, `IVF_FULL_NPROBE=1`, `IVF_BBOX_REPAIR=true`, and fraud repair range `1..4`.
+2. Run official-like benchmark with `SCORER_MODE=ivf`, `IVF_FAST_NPROBE=1`, `IVF_FULL_NPROBE=1`, `IVF_BBOX_REPAIR=true`, `IVF_EXACT_RERANK=true`, `IVF_RERANK_CANDIDATES=6`, and fraud repair range `1..4`.
 3. Compare IVF p99, failure rate, and score against the current bucket candidate.
 4. Promote IVF to submission only if it preserves `0` HTTP errors and improves p99/failure/score.
 5. Track official issue `#2088` for the next preview result from the updated submission branch.

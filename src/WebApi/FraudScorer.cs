@@ -157,7 +157,8 @@ internal sealed class FraudScorer
             return null;
 
         string path = Environment.GetEnvironmentVariable("IVF_PATH") ?? Path.Combine(dataDirectory, "references.ivf.bin");
-        if (IvfIndex.TryLoad(path, out IvfIndex? index, out string error))
+        string exactPath = Environment.GetEnvironmentVariable("IVF_EXACT_PATH") ?? Path.Combine(dataDirectory, "references.exact.bin");
+        if (IvfIndex.TryLoad(path, exactPath, out IvfIndex? index, out string error))
         {
             Console.WriteLine($"IVF scorer enabled: {path}");
             return index;

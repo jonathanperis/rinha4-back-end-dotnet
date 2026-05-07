@@ -82,6 +82,18 @@ on:
         options:
           - "true"
           - "false"
+      ivf_exact_rerank:
+        description: Enable exact float32 rerank when references.exact.bin exists
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      ivf_rerank_candidates:
+        description: Int16 candidates retained before exact rerank
+        required: true
+        default: "6"
       ivf_repair_min_frauds:
         description: Inclusive repair fraud-count minimum
         required: true
@@ -139,6 +151,8 @@ jobs:
           IVF_FULL_NPROBE: ${{ inputs.ivf_full_nprobe }}
           IVF_BOUNDARY_FULL: ${{ inputs.ivf_boundary_full }}
           IVF_BBOX_REPAIR: ${{ inputs.ivf_bbox_repair }}
+          IVF_EXACT_RERANK: ${{ inputs.ivf_exact_rerank }}
+          IVF_RERANK_CANDIDATES: ${{ inputs.ivf_rerank_candidates }}
           IVF_REPAIR_MIN_FRAUDS: ${{ inputs.ivf_repair_min_frauds }}
           IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
         run: bash scripts/ci-official-benchmark.sh
@@ -166,6 +180,8 @@ jobs:
           IVF_FULL_NPROBE: ${{ inputs.ivf_full_nprobe }}
           IVF_BOUNDARY_FULL: ${{ inputs.ivf_boundary_full }}
           IVF_BBOX_REPAIR: ${{ inputs.ivf_bbox_repair }}
+          IVF_EXACT_RERANK: ${{ inputs.ivf_exact_rerank }}
+          IVF_RERANK_CANDIDATES: ${{ inputs.ivf_rerank_candidates }}
           IVF_REPAIR_MIN_FRAUDS: ${{ inputs.ivf_repair_min_frauds }}
           IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
         run: bash scripts/archive-benchmark-result.sh

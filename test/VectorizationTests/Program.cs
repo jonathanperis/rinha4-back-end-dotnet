@@ -62,6 +62,35 @@ VectorizationTestRunner.Run("loads IVF index and repairs boundary fraud counts",
     }
 });
 
+VectorizationTestRunner.Run("reranks IVF candidates with exact vectors", () =>
+{
+    string ivfPath = Path.Combine(Path.GetTempPath(), $"rinha-ivf-test-{Guid.NewGuid():N}.bin");
+    string exactPath = Path.Combine(Path.GetTempPath(), $"rinha-exact-test-{Guid.NewGuid():N}.bin");
+    try
+    {
+        IvfTestIndex.Write(ivfPath, 0, 0);
+        IvfTestIndex.WriteExact(exactPath);
+        if (!IvfIndex.TryLoad(ivfPath, exactPath, out IvfIndex? index, out string error) || index is null)
+            throw new InvalidOperationException(error);
+
+        Span<float> query = stackalloc float[14];
+        Span<short> quantized = stackalloc short[16];
+
+        byte int16Only = index.FraudCount(query, quantized, new IvfSearchOptions(1, 1, false, false, false, 5, 1, 4));
+        byte exact = index.FraudCount(query, quantized, new IvfSearchOptions(1, 1, false, false, true, 6, 1, 4));
+
+        VectorizationTestRunner.AssertEqualInt(0, int16Only);
+        VectorizationTestRunner.AssertEqualInt(1, exact);
+    }
+    finally
+    {
+        if (File.Exists(ivfPath))
+            File.Delete(ivfPath);
+        if (File.Exists(exactPath))
+            File.Delete(exactPath);
+    }
+});
+
 /// <summary>
 /// Minimal test runner and assertion helpers for vectorization behavior.
 /// </summary>
@@ -149,8 +178,8 @@ internal static class IvfRepairAssertions
         Span<float> query = stackalloc float[14];
         Span<short> quantized = stackalloc short[16];
 
-        byte fastOnly = index.FraudCount(query, quantized, new IvfSearchOptions(1, 1, false, false, 1, 4));
-        byte repaired = index.FraudCount(query, quantized, new IvfSearchOptions(1, 1, true, true, 1, 4));
+        byte fastOnly = index.FraudCount(query, quantized, new IvfSearchOptions(1, 1, false, false, false, 5, 1, 4));
+        byte repaired = index.FraudCount(query, quantized, new IvfSearchOptions(1, 1, true, true, false, 5, 1, 4));
 
         VectorizationTestRunner.AssertEqualInt(expectedFastOnly, fastOnly);
         VectorizationTestRunner.AssertEqualInt(expectedRepaired, repaired);
@@ -168,7 +197,8 @@ internal static class IvfRepairAssertions
 internal static class IvfTestIndex
 {
     private const int Magic = 0x31465649;
-    private const int Count = 10;
+    private const int ExactMagic = 0x31465845;
+    private const int Count = 11;
     private const int Clusters = 2;
     private const int Dims = 14;
     private const int Scale = 10000;
@@ -200,6 +230,27 @@ internal static class IvfTestIndex
         WriteLabels(writer, firstPassFrauds, repairFrauds);
         WriteIds(writer);
         WriteBlocks(writer);
+    }
+
+    /// <summary>
+    /// Writes exact vectors where the sixth first-cluster candidate becomes nearest.
+    /// </summary>
+    /// <param name="path">Destination exact-rerank binary path.</param>
+    public static void WriteExact(string path)
+    {
+        using var stream = File.Create(path);
+        using var writer = new BinaryWriter(stream);
+
+        writer.Write(ExactMagic);
+        writer.Write(Count);
+        writer.Write(Dims);
+
+        for (int id = 0; id < Count; id++)
+        {
+            float value = id == 5 ? 0.0f : 0.5f;
+            for (int dim = 0; dim < Dims; dim++)
+                writer.Write(value);
+        }
     }
 
     /// <summary>
@@ -250,6 +301,7 @@ internal static class IvfTestIndex
         byte[] labels = new byte[TotalBlocks * BlockLanes];
         for (int i = 0; i < Math.Min(firstPassFrauds, (byte)5); i++)
             labels[i] = 1;
+        labels[5] = 1;
 
         for (int i = 0; i < Math.Min(repairFrauds, (byte)5); i++)
             labels[BlockLanes + i] = 1;
@@ -265,8 +317,8 @@ internal static class IvfTestIndex
     {
         int[] ids =
         [
-            0, 1, 2, 3, 4, -1, -1, -1,
-            5, 6, 7, 8, 9, -1, -1, -1
+            0, 1, 2, 3, 4, 5, -1, -1,
+            6, 7, 8, 9, 10, -1, -1, -1
         ];
 
         foreach (int id in ids)
@@ -279,7 +331,7 @@ internal static class IvfTestIndex
     /// <param name="writer">Binary writer positioned after ids.</param>
     private static void WriteBlocks(BinaryWriter writer)
     {
-        short[] lane0 = [10, 11, 12, 13, 14, short.MaxValue, short.MaxValue, short.MaxValue];
+        short[] lane0 = [10, 11, 12, 13, 14, 15, short.MaxValue, short.MaxValue];
         short[] lane1 = [0, 0, 0, 0, 0, short.MaxValue, short.MaxValue, short.MaxValue];
 
         for (int dim = 0; dim < Dims; dim++)

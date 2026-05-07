@@ -20,7 +20,8 @@ BUILD_IVF=true SCORER_MODE=ivf docker compose up --build
 ```
 
 Tune IVF image-build parameters with `IVF_CLUSTERS`, `IVF_TRAIN_SAMPLE`, and
-`IVF_ITERATIONS` when testing alternatives.
+`IVF_ITERATIONS` when testing alternatives. Runtime rerank controls are
+`IVF_EXACT_RERANK` and `IVF_RERANK_CANDIDATES`.
 
 Generate IVF data without Docker:
 

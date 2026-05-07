@@ -18,6 +18,7 @@ internal readonly record struct IvfBuildOptions(int Clusters, int TrainSample, i
 internal static class IvfIndexBuilder
 {
     private const int Magic = 0x31465649; // IVF1
+    private const int ExactMagic = 0x31465845; // EXF1
     private const int Dims = 14;
     private const int BlockLanes = 8;
     private const short Scale = 10000;
@@ -118,6 +119,29 @@ internal static class IvfIndexBuilder
         writer.Write(labelsOut);
         WriteInts(writer, idsOut);
         WriteShorts(writer, blocks);
+        writer.Flush();
+    }
+
+    /// <summary>
+    /// Writes exact float32 vectors for optional IVF reranking.
+    /// </summary>
+    /// <param name="outputPath">Destination <c>references.exact.bin</c> path.</param>
+    /// <param name="vectors">Row-major normalized vectors, with <c>14</c> floats per row.</param>
+    /// <param name="count">Number of reference rows.</param>
+    /// <remarks>
+    /// This file is memory-mapped by the API instead of copied into managed
+    /// arrays. It gives IVF a tiny exact rerank stage without changing the
+    /// default bucket artifact or loading the full reference corpus into GC memory.
+    /// </remarks>
+    public static void WriteExact(string outputPath, float[] vectors, int count)
+    {
+        using var stream = File.Create(outputPath);
+        using var writer = new BinaryWriter(stream);
+
+        writer.Write(ExactMagic);
+        writer.Write(count);
+        writer.Write(Dims);
+        WriteFloats(writer, vectors);
         writer.Flush();
     }
 

@@ -2,6 +2,7 @@ string inputDir = DataConverterOptions.InputDirectory(args);
 string inputPath = Path.Combine(inputDir, "references.json.gz");
 string outputPath = Path.Combine(inputDir, "references.bin");
 string ivfOutputPath = Path.Combine(inputDir, "references.ivf.bin");
+string exactOutputPath = Path.Combine(inputDir, "references.exact.bin");
 bool buildIvf = DataConverterOptions.BuildIvf(args);
 IvfBuildOptions ivfOptions = DataConverterOptions.IvfOptions();
 
@@ -91,8 +92,11 @@ Console.WriteLine($"Format: {count} vectors, {Dims} dims (padded to {PaddedDims}
 if (buildIvf)
 {
     IvfIndexBuilder.Write(ivfOutputPath, ivfVectors!, ivfLabels!, count, ivfOptions);
+    IvfIndexBuilder.WriteExact(exactOutputPath, ivfVectors!, count);
     long ivfSize = new FileInfo(ivfOutputPath).Length;
+    long exactSize = new FileInfo(exactOutputPath).Length;
     Console.WriteLine($"IVF output: {ivfSize / (1024.0 * 1024.0):F1} MB ({ivfSize:N0} bytes)");
+    Console.WriteLine($"Exact rerank output: {exactSize / (1024.0 * 1024.0):F1} MB ({exactSize:N0} bytes)");
 }
 
 /// <summary>
