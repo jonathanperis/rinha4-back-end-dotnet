@@ -18,6 +18,6 @@ Main build flow:
 | `latest.json` | latest benchmark result |
 | `index.json` | sorted benchmark history |
 | `rinha-benchmark-*.json` | immutable benchmark records |
+| `rinha-benchmark-*.html` | k6 HTML reports when generated |
 
 The report archive commit is docs-only. The build workflow ignores `docs/**`, so report commits do not trigger a new benchmark loop.
-

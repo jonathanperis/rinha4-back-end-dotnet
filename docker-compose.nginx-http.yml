@@ -1,5 +1,0 @@
-services:
-  nginx:
-    volumes:
-      - ./nginx-http.conf:/etc/nginx/nginx.conf:ro
-      - sockets:/sockets

@@ -213,7 +213,7 @@ Implemented:
 - pooled per-connection read buffers
 - Unix Domain Sockets between proxy and APIs
 - socket cleanup on process start
-- socket chmod for non-root proxy processes like Envoy
+- socket chmod so nginx can reach API sockets
 - direct header and `Content-Length` parsing
 - manual `Utf8JsonReader` parser
 - no JSON model binding in `/fraud-score`
@@ -226,7 +226,7 @@ Implemented:
 - O(1) default classifier
 - exact SIMD/pruned search retained behind env switch
 
-## Reverse Proxy A/B
+## Reverse Proxy
 
 Default:
 
@@ -241,50 +241,7 @@ Uses:
 - UDS upstreams
 - `20 MB` proxy memory
 
-Envoy test:
-
-```bash
-ENVOY_IMAGE=envoyproxy/envoy:tools-dev \
-docker compose -f docker-compose.yml -f docker-compose.envoy.yml up -d --force-recreate
-```
-
-Uses:
-
-- [envoy.yaml](./envoy.yaml)
-- HTTP/1 connection manager
-- UDS upstreams
-- `30 MB` proxy memory
-- APIs reduced to `160 MB` each
-
-HTTP nginx test:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.nginx-http.yml up -d --force-recreate
-```
-
-Uses:
-
-- [nginx-http.conf](./nginx-http.conf)
-- HTTP reverse proxy
-- UDS upstreams
-
-Latest local A/B observations:
-
-| Proxy | Load | Failure | p99 / p95 | Throughput | Result |
-| --- | ---: | ---: | --- | ---: | --- |
-| nginx stream + raw API | 200 VU debug | `0.00%` | p95 `71.38ms` | `6.75k req/s` | current raw-server baseline |
-| nginx stream + raw API | 500 VU full | `0.00%` reported, 4 EOF | p99 `107.56ms` | `6.95k req/s` | far fewer failures than Kestrel path |
-| nginx stream + raw API + larger backlog | 500 VU full | `0.00%` reported, 2 EOF | p99 `113.34ms` | `6.72k req/s` | fewer EOFs, slight latency cost |
-| nginx stream + Kestrel parser | 200 VU debug | `0.00%` | p95 `67.56ms` | `7.2k req/s` | faster at 200 VU |
-| nginx stream + Kestrel parser | 500 VU full | `0.60%` | p99 `105.19ms` | `6.8k req/s` | too many failures |
-| Envoy HTTP/UDS | 200 VU debug | `0.97%` | p95 `186.96ms` | `1.25k req/s` | worse locally |
-| nginx HTTP | 500 VU full | `0.00%` | p99 `308.67ms` | `3.1k req/s` | clean but too slow |
-
-Interpretation:
-
-- Envoy is not currently a win.
-- HTTP nginx removes most EOF behavior but costs too much throughput and latency.
-- raw socket API greatly reduced EOF count under 500 VU, but the target remains strict 0 failures.
+nginx stream is the retained load balancer path. It keeps the proxy layer byte-oriented, avoids HTTP parsing in the proxy, and leaves request parsing to the raw socket server.
 
 Local benchmark caveats:
 
@@ -362,11 +319,8 @@ Run from GitHub Actions:
 
 1. Open **Actions**.
 2. Select **Official-like Benchmark**.
-3. Choose proxy compose overlay:
+3. Choose compose file:
    - `docker-compose.yml` for nginx stream baseline
-   - `docker-compose.nginx-http.yml`
-   - `docker-compose.envoy.yml`
-   - `docker-compose.haproxy.yml`
    - `docker-compose.avx2.yml` for exact reference search with AVX2 enabled on amd64 runners
 4. Run workflow.
 
