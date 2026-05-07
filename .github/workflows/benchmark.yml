@@ -1,0 +1,62 @@
+name: Official-like Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      compose_file:
+        description: Docker Compose file to benchmark
+        required: true
+        default: docker-compose.yml
+        type: choice
+        options:
+          - docker-compose.yml
+          - docker-compose.nginx-http.yml
+          - docker-compose.envoy.yml
+          - docker-compose.haproxy.yml
+      official_ref:
+        description: Rinha official repo ref to clone for test/test.js and test-data.json
+        required: true
+        default: main
+      k6_image:
+        description: k6 Docker image
+        required: true
+        default: grafana/k6:latest
+
+jobs:
+  official-like-benchmark:
+    name: Run official-like k6 benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show runner capacity
+        run: |
+          uname -a
+          nproc
+          free -h
+          docker version
+          docker compose version
+
+      - name: Run benchmark
+        env:
+          COMPOSE_FILE: ${{ inputs.compose_file }}
+          OFFICIAL_REF: ${{ inputs.official_ref }}
+          K6_IMAGE: ${{ inputs.k6_image }}
+          RESULTS_DIR: benchmark-results
+        run: bash scripts/ci-official-benchmark.sh
+
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rinha-benchmark-${{ inputs.compose_file }}-${{ github.run_number }}
+          path: |
+            benchmark-results/results.json
+            benchmark-results/docker-compose.log
+          if-no-files-found: ignore

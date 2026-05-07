@@ -343,6 +343,25 @@ k6 run --quiet benchmarks/k6/fraud-score.js
 
 The local k6 scripts are not the official judge. They are smoke and pressure tests used to compare changes.
 
+CI official-like benchmark:
+
+- GitHub Actions workflow: `.github/workflows/benchmark.yml`
+- Trigger: manual `workflow_dispatch`
+- Test source: clones `zanfranceschi/rinha-de-backend-2026` and runs official `test/test.js`
+- Stack start: `docker compose --compatibility` so Compose maps `deploy.resources.limits` into local container limits
+- Artifacts: `benchmark-results/results.json` and `benchmark-results/docker-compose.log`
+
+Run from GitHub Actions:
+
+1. Open **Actions**.
+2. Select **Official-like Benchmark**.
+3. Choose proxy compose overlay:
+   - `docker-compose.yml` for nginx stream baseline
+   - `docker-compose.nginx-http.yml`
+   - `docker-compose.envoy.yml`
+   - `docker-compose.haproxy.yml`
+4. Run workflow.
+
 ## Tests And Validation
 
 Unit-style vectorization tests live under `test/`:

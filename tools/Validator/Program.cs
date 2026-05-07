@@ -22,17 +22,17 @@ int pos = 0;
 const int BinaryMagic = 0x35444852;
 const int GroupCount = FraudVectorizer.FineGroupCount;
 
-int first = ReadInt32(span, ref pos);
+int first = ValidatorBinary.ReadInt32(span, ref pos);
 bool hasGroupIndex = first == BinaryMagic;
-int count = hasGroupIndex ? ReadInt32(span, ref pos) : first;
-int dims = ReadInt32(span, ref pos);
-int paddedDims = ReadInt32(span, ref pos);
-int scale = ReadInt32(span, ref pos);
+int count = hasGroupIndex ? ValidatorBinary.ReadInt32(span, ref pos) : first;
+int dims = ValidatorBinary.ReadInt32(span, ref pos);
+int paddedDims = ValidatorBinary.ReadInt32(span, ref pos);
+int scale = ValidatorBinary.ReadInt32(span, ref pos);
 var groupOffsets = new int[GroupCount + 1];
 if (hasGroupIndex)
 {
     for (int i = 0; i <= GroupCount; i++)
-        groupOffsets[i] = ReadInt32(span, ref pos);
+        groupOffsets[i] = ValidatorBinary.ReadInt32(span, ref pos);
 }
 
 int vectorsOffset = pos;
@@ -196,23 +196,51 @@ Console.WriteLine($"  Decision Match:  {majorityMatches}/{numTests} ({100.0 * ma
 Console.WriteLine($"  Majority FP:     {majorityFalsePositives}");
 Console.WriteLine($"  Majority FN:     {majorityFalseNegatives}");
 
-static int ReadInt32(ReadOnlySpan<byte> span, ref int pos)
+/// <summary>
+/// Binary decoding helpers for the offline validator.
+/// </summary>
+internal static class ValidatorBinary
 {
-    int val = MemoryMarshal.Read<int>(span.Slice(pos, 4));
-    pos += 4;
-    return val;
+    /// <summary>
+    /// Reads a little-endian int32 from the validator dataset span and advances the cursor.
+    /// </summary>
+    /// <param name="span">Binary dataset span being decoded.</param>
+    /// <param name="pos">Current byte offset; advanced by four when the value is read.</param>
+    /// <returns>The decoded int32 value.</returns>
+    public static int ReadInt32(ReadOnlySpan<byte> span, ref int pos)
+    {
+        int val = MemoryMarshal.Read<int>(span.Slice(pos, 4));
+        pos += 4;
+        return val;
+    }
 }
 
+/// <summary>
+/// Float-distance top-five tracker used by the offline exact validator.
+/// </summary>
+/// <remarks>
+/// This validator keeps distances as <see cref="float"/> because it reads
+/// vectors through <see cref="ReadOnlySpan{T}"/> and compares exact, approximate,
+/// and bucket-majority decisions outside the API hot path.
+/// </remarks>
 ref struct Top5
 {
     private float D0, D1, D2, D3, D4;
     private byte L0, L1, L2, L3, L4;
 
+    /// <summary>
+    /// Initializes all candidate distances to <see cref="float.MaxValue"/>.
+    /// </summary>
     public Top5()
     {
         D0 = D1 = D2 = D3 = D4 = float.MaxValue;
     }
 
+    /// <summary>
+    /// Inserts a closer candidate while preserving sorted top-five order.
+    /// </summary>
+    /// <param name="dist">Squared float distance from query to reference vector.</param>
+    /// <param name="label">Reference label, where <c>1</c> means fraud.</param>
     public void TryInsert(float dist, byte label)
     {
         if (dist >= D4) return;
@@ -249,6 +277,10 @@ ref struct Top5
         }
     }
 
+    /// <summary>
+    /// Counts fraud labels among the five retained nearest candidates.
+    /// </summary>
+    /// <returns>An integer from 0 through 5 used to derive fraud score.</returns>
     public int FraudCount()
     {
         int c = 0;

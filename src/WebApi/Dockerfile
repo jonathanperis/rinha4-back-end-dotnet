@@ -45,8 +45,7 @@ RUN dotnet restore "WebApi/WebApi.csproj" \
     -p:AOT=${AOT} \
     -r $(cat /tmp/runtime-id)
 
-COPY ["src/WebApi/Program.cs", "WebApi/"]
-COPY ["src/WebApi/FraudVectorizer.cs", "WebApi/"]
+COPY ["src/WebApi/", "WebApi/"]
 WORKDIR "/src/WebApi"
 RUN dotnet publish "WebApi.csproj" \
     -c $BUILD_CONFIGURATION \
