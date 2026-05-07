@@ -3,6 +3,8 @@
 **/obj/
 **/out/
 **/publish/
+**/node_modules/
+**/.astro/
 
 # Generated data
 data/references.bin

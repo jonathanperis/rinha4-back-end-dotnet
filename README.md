@@ -372,6 +372,24 @@ Run from GitHub Actions:
 Manual runs can also benchmark a pushed image by filling `webapi_image`; when set,
 the workflow pulls that image and starts Compose with `--no-build`.
 
+## GitHub Pages
+
+The repository publishes an Astro documentation site from `docs/`.
+
+Pages structure:
+
+- `/` home dashboard with latest official-like benchmark metrics
+- `/reports/` benchmark history from `docs/public/reports/index.json`
+- `/docs/` searchable implementation notes generated from `docs/wiki/*.md`
+
+Local docs workflow:
+
+```bash
+cd docs
+bun install
+bun run dev
+```
+
 ## Tests And Validation
 
 Unit-style vectorization tests live under `test/`:

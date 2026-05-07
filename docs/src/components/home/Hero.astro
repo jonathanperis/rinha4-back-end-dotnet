@@ -1,0 +1,30 @@
+---
+const latest = await import('../../../public/reports/latest.json');
+const result = latest.default.result;
+---
+
+<section class="hero">
+  <div class="hero-content">
+    <p class="eyebrow">RINHA 2026 // .NET 10 NATIVEAOT</p>
+    <h1>FRAUD SIGNAL<br />UNDER LOAD.</h1>
+    <p class="tagline">
+      Raw HTTP/1 over Unix sockets, precomputed byte responses, and a fine-bucket classifier built to keep p99 close to the floor while chasing 0% failures.
+    </p>
+    <div class="cta-group">
+      <a href="./reports/" class="btn-fire">OPEN BENCHMARKS</a>
+      <a href="./docs/" class="btn-secondary">READ SYSTEM NOTES</a>
+    </div>
+  </div>
+
+  <div class="terminal-panel">
+    <div class="terminal-content">
+      <div class="term-line">&gt; docker pull ghcr.io/jonathanperis/rinha4-back-end-dotnet:latest</div>
+      <div class="term-line">&gt; reverse_proxy: nginx stream // uds</div>
+      <div class="term-line">&gt; native_aot: ready // parser: raw_http</div>
+      <div class="term-line">&gt; latest.p99 = {result.p99}</div>
+      <div class="term-line">&gt; latest.failures = {result.scoring.failure_rate}</div>
+      <div class="term-line">&gt; target: 0% failures, p99 near 1ms</div>
+      <div class="term-line">&gt; <span class="cursor"></span></div>
+    </div>
+  </div>
+</section>

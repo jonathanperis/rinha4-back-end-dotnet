@@ -1,0 +1,81 @@
+---
+const latest = await import('../../../public/reports/latest.json');
+const index = await import('../../../public/reports/index.json');
+const result = latest.default.result;
+const metadata = latest.default.metadata;
+const runs = index.default;
+const score = Number(result.scoring.final_score).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const p99Score = Number(result.scoring.p99_score.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const detectionScore = Number(result.scoring.detection_score.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+---
+
+<section class="stats-grid">
+  <div class="stat-box">
+    <div class="stat-label">Latest p99</div>
+    <div class="stat-value">{result.p99}</div>
+    <div class="stat-sub">GitHub Actions runner</div>
+  </div>
+  <div class="stat-box danger">
+    <div class="stat-label">Failures</div>
+    <div class="stat-value">{result.scoring.failure_rate}</div>
+    <div class="stat-sub">Target is 0%</div>
+  </div>
+  <div class="stat-box warning">
+    <div class="stat-label">Score</div>
+    <div class="stat-value">{score}</div>
+    <div class="stat-sub">Official-like, not official hardware</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-label">Archived runs</div>
+    <div class="stat-value">{runs.length}</div>
+    <div class="stat-sub">Stored in docs/public/reports</div>
+  </div>
+</section>
+
+<h2 class="section-title">SYSTEM TOPOLOGY</h2>
+<section class="scenarios">
+  <div class="scenario-card">
+    <h3>Transport Path</h3>
+    <div class="endpoint"><span class="method get">GET</span> /ready</div>
+    <p>nginx stream accepts port 9999 and forwards raw HTTP to two API containers through Unix Domain Sockets. The app parses enough HTTP/1 to satisfy the Rinha workload.</p>
+    <div class="progress-container">
+      <div class="progress-label">Latency path [||||||||||||||||||..] tuned</div>
+    </div>
+  </div>
+  <div class="scenario-card">
+    <h3>Fraud Decision</h3>
+    <div class="endpoint"><span class="method post">POST</span> /fraud-score</div>
+    <p>Manual JSON parsing extracts only the required fields, vectorizes into 14 dimensions, maps to a fine bucket, and writes one prebuilt HTTP response.</p>
+    <div class="progress-container">
+      <div class="progress-label danger-text">Accuracy gap [|||||...............] active</div>
+    </div>
+  </div>
+</section>
+
+<section class="stress-tests">
+  <h3>OFFICIAL-LIKE BENCHMARK STREAM</h3>
+  <p class="stress-intro">
+    The CI benchmark pulls the immutable image built on main, clones the public Rinha 2026 test harness, runs k6, stores raw JSON, and renders the history here.
+  </p>
+
+  <div class="stress-metrics">
+    <div class="stress-metric">
+      <span class="metric-value">{p99Score}</span>
+      <span class="metric-label">p99 score</span>
+    </div>
+    <div class="stress-metric">
+      <span class="metric-value">{detectionScore}</span>
+      <span class="metric-label">detection score</span>
+    </div>
+    <div class="stress-metric">
+      <span class="metric-value">{result.scoring.breakdown.http_errors}</span>
+      <span class="metric-label">HTTP errors</span>
+    </div>
+  </div>
+
+  <div class="stress-links">
+    <a href="./reports/" class="stress-link">View report history</a>
+    <a href={metadata.run_url} class="stress-link" target="_blank" rel="noopener noreferrer">Latest CI run</a>
+    <a href="https://rinhadebackend.com.br/" class="stress-link" target="_blank" rel="noopener noreferrer">Public ranking</a>
+  </div>
+</section>

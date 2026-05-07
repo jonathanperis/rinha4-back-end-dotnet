@@ -1,0 +1,60 @@
+---
+import '../styles/globals.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = 'rinha4-back-end-dotnet | FRAUD SIGNAL UNDER LOAD',
+  description = '.NET 10 NativeAOT implementation for Rinha de Backend 2026, tuned for low p99 latency and official-like benchmark tracking.'
+} = Astro.props;
+
+const pageUrl = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : `https://jonathanperis.github.io${Astro.url.pathname}`;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareSourceCode',
+  name: 'rinha4-back-end-dotnet',
+  description,
+  url: pageUrl,
+  codeRepository: 'https://github.com/jonathanperis/rinha4-back-end-dotnet',
+  programmingLanguage: 'C#',
+  runtimePlatform: '.NET 10 NativeAOT / Docker',
+  license: 'https://github.com/jonathanperis/rinha4-back-end-dotnet/blob/main/LICENSE',
+  author: {
+    '@type': 'Person',
+    name: 'Jonathan Peris',
+    url: 'https://github.com/jonathanperis'
+  }
+};
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <meta name="description" content={description} />
+    <meta name="keywords" content="Rinha de Backend, .NET, NativeAOT, fraud detection, k6, performance, benchmark" />
+    <link rel="canonical" href={pageUrl} />
+    <meta name="theme-color" content="#00ff41" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={pageUrl} />
+    <meta property="og:site_name" content="rinha4-back-end-dotnet" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+    <title>{title}</title>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

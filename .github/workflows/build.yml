@@ -3,6 +3,8 @@ name: Build and Release
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -189,7 +191,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No benchmark report changes to commit"
           else
-            git commit -m "docs: archive rinha benchmark [skip ci]"
+            git commit -m "docs: archive rinha benchmark"
             git push
           fi
 
