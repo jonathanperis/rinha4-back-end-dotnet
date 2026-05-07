@@ -10,7 +10,8 @@
     "official_ref": "main",
     "k6_image": "grafana/k6:latest",
     "source": "zanfranceschi/rinha-de-backend-2026:test/test.js",
-    "environment": "GitHub Actions ubuntu-latest; official-like only, not official Rinha hardware"
+    "environment": "GitHub Actions ubuntu-latest; official-like only, not official Rinha hardware",
+    "report_kind": "candidate"
   },
   "result": {
     "expected": {

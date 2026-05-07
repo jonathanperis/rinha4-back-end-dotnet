@@ -14,6 +14,15 @@ IMAGE="${BENCHMARK_IMAGE:-${WEBAPI_IMAGE:-}}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 OFFICIAL_REF="${OFFICIAL_REF:-main}"
 K6_IMAGE="${K6_IMAGE:-grafana/k6:latest}"
+REPORT_KIND="${BENCHMARK_REPORT_KIND:-}"
+
+if [[ -z "$REPORT_KIND" ]]; then
+    if [[ "$COMPOSE_FILE" == "docker-compose.yml" ]]; then
+        REPORT_KIND="candidate"
+    else
+        REPORT_KIND="experiment"
+    fi
+fi
 
 if [[ ! -f "$RESULTS_JSON" ]]; then
     echo "Result file not found: $RESULTS_JSON" >&2
@@ -42,6 +51,7 @@ jq -n \
     --arg compose_file "$COMPOSE_FILE" \
     --arg official_ref "$OFFICIAL_REF" \
     --arg k6_image "$K6_IMAGE" \
+    --arg report_kind "$REPORT_KIND" \
     --arg source "zanfranceschi/rinha-de-backend-2026:test/test.js" \
     --slurpfile result "$RESULTS_JSON" \
     '{
@@ -53,6 +63,7 @@ jq -n \
             run_url: $run_url,
             image: $image,
             compose_file: $compose_file,
+            report_kind: $report_kind,
             official_ref: $official_ref,
             k6_image: $k6_image,
             source: $source,
@@ -60,8 +71,6 @@ jq -n \
         },
         result: $result[0]
     }' > "$report_path"
-
-cp "$report_path" "$REPORTS_DIR/latest.json"
 
 tmp_index="$(mktemp)"
 : > "$tmp_index"
@@ -76,6 +85,7 @@ for report in "$REPORTS_DIR"/${REPORT_PREFIX}-*.json; do
         run_url: .metadata.run_url,
         image: .metadata.image,
         compose_file: .metadata.compose_file,
+        report_kind: (.metadata.report_kind // (if .metadata.compose_file == "docker-compose.yml" then "candidate" else "experiment" end)),
         p99: .result.p99,
         failure_rate: .result.scoring.failure_rate,
         final_score: .result.scoring.final_score,
@@ -87,5 +97,16 @@ done
 
 jq -s 'sort_by(.file) | reverse' "$tmp_index" > "$REPORTS_DIR/index.json"
 rm -f "$tmp_index"
+
+candidate_file="$(jq -r 'map(select(.report_kind == "candidate")) | .[0].file // empty' "$REPORTS_DIR/index.json")"
+if [[ -n "$candidate_file" ]]; then
+    cp "$REPORTS_DIR/$candidate_file" "$REPORTS_DIR/latest-candidate.json"
+    cp "$REPORTS_DIR/$candidate_file" "$REPORTS_DIR/latest.json"
+fi
+
+experiment_file="$(jq -r 'map(select(.report_kind == "experiment")) | .[0].file // empty' "$REPORTS_DIR/index.json")"
+if [[ -n "$experiment_file" ]]; then
+    cp "$REPORTS_DIR/$experiment_file" "$REPORTS_DIR/latest-experiment.json"
+fi
 
 echo "Archived benchmark report: $report_path"

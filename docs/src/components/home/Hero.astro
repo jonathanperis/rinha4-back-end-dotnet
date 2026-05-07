@@ -1,5 +1,5 @@
 ---
-const latest = await import('../../../public/reports/latest.json');
+const latest = await import('../../../public/reports/latest-candidate.json');
 const result = latest.default.result;
 ---
 
@@ -21,8 +21,8 @@ const result = latest.default.result;
       <div class="term-line">&gt; docker pull ghcr.io/jonathanperis/rinha4-back-end-dotnet:latest</div>
       <div class="term-line">&gt; reverse_proxy: nginx stream // uds</div>
       <div class="term-line">&gt; native_aot: ready // parser: raw_http</div>
-      <div class="term-line">&gt; latest.p99 = {result.p99}</div>
-      <div class="term-line">&gt; latest.failures = {result.scoring.failure_rate}</div>
+      <div class="term-line">&gt; candidate.p99 = {result.p99}</div>
+      <div class="term-line">&gt; candidate.failures = {result.scoring.failure_rate}</div>
       <div class="term-line">&gt; target: 0% failures, p99 near 1ms</div>
       <div class="term-line">&gt; <span class="cursor"></span></div>
     </div>
