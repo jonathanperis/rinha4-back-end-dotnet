@@ -2,7 +2,7 @@ string inputDir = args.Length > 0 ? args[0] : "/data";
 string inputPath = Path.Combine(inputDir, "references.json.gz");
 string outputPath = Path.Combine(inputDir, "references.bin");
 
-const int Magic = 0x36444852; // RHD6
+const int Magic = 0x37444852; // RHD7
 const short Scale = 10000;
 const int Dims = 14;
 const int PaddedDims = 16; // fixed converter/API binary vector stride
@@ -12,9 +12,10 @@ Console.WriteLine("Loading references.json.gz...");
 
 int count;
 var groupCounts = new int[GroupCount];
+var groupFrauds = new int[GroupCount];
 
-// First pass counts bucket sizes. That lets us compute deterministic offsets and write
-// labels already grouped without per-bucket lists.
+// Single pass counts bucket sizes and fraud labels. The API only needs the
+// final majority response table at runtime, so raw labels stay out of the image.
 using (var fs = File.OpenRead(inputPath))
 using (var gz = new GZipStream(fs, CompressionMode.Decompress))
 using (var doc = JsonDocument.Parse(gz))
@@ -28,38 +29,19 @@ using (var doc = JsonDocument.Parse(gz))
         var v = el.GetProperty("vector");
         int group = DataConverterVectorGroups.VectorGroup(v);
         groupCounts[group]++;
+        if (el.GetProperty("label").GetString() == "fraud")
+            groupFrauds[group]++;
     }
 }
 
 // Write binary format:
 // [int32 magic][int32 count][int32 dims][int32 padded_dims][int32 scale]
-// [(FineGroupCount + 1) * int32 group_offsets]
-// [count * byte labels]
-var groupOffsets = new int[GroupCount + 1];
-for (int i = 0; i < GroupCount; i++)
-    groupOffsets[i + 1] = groupOffsets[i] + groupCounts[i];
-
-var nextGroupIndex = new int[GroupCount];
-Array.Copy(groupOffsets, nextGroupIndex, GroupCount);
-
-var labels = GC.AllocateUninitializedArray<byte>(count);
-
-Console.WriteLine("Packing labels grouped by fine bucket key...");
-
-using (var fs = File.OpenRead(inputPath))
-using (var gz = new GZipStream(fs, CompressionMode.Decompress))
-using (var doc = JsonDocument.Parse(gz))
+// [FineGroupCount * byte response_indexes]
+var responseIndexes = GC.AllocateUninitializedArray<byte>(GroupCount);
+for (int group = 0; group < GroupCount; group++)
 {
-    // Second pass writes each label into its final grouped slot.
-    var root = doc.RootElement;
-    foreach (var el in root.EnumerateArray())
-    {
-        var v = el.GetProperty("vector");
-        int group = DataConverterVectorGroups.VectorGroup(v);
-        int dest = nextGroupIndex[group]++;
-
-        labels[dest] = el.GetProperty("label").GetString() == "fraud" ? (byte)1 : (byte)0;
-    }
+    int total = groupCounts[group];
+    responseIndexes[group] = total == 0 ? (byte)0 : (byte)((groupFrauds[group] * 5 + total / 2) / total);
 }
 
 using var outStream = File.Create(outputPath);
@@ -70,11 +52,9 @@ writer.Write(count);
 writer.Write(Dims);
 writer.Write(PaddedDims);
 writer.Write((int)Scale);
-for (int i = 0; i <= GroupCount; i++)
-    writer.Write(groupOffsets[i]);
 
-Console.WriteLine("Writing grouped labels...");
-writer.Write(labels);
+Console.WriteLine("Writing bucket response indexes...");
+writer.Write(responseIndexes);
 
 writer.Flush();
 
@@ -99,7 +79,7 @@ internal static class DataConverterVectorGroups
     /// <param name="vector">JSON vector array from <c>references.json.gz</c>.</param>
     /// <returns>
     /// The same fine-bucket id produced by <see cref="FraudVectorizer.FineVectorGroup"/>
-    /// in the API, used to place labels in grouped order inside <c>references.bin</c>.
+    /// in the API, used to precompute bucket response indexes inside <c>references.bin</c>.
     /// </returns>
     /// <remarks>
     /// Converter and API must use the exact same bucket key; otherwise startup

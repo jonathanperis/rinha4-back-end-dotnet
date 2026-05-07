@@ -29,10 +29,9 @@ nginx stream :9999
 The binary format stores:
 
 - metadata header
-- group offsets
-- labels
+- precomputed bucket response indexes
 
-The runtime loads this once, computes the bucket response map at startup, and avoids per-request allocation-heavy structures.
+The runtime loads this once and avoids startup scans or per-request allocation-heavy structures.
 
 ## Classifier
 

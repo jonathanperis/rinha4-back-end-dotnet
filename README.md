@@ -101,21 +101,20 @@ The binary file is embedded in the Docker image. The runtime container does not 
 Binary format:
 
 ```text
-int32 magic = "RHD6"
+int32 magic = "RHD7"
 int32 count
 int32 dims
 int32 padded_dims
 int32 scale
-int32 group_offsets[FineGroupCount + 1]
-byte labels[count]
+byte response_indexes[FineGroupCount]
 ```
 
 Why this format:
 
-- compact labels reduce image size and startup memory.
+- precomputed response indexes reduce image size and startup work.
 - `padded_dims = 16` keeps the API request-vector stride stable.
 - group offsets make bucket lookup O(1).
-- labels are stored separately for startup bucket-majority precomputation.
+- runtime can start serving immediately after reading the compact table.
 
 ## Fraud Vector
 
