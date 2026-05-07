@@ -136,6 +136,9 @@ jobs:
     needs: build-amd64
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     timeout-minutes: 45
+    concurrency:
+      group: benchmark-reports-main
+      cancel-in-progress: false
     permissions:
       actions: write
       contents: write
@@ -197,6 +200,7 @@ jobs:
             echo "committed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "docs: archive rinha benchmark"
+            git pull --rebase origin main
             git push
             echo "committed=true" >> "$GITHUB_OUTPUT"
           fi
