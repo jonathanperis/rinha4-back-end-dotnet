@@ -27,6 +27,9 @@ on:
         required: false
         default: ""
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   official-like-benchmark:
     name: Run official-like k6 benchmark
