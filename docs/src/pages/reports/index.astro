@@ -8,6 +8,7 @@ const rows = reports.default;
 const candidates = rows.filter((row) => row.report_kind === 'candidate');
 const experiments = rows.filter((row) => row.report_kind === 'experiment');
 const latest = candidates[0];
+const pageSize = 5;
 const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 ---
 
@@ -47,46 +48,8 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
       </section>
     )}
 
-    <section class="report-table-wrap">
-      <table class="report-table">
-        <thead>
-          <tr>
-            <th>Run</th>
-            <th class="num">p99</th>
-            <th class="num">Failures</th>
-            <th class="num">Score</th>
-            <th class="num">HTTP</th>
-            <th>Files</th>
-          </tr>
-        </thead>
-        <tbody>
-          {candidates.map((row) => (
-            <tr>
-              <td>
-                <a href={row.run_url} target="_blank" rel="noopener noreferrer">{new Date(row.timestamp).toLocaleString('sv-SE')}</a>
-                <code>{row.short_sha}</code>
-                <code>{row.compose_file}</code>
-              </td>
-              <td class="num">{row.p99}</td>
-              <td class="num danger-text">{row.failure_rate}</td>
-              <td class="num">{fmtScore(row.final_score)}</td>
-              <td class="num">{row.http_errors}</td>
-              <td>
-                <span class="file-links">
-                  <a href={`../reports/${row.file}`}>json</a>
-                  {row.html_report && <a href={`../reports/${row.html_report}`}>html</a>}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
-
-    {experiments.length > 0 && (
-      <section class="report-table-wrap experiment-wrap">
-        <h2>Experiment Runs</h2>
-        <p>Failed or alternate overlays stay here for evidence, not candidate status.</p>
+    <section class="report-table-wrap" data-paginated-table data-page-size={pageSize}>
+      <div class="report-scroll">
         <table class="report-table">
           <thead>
             <tr>
@@ -99,8 +62,8 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
             </tr>
           </thead>
           <tbody>
-            {experiments.map((row) => (
-              <tr>
+            {candidates.map((row) => (
+              <tr data-page-row>
                 <td>
                   <a href={row.run_url} target="_blank" rel="noopener noreferrer">{new Date(row.timestamp).toLocaleString('sv-SE')}</a>
                   <code>{row.short_sha}</code>
@@ -120,10 +83,101 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
             ))}
           </tbody>
         </table>
+      </div>
+      <nav class="pagination" data-pagination aria-label="Candidate run pages">
+        <button type="button" data-page-prev>Prev</button>
+        <span data-page-status></span>
+        <button type="button" data-page-next>Next</button>
+      </nav>
+    </section>
+
+    {experiments.length > 0 && (
+      <section class="report-table-wrap experiment-wrap" data-paginated-table data-page-size={pageSize}>
+        <h2>Experiment Runs</h2>
+        <p>Failed or alternate overlays stay here for evidence, not candidate status.</p>
+        <div class="report-scroll">
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th>Run</th>
+                <th class="num">p99</th>
+                <th class="num">Failures</th>
+                <th class="num">Score</th>
+                <th class="num">HTTP</th>
+                <th>Files</th>
+              </tr>
+            </thead>
+            <tbody>
+              {experiments.map((row) => (
+                <tr data-page-row>
+                  <td>
+                    <a href={row.run_url} target="_blank" rel="noopener noreferrer">{new Date(row.timestamp).toLocaleString('sv-SE')}</a>
+                    <code>{row.short_sha}</code>
+                    <code>{row.compose_file}</code>
+                  </td>
+                  <td class="num">{row.p99}</td>
+                  <td class="num danger-text">{row.failure_rate}</td>
+                  <td class="num">{fmtScore(row.final_score)}</td>
+                  <td class="num">{row.http_errors}</td>
+                  <td>
+                    <span class="file-links">
+                      <a href={`../reports/${row.file}`}>json</a>
+                      {row.html_report && <a href={`../reports/${row.html_report}`}>html</a>}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <nav class="pagination" data-pagination aria-label="Experiment run pages">
+          <button type="button" data-page-prev>Prev</button>
+          <span data-page-status></span>
+          <button type="button" data-page-next>Next</button>
+        </nav>
       </section>
     )}
   </main>
   <Footer />
+
+  <script is:inline>
+    for (const tableWrap of document.querySelectorAll('[data-paginated-table]')) {
+      const rows = Array.from(tableWrap.querySelectorAll('[data-page-row]'));
+      const pageSize = Number(tableWrap.dataset.pageSize || 5);
+      const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+      const pagination = tableWrap.querySelector('[data-pagination]');
+      const status = tableWrap.querySelector('[data-page-status]');
+      const prev = tableWrap.querySelector('[data-page-prev]');
+      const next = tableWrap.querySelector('[data-page-next]');
+      let page = 0;
+
+      if (!pagination || !status || !prev || !next) continue;
+      if (rows.length <= pageSize) pagination.hidden = true;
+
+      const render = () => {
+        const start = page * pageSize;
+        const end = start + pageSize;
+        rows.forEach((row, index) => {
+          row.hidden = index < start || index >= end;
+        });
+        status.textContent = `${page + 1} / ${pageCount}`;
+        prev.disabled = page === 0;
+        next.disabled = page === pageCount - 1;
+      };
+
+      prev.addEventListener('click', () => {
+        page = Math.max(0, page - 1);
+        render();
+      });
+
+      next.addEventListener('click', () => {
+        page = Math.min(pageCount - 1, page + 1);
+        render();
+      });
+
+      render();
+    }
+  </script>
 </BaseLayout>
 
 <style>
@@ -142,11 +196,11 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
   }
   .compact { margin-bottom: 3rem; }
   .report-table-wrap {
-    overflow-x: auto;
     border: 1px solid var(--term-green-dim);
     background: rgba(0, 8, 0, 0.72);
     box-shadow: inset 0 0 40px rgba(0, 255, 65, 0.035);
   }
+  .report-scroll { overflow-x: auto; }
   .experiment-wrap {
     margin-top: 3rem;
     border-color: rgba(255, 179, 0, 0.45);
@@ -187,6 +241,43 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
     display: flex;
     gap: 0.75rem;
     flex-wrap: wrap;
+  }
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border-top: 1px solid var(--term-green-dim);
+  }
+  .pagination[hidden] { display: none; }
+  .pagination button {
+    min-width: 4.5rem;
+    border: 1px solid var(--term-green-dim);
+    background: rgba(92, 255, 177, 0.08);
+    color: var(--term-green);
+    font: inherit;
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.45rem 0.7rem;
+    cursor: pointer;
+  }
+  .pagination button:hover:not(:disabled) {
+    background: var(--term-green);
+    color: var(--bg-deep);
+    box-shadow: 0 0 14px var(--term-green-glow);
+  }
+  .pagination button:disabled {
+    color: var(--text-muted);
+    cursor: default;
+    opacity: 0.52;
+  }
+  .pagination span {
+    color: var(--text-muted);
+    min-width: 4rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
   }
   .report-table code {
     display: block;
