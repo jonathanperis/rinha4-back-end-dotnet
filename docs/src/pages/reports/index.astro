@@ -68,6 +68,7 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
                   <a href={row.run_url} target="_blank" rel="noopener noreferrer">{new Date(row.timestamp).toLocaleString('sv-SE')}</a>
                   <code>{row.short_sha}</code>
                   <code>{row.compose_file}</code>
+                  {row.scorer_mode && <code>{row.scorer_mode}</code>}
                 </td>
                 <td class="num">{row.p99}</td>
                 <td class="num danger-text">{row.failure_rate}</td>
@@ -114,6 +115,8 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
                     <a href={row.run_url} target="_blank" rel="noopener noreferrer">{new Date(row.timestamp).toLocaleString('sv-SE')}</a>
                     <code>{row.short_sha}</code>
                     <code>{row.compose_file}</code>
+                    {row.scorer_mode && <code>{row.scorer_mode}</code>}
+                    {row.ivf_fast_nprobe && <code>n{row.ivf_fast_nprobe}/{row.ivf_full_nprobe}</code>}
                   </td>
                   <td class="num">{row.p99}</td>
                   <td class="num danger-text">{row.failure_rate}</td>

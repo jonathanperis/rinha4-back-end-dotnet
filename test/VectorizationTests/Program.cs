@@ -44,6 +44,24 @@ VectorizationTestRunner.Run("separates fine groups by continuous bins and flags"
     VectorizationTestRunner.AssertNotEqualInt(query, farFlag);
 });
 
+VectorizationTestRunner.Run("loads IVF index and repairs boundary fraud counts", () =>
+{
+    string path = Path.Combine(Path.GetTempPath(), $"rinha-ivf-test-{Guid.NewGuid():N}.bin");
+    try
+    {
+        for (byte frauds = 1; frauds <= 4; frauds++)
+            IvfRepairAssertions.AssertBoundaryRepair(path, frauds, 5, frauds, 5);
+
+        IvfRepairAssertions.AssertBoundaryRepair(path, 0, 5, 0, 0);
+        IvfRepairAssertions.AssertBoundaryRepair(path, 5, 0, 5, 5);
+    }
+    finally
+    {
+        if (File.Exists(path))
+            File.Delete(path);
+    }
+});
+
 /// <summary>
 /// Minimal test runner and assertion helpers for vectorization behavior.
 /// </summary>
@@ -106,5 +124,170 @@ internal static class VectorizationTestRunner
     {
         if (left == right)
             throw new InvalidOperationException($"expected different values, got {left.ToString(CultureInfo.InvariantCulture)}");
+    }
+}
+
+/// <summary>
+/// Assertions for the experimental IVF boundary-repair policy.
+/// </summary>
+internal static class IvfRepairAssertions
+{
+    /// <summary>
+    /// Writes one fixture, loads it, and compares fast-only and repaired fraud counts.
+    /// </summary>
+    /// <param name="path">Reusable fixture path.</param>
+    /// <param name="firstPassFrauds">Fraud count returned by the nearest centroid cluster.</param>
+    /// <param name="repairFrauds">Fraud count returned if bbox repair scans the second cluster.</param>
+    /// <param name="expectedFastOnly">Expected count with no boundary or bbox repair.</param>
+    /// <param name="expectedRepaired">Expected count with boundary and bbox repair enabled for counts <c>1..4</c>.</param>
+    public static void AssertBoundaryRepair(string path, byte firstPassFrauds, byte repairFrauds, byte expectedFastOnly, byte expectedRepaired)
+    {
+        IvfTestIndex.Write(path, firstPassFrauds, repairFrauds);
+        if (!IvfIndex.TryLoad(path, out IvfIndex? index, out string error) || index is null)
+            throw new InvalidOperationException(error);
+
+        Span<float> query = stackalloc float[14];
+        Span<short> quantized = stackalloc short[16];
+
+        byte fastOnly = index.FraudCount(query, quantized, new IvfSearchOptions(1, 1, false, false, 1, 4));
+        byte repaired = index.FraudCount(query, quantized, new IvfSearchOptions(1, 1, true, true, 1, 4));
+
+        VectorizationTestRunner.AssertEqualInt(expectedFastOnly, fastOnly);
+        VectorizationTestRunner.AssertEqualInt(expectedRepaired, repaired);
+    }
+}
+
+/// <summary>
+/// Writes a tiny deterministic IVF fixture for scorer behavior tests.
+/// </summary>
+/// <remarks>
+/// The fixture makes the nearest centroid cluster return a boundary count of
+/// configurable frauds, then gives bbox repair a second cluster that contains
+/// closer vectors. This validates <c>nprobe=1</c>, boundary repair, and bbox repair.
+/// </remarks>
+internal static class IvfTestIndex
+{
+    private const int Magic = 0x31465649;
+    private const int Count = 10;
+    private const int Clusters = 2;
+    private const int Dims = 14;
+    private const int Scale = 10000;
+    private const int BlockLanes = 8;
+    private const int TotalBlocks = 2;
+
+    /// <summary>
+    /// Writes the test index to disk.
+    /// </summary>
+    /// <param name="path">Destination binary path.</param>
+    /// <param name="firstPassFrauds">Fraud labels in the nearest centroid block.</param>
+    /// <param name="repairFrauds">Fraud labels in the bbox-repair block.</param>
+    public static void Write(string path, byte firstPassFrauds, byte repairFrauds)
+    {
+        using var stream = File.Create(path);
+        using var writer = new BinaryWriter(stream);
+
+        writer.Write(Magic);
+        writer.Write(Count);
+        writer.Write(Clusters);
+        writer.Write(Dims);
+        writer.Write(Scale);
+        writer.Write(BlockLanes);
+        writer.Write(TotalBlocks);
+
+        WriteCentroids(writer);
+        WriteBoundingBoxes(writer);
+        WriteOffsets(writer);
+        WriteLabels(writer, firstPassFrauds, repairFrauds);
+        WriteIds(writer);
+        WriteBlocks(writer);
+    }
+
+    /// <summary>
+    /// Writes dimension-major centroids so cluster zero is selected by <c>nprobe=1</c>.
+    /// </summary>
+    /// <param name="writer">Binary writer positioned after the header.</param>
+    private static void WriteCentroids(BinaryWriter writer)
+    {
+        for (int dim = 0; dim < Dims; dim++)
+        {
+            writer.Write(0.0f);
+            writer.Write(1.0f);
+        }
+    }
+
+    /// <summary>
+    /// Writes bounding boxes that allow the second cluster to repair the first-pass result.
+    /// </summary>
+    /// <param name="writer">Binary writer positioned after centroids.</param>
+    private static void WriteBoundingBoxes(BinaryWriter writer)
+    {
+        for (int i = 0; i < Clusters * Dims; i++)
+            writer.Write((short)0);
+
+        for (int i = 0; i < Clusters * Dims; i++)
+            writer.Write((short)200);
+    }
+
+    /// <summary>
+    /// Writes one block per cluster.
+    /// </summary>
+    /// <param name="writer">Binary writer positioned after bounding boxes.</param>
+    private static void WriteOffsets(BinaryWriter writer)
+    {
+        writer.Write(0);
+        writer.Write(1);
+        writer.Write(2);
+    }
+
+    /// <summary>
+    /// Writes padded labels for both blocks.
+    /// </summary>
+    /// <param name="writer">Binary writer positioned after offsets.</param>
+    /// <param name="firstPassFrauds">Fraud labels in the nearest centroid block.</param>
+    /// <param name="repairFrauds">Fraud labels in the bbox-repair block.</param>
+    private static void WriteLabels(BinaryWriter writer, byte firstPassFrauds, byte repairFrauds)
+    {
+        byte[] labels = new byte[TotalBlocks * BlockLanes];
+        for (int i = 0; i < Math.Min(firstPassFrauds, (byte)5); i++)
+            labels[i] = 1;
+
+        for (int i = 0; i < Math.Min(repairFrauds, (byte)5); i++)
+            labels[BlockLanes + i] = 1;
+
+        writer.Write(labels);
+    }
+
+    /// <summary>
+    /// Writes original ids, with negative ids marking padded lanes.
+    /// </summary>
+    /// <param name="writer">Binary writer positioned after labels.</param>
+    private static void WriteIds(BinaryWriter writer)
+    {
+        int[] ids =
+        [
+            0, 1, 2, 3, 4, -1, -1, -1,
+            5, 6, 7, 8, 9, -1, -1, -1
+        ];
+
+        foreach (int id in ids)
+            writer.Write(id);
+    }
+
+    /// <summary>
+    /// Writes two packed dimension-major blocks.
+    /// </summary>
+    /// <param name="writer">Binary writer positioned after ids.</param>
+    private static void WriteBlocks(BinaryWriter writer)
+    {
+        short[] lane0 = [10, 11, 12, 13, 14, short.MaxValue, short.MaxValue, short.MaxValue];
+        short[] lane1 = [0, 0, 0, 0, 0, short.MaxValue, short.MaxValue, short.MaxValue];
+
+        for (int dim = 0; dim < Dims; dim++)
+            foreach (short value in lane0)
+                writer.Write(value);
+
+        for (int dim = 0; dim < Dims; dim++)
+            foreach (short value in lane1)
+                writer.Write(value);
     }
 }

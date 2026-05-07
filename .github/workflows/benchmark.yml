@@ -22,6 +22,74 @@ on:
         description: Optional prebuilt WebApi image; empty means build from checkout
         required: false
         default: ""
+      report_kind:
+        description: Report lane used by GitHub Pages archive
+        required: true
+        default: experiment
+        type: choice
+        options:
+          - experiment
+          - candidate
+      build_ivf:
+        description: Build references.ivf.bin during Docker image build
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      scorer_mode:
+        description: Runtime scorer mode
+        required: true
+        default: bucket
+        type: choice
+        options:
+          - bucket
+          - ivf
+      ivf_clusters:
+        description: IVF build cluster count
+        required: true
+        default: "2048"
+      ivf_train_sample:
+        description: IVF build training sample size
+        required: true
+        default: "65536"
+      ivf_iterations:
+        description: IVF k-means iterations
+        required: true
+        default: "6"
+      ivf_fast_nprobe:
+        description: IVF first-pass nprobe
+        required: true
+        default: "1"
+      ivf_full_nprobe:
+        description: IVF boundary-pass nprobe
+        required: true
+        default: "1"
+      ivf_boundary_full:
+        description: Enable boundary second pass
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      ivf_bbox_repair:
+        description: Enable bounding-box repair
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      ivf_repair_min_frauds:
+        description: Inclusive repair fraud-count minimum
+        required: true
+        default: "1"
+      ivf_repair_max_frauds:
+        description: Inclusive repair fraud-count maximum
+        required: true
+        default: "4"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -33,11 +101,14 @@ jobs:
     timeout-minutes: 45
 
     permissions:
-      contents: read
+      actions: write
+      contents: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Show runner capacity
         run: |
@@ -56,7 +127,67 @@ jobs:
           BENCHMARK_PULL_IMAGE: ${{ inputs.webapi_image != '' && 'true' || 'false' }}
           BENCHMARK_NO_BUILD: ${{ inputs.webapi_image != '' && 'true' || 'false' }}
           RESULTS_DIR: benchmark-results
+          BUILD_IVF: ${{ inputs.build_ivf }}
+          SCORER_MODE: ${{ inputs.scorer_mode }}
+          IVF_CLUSTERS: ${{ inputs.ivf_clusters }}
+          IVF_TRAIN_SAMPLE: ${{ inputs.ivf_train_sample }}
+          IVF_ITERATIONS: ${{ inputs.ivf_iterations }}
+          IVF_FAST_NPROBE: ${{ inputs.ivf_fast_nprobe }}
+          IVF_FULL_NPROBE: ${{ inputs.ivf_full_nprobe }}
+          IVF_BOUNDARY_FULL: ${{ inputs.ivf_boundary_full }}
+          IVF_BBOX_REPAIR: ${{ inputs.ivf_bbox_repair }}
+          IVF_REPAIR_MIN_FRAUDS: ${{ inputs.ivf_repair_min_frauds }}
+          IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
         run: bash scripts/ci-official-benchmark.sh
+
+      - name: Archive benchmark report
+        if: always() && hashFiles('benchmark-results/results.json') != ''
+        env:
+          RESULTS_JSON: benchmark-results/results.json
+          K6_HTML_REPORT: benchmark-results/k6-report.html
+          COMPOSE_LOG: benchmark-results/docker-compose.log
+          BENCHMARK_IMAGE: ${{ inputs.webapi_image }}
+          BENCHMARK_SHA: ${{ github.sha }}
+          BENCHMARK_RUN_ID: ${{ github.run_id }}
+          BENCHMARK_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BENCHMARK_REPORT_KIND: ${{ inputs.report_kind }}
+          COMPOSE_FILE: ${{ inputs.compose_file }}
+          OFFICIAL_REF: ${{ inputs.official_ref }}
+          K6_IMAGE: ${{ inputs.k6_image }}
+          BUILD_IVF: ${{ inputs.build_ivf }}
+          SCORER_MODE: ${{ inputs.scorer_mode }}
+          IVF_CLUSTERS: ${{ inputs.ivf_clusters }}
+          IVF_TRAIN_SAMPLE: ${{ inputs.ivf_train_sample }}
+          IVF_ITERATIONS: ${{ inputs.ivf_iterations }}
+          IVF_FAST_NPROBE: ${{ inputs.ivf_fast_nprobe }}
+          IVF_FULL_NPROBE: ${{ inputs.ivf_full_nprobe }}
+          IVF_BOUNDARY_FULL: ${{ inputs.ivf_boundary_full }}
+          IVF_BBOX_REPAIR: ${{ inputs.ivf_bbox_repair }}
+          IVF_REPAIR_MIN_FRAUDS: ${{ inputs.ivf_repair_min_frauds }}
+          IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
+        run: bash scripts/archive-benchmark-result.sh
+
+      - name: Commit benchmark report
+        id: commit-benchmark-report
+        if: always() && hashFiles('benchmark-results/results.json') != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/public/reports
+          if git diff --cached --quiet; then
+            echo "No benchmark report changes to commit"
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "docs: archive rinha benchmark"
+            git push
+            echo "committed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Refresh GitHub Pages report site
+        if: steps.commit-benchmark-report.outputs.committed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run pages.yml --ref main
 
       - name: Upload benchmark artifacts
         if: always()

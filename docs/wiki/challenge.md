@@ -23,5 +23,4 @@ Ranking pressure:
 - 0% failures preserves detection score
 - HTTP errors destroy score quickly
 
-This repository currently wins on transport speed in CI-like runs, but still loses ranking score through fraud classification errors. Accuracy work is the main remaining lane.
-
+This repository currently has `0` HTTP errors in the latest CI-like run, but still loses ranking score through fraud classification errors. Accuracy work is the main remaining lane.

@@ -16,6 +16,17 @@ COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 OFFICIAL_REF="${OFFICIAL_REF:-main}"
 K6_IMAGE="${K6_IMAGE:-grafana/k6:latest}"
 REPORT_KIND="${BENCHMARK_REPORT_KIND:-}"
+BUILD_IVF="${BUILD_IVF:-false}"
+SCORER_MODE="${SCORER_MODE:-bucket}"
+IVF_CLUSTERS="${IVF_CLUSTERS:-}"
+IVF_TRAIN_SAMPLE="${IVF_TRAIN_SAMPLE:-}"
+IVF_ITERATIONS="${IVF_ITERATIONS:-}"
+IVF_FAST_NPROBE="${IVF_FAST_NPROBE:-}"
+IVF_FULL_NPROBE="${IVF_FULL_NPROBE:-}"
+IVF_BOUNDARY_FULL="${IVF_BOUNDARY_FULL:-}"
+IVF_BBOX_REPAIR="${IVF_BBOX_REPAIR:-}"
+IVF_REPAIR_MIN_FRAUDS="${IVF_REPAIR_MIN_FRAUDS:-}"
+IVF_REPAIR_MAX_FRAUDS="${IVF_REPAIR_MAX_FRAUDS:-}"
 
 if [[ -z "$REPORT_KIND" ]]; then
     if [[ "$COMPOSE_FILE" == "docker-compose.yml" ]]; then
@@ -59,6 +70,17 @@ jq -n \
     --arg k6_image "$K6_IMAGE" \
     --arg report_kind "$REPORT_KIND" \
     --arg html_report "$html_report_file" \
+    --arg build_ivf "$BUILD_IVF" \
+    --arg scorer_mode "$SCORER_MODE" \
+    --arg ivf_clusters "$IVF_CLUSTERS" \
+    --arg ivf_train_sample "$IVF_TRAIN_SAMPLE" \
+    --arg ivf_iterations "$IVF_ITERATIONS" \
+    --arg ivf_fast_nprobe "$IVF_FAST_NPROBE" \
+    --arg ivf_full_nprobe "$IVF_FULL_NPROBE" \
+    --arg ivf_boundary_full "$IVF_BOUNDARY_FULL" \
+    --arg ivf_bbox_repair "$IVF_BBOX_REPAIR" \
+    --arg ivf_repair_min_frauds "$IVF_REPAIR_MIN_FRAUDS" \
+    --arg ivf_repair_max_frauds "$IVF_REPAIR_MAX_FRAUDS" \
     --arg source "zanfranceschi/rinha-de-backend-2026:test/test.js" \
     --slurpfile result "$RESULTS_JSON" \
     '{
@@ -75,7 +97,20 @@ jq -n \
             official_ref: $official_ref,
             k6_image: $k6_image,
             source: $source,
-            environment: "GitHub Actions ubuntu-latest; official-like only, not official Rinha hardware"
+            environment: "GitHub Actions ubuntu-latest; official-like only, not official Rinha hardware",
+            benchmark_config: {
+                build_ivf: $build_ivf,
+                scorer_mode: $scorer_mode,
+                ivf_clusters: $ivf_clusters,
+                ivf_train_sample: $ivf_train_sample,
+                ivf_iterations: $ivf_iterations,
+                ivf_fast_nprobe: $ivf_fast_nprobe,
+                ivf_full_nprobe: $ivf_full_nprobe,
+                ivf_boundary_full: $ivf_boundary_full,
+                ivf_bbox_repair: $ivf_bbox_repair,
+                ivf_repair_min_frauds: $ivf_repair_min_frauds,
+                ivf_repair_max_frauds: $ivf_repair_max_frauds
+            }
         },
         result: $result[0]
     }' > "$report_path"
@@ -94,6 +129,10 @@ for report in "$REPORTS_DIR"/${REPORT_PREFIX}-*.json; do
         image: .metadata.image,
         compose_file: .metadata.compose_file,
         report_kind: (.metadata.report_kind // (if .metadata.compose_file == "docker-compose.yml" then "candidate" else "experiment" end)),
+        scorer_mode: (.metadata.benchmark_config.scorer_mode // "bucket"),
+        build_ivf: (.metadata.benchmark_config.build_ivf // "false"),
+        ivf_fast_nprobe: (.metadata.benchmark_config.ivf_fast_nprobe // ""),
+        ivf_full_nprobe: (.metadata.benchmark_config.ivf_full_nprobe // ""),
         html_report: .metadata.html_report,
         p99: .result.p99,
         failure_rate: .result.scoring.failure_rate,

@@ -13,6 +13,21 @@ docker compose up --build
 curl -i http://localhost:9999/ready
 ```
 
+Run local stack with the experimental IVF scorer:
+
+```bash
+BUILD_IVF=true SCORER_MODE=ivf docker compose up --build
+```
+
+Tune IVF image-build parameters with `IVF_CLUSTERS`, `IVF_TRAIN_SAMPLE`, and
+`IVF_ITERATIONS` when testing alternatives.
+
+Generate IVF data without Docker:
+
+```bash
+BUILD_IVF=true dotnet run --project src/DataConverter/DataConverter.csproj -- data/ --ivf
+```
+
 Run focused tests:
 
 ```bash
@@ -32,4 +47,3 @@ cd docs
 bun install
 bun run dev
 ```
-

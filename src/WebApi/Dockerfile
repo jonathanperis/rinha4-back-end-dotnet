@@ -11,6 +11,10 @@ RUN apk add --no-cache \
 ARG AOT
 ARG EXTRA_OPTIMIZE
 ARG BUILD_CONFIGURATION=Release
+ARG BUILD_IVF=false
+ARG IVF_CLUSTERS=2048
+ARG IVF_TRAIN_SAMPLE=65536
+ARG IVF_ITERATIONS=6
 ARG CACHEBUST
 ARG TARGETARCH
 
@@ -29,6 +33,7 @@ COPY ["src/DataConverter/DataConverter.csproj", "DataConverter/"]
 RUN dotnet restore "DataConverter/DataConverter.csproj"
 COPY ["src/DataConverter/Program.cs", "DataConverter/"]
 COPY ["src/DataConverter/Usings.cs", "DataConverter/"]
+COPY ["src/DataConverter/IvfIndexBuilder.cs", "DataConverter/"]
 COPY ["src/WebApi/FraudVectorizer.cs", "WebApi/"]
 
 # Copy dataset files
@@ -37,7 +42,12 @@ COPY ["data/mcc_risk.json", "data/"]
 COPY ["data/normalization.json", "data/"]
 
 RUN dotnet build "DataConverter/DataConverter.csproj" -c Release -o /app/build-converter
-RUN /app/build-converter/DataConverter data/
+RUN if [ "$BUILD_IVF" = "true" ]; then \
+        BUILD_IVF=true IVF_CLUSTERS=$IVF_CLUSTERS IVF_TRAIN_SAMPLE=$IVF_TRAIN_SAMPLE IVF_ITERATIONS=$IVF_ITERATIONS \
+        /app/build-converter/DataConverter data/ --ivf; \
+    else \
+        /app/build-converter/DataConverter data/ && : > data/references.ivf.bin; \
+    fi
 
 # ── WebApi ──
 COPY ["src/WebApi/WebApi.csproj", "WebApi/"]
@@ -63,6 +73,7 @@ WORKDIR /app
 
 COPY --from=build /app/publish/WebApi /WebApi
 COPY --from=build /src/data/references.bin /data/
+COPY --from=build /src/data/references.ivf.bin /data/
 COPY --from=build /src/data/mcc_risk.json /data/
 COPY --from=build /src/data/normalization.json /data/
 

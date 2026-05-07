@@ -38,7 +38,7 @@ Submission shape:
   - `nginx.conf`
   - `info.json`
   - `LICENSE`
-- `docker-compose.yml` on `submission` uses the public GHCR image built from `main`.
+- `docker-compose.yml` on `submission` pins the immutable public GHCR image built from `main`.
 
 ## Current Architecture
 
@@ -74,6 +74,8 @@ The raw HTTP server intentionally implements only the subset required by this wo
 
 It is not a general-purpose web server.
 
+Docker Compose waits for both API Unix socket files before starting nginx. This prevents the reverse proxy from accepting `/ready` while upstream sockets are still missing, which was the likely cause of official `No status` health-check failures.
+
 ## Services And Limits
 
 | Service | CPU | Memory | Notes |
@@ -86,7 +88,7 @@ It is not a general-purpose web server.
 API memory is dominated by:
 
 - `references.bin` loaded as one byte array
-- group response table
+- one-byte response-index table for all fine buckets
 - normalization and MCC lookup tables
 - NativeAOT runtime overhead
 
@@ -95,6 +97,8 @@ API memory is dominated by:
 Input data lives in `data/references.json.gz`.
 
 `src/DataConverter` converts it to `data/references.bin` at image build time.
+When `--ivf` or `BUILD_IVF=true` is enabled, the same converter also writes the
+experimental `data/references.ivf.bin` index.
 
 The binary file is embedded in the Docker image. The runtime container does not need to download or transform data before serving.
 
@@ -113,8 +117,31 @@ Why this format:
 
 - precomputed response indexes reduce image size and startup work.
 - `padded_dims = 16` keeps the API request-vector stride stable.
-- group offsets make bucket lookup O(1).
+- one byte per fine bucket keeps lookup O(1) with a compact `4.0 MB` table.
 - runtime can start serving immediately after reading the compact table.
+
+Experimental IVF format:
+
+```text
+int32 magic = "IVF1"
+int32 count
+int32 clusters
+int32 dims
+int32 scale
+int32 block_lanes
+int32 total_blocks
+float32 centroids[dims * clusters]
+int16 bbox_min[clusters * dims]
+int16 bbox_max[clusters * dims]
+int32 offsets[clusters + 1]
+byte labels[padded_rows]
+int32 ids[padded_rows]
+int16 blocks[total_blocks * dims * block_lanes]
+```
+
+The IVF file is opt-in and separate from `references.bin`. It lets CI AB-test
+nearest-cluster search, `nprobe=1`, and bounding-box repair without changing the
+known-good bucket artifact.
 
 ## Fraud Vector
 
@@ -160,7 +187,7 @@ Total:
 16 * 32 * 32 * 16 * 16 = 4,194,304 fine buckets
 ```
 
-At startup the API builds:
+At startup the default API mode loads:
 
 ```text
 groupResponseIndexes[group] -> response index 0..5
@@ -174,11 +201,21 @@ request -> vector -> fine group -> response index -> JSON bytes
 
 This is intentionally O(1) after parsing.
 
+Experimental classifier:
+
+- enabled only with `SCORER_MODE=ivf`
+- loads `references.ivf.bin` from `IVF_PATH` or beside `references.bin`
+- scans nearest IVF centroid clusters with `IVF_FAST_NPROBE`
+- reruns boundary fraud counts with `IVF_FULL_NPROBE` when enabled
+- uses bounding-box lower bounds to repair missed clusters when enabled
+- falls back to the bucket classifier if the IVF file is absent or invalid
+
 Tradeoff:
 
 - This prioritizes ranking performance under load.
 - It is not guaranteed to match nearest-neighbor reference scoring for every request.
-- The implementation keeps only this production path in the repository.
+- The bucket implementation remains the production fallback until CI proves IVF
+  has lower p99, `0%` failures, and a better score.
 
 ## Hot Path Optimizations
 
@@ -193,6 +230,7 @@ Implemented:
 - Unix Domain Sockets between proxy and APIs
 - socket cleanup on process start
 - socket chmod so nginx can reach API sockets
+- Compose healthcheck waits for both API socket files before nginx starts
 - direct header and `Content-Length` parsing
 - manual `Utf8JsonReader` parser
 - no JSON model binding in `/fraud-score`
@@ -203,6 +241,7 @@ Implemented:
 - no hot-path logging
 - grouped binary dataset
 - O(1) default classifier
+- experimental IVF scorer behind `SCORER_MODE=ivf`
 
 ## Reverse Proxy
 
@@ -235,10 +274,24 @@ Generate binary data:
 dotnet run --project src/DataConverter/DataConverter.csproj -- data/
 ```
 
+Generate bucket data plus experimental IVF data:
+
+```bash
+BUILD_IVF=true IVF_CLUSTERS=2048 IVF_TRAIN_SAMPLE=65536 IVF_ITERATIONS=6 \
+  dotnet run --project src/DataConverter/DataConverter.csproj -- data/ --ivf
+```
+
 Run one API locally over TCP:
 
 ```bash
 DATA_PATH=data/references.bin dotnet run --project src/WebApi/WebApi.csproj
+```
+
+Run one API locally with IVF scoring:
+
+```bash
+SCORER_MODE=ivf IVF_PATH=data/references.ivf.bin DATA_PATH=data/references.bin \
+  dotnet run --project src/WebApi/WebApi.csproj
 ```
 
 Check readiness:
@@ -262,6 +315,15 @@ docker compose up --build
 curl -i http://localhost:9999/ready
 ```
 
+Run full Docker stack with IVF experiment enabled:
+
+```bash
+BUILD_IVF=true SCORER_MODE=ivf docker compose up --build
+```
+
+Docker IVF build parameters are also tunable with `IVF_CLUSTERS`,
+`IVF_TRAIN_SAMPLE`, and `IVF_ITERATIONS`.
+
 ## Benchmarks
 
 CI official-like benchmark:
@@ -277,7 +339,18 @@ CI official-like benchmark:
   - `index.html` browser-friendly report list
   - `index.json` machine-readable history
   - `latest.json` latest run shortcut
+  - `latest-candidate.json` latest default submission-stack run
   - `rinha-benchmark-YYYYMMDDHHMMSS-SHA.json` immutable run result
+  - `rinha-benchmark-YYYYMMDDHHMMSS-SHA.html` k6 HTML report when generated
+
+Current CI signal:
+
+- latest candidate p99: `1.35ms`
+- latest candidate HTTP errors: `0`
+- latest candidate failure rate: `2.35%`
+- latest candidate score: `3204.75`
+
+Those numbers are official-like GitHub Actions results, not official Rinha hardware results.
 
 Run from GitHub Actions:
 
@@ -285,10 +358,12 @@ Run from GitHub Actions:
 2. Select **Official-like Benchmark**.
 3. Choose compose file:
    - `docker-compose.yml` for nginx stream baseline
-4. Run workflow.
+4. For IVF experiment, set `report_kind=experiment`, `BUILD_IVF=true`, `SCORER_MODE=ivf`, `IVF_FAST_NPROBE=1`, `IVF_FULL_NPROBE=1`, `IVF_BBOX_REPAIR=true`, and repair frauds `1..4`.
+5. Run workflow.
 
 Manual runs can also benchmark a pushed image by filling `webapi_image`; when set,
 the workflow pulls that image and starts Compose with `--no-build`.
+Manual workflow runs archive results under `docs/public/reports/` and refresh GitHub Pages when a report changes.
 
 ## GitHub Pages
 
@@ -316,6 +391,9 @@ Unit-style vectorization tests live under `test/`:
 dotnet run --project test/VectorizationTests/VectorizationTests.csproj --no-restore
 ```
 
+Current focused tests cover vector grouping, request parsing, fraud-count
+response mapping, and a synthetic IVF boundary/bounding-box repair case.
+
 Build checks:
 
 ```bash
@@ -335,6 +413,8 @@ Build details:
 
 - SDK image builds converter and API.
 - converter creates `references.bin`.
+- `BUILD_IVF=true` makes the converter create `references.ivf.bin`; default is an empty placeholder.
+- IVF image builds accept `IVF_CLUSTERS`, `IVF_TRAIN_SAMPLE`, and `IVF_ITERATIONS` build args.
 - API is published with NativeAOT.
 - runtime image contains only API binary plus data files.
 
@@ -342,7 +422,7 @@ Publishing:
 
 - pushes to `main` trigger the amd64 build workflow
 - successful workflow publishes `ghcr.io/jonathanperis/rinha4-back-end-dotnet:latest`
-- the `submission` branch references this tag
+- the `submission` branch pins an immutable `ci-${GITHUB_SHA}` tag after a successful build
 
 Official preview trigger:
 
@@ -356,15 +436,17 @@ Preview issues are opened in the official Rinha repository after `main` image bu
 
 Main blocker for top-10 target:
 
-- keep nginx stream throughput
-- remove the remaining rare EOF failures under 500 VU
-- lower p99 toward single-digit milliseconds
+- reduce classifier failures from the current `2.35%` toward `0%`
+- preserve `0` HTTP errors after the nginx/socket readiness hardening
+- keep p99 near the `1ms` scoring floor while improving accuracy
 
 Likely next moves:
 
-1. Harden raw HTTP/1 connection handling until repeated full runs show 0 EOF.
-2. Continue nginx stream tuning around backlog, upstream retry, and connection churn.
-3. Compare with official-style load locally.
+1. Build the full IVF image in CI with `BUILD_IVF=true`.
+2. Run official-like benchmark with `SCORER_MODE=ivf`, `IVF_FAST_NPROBE=1`, `IVF_FULL_NPROBE=1`, `IVF_BBOX_REPAIR=true`, and fraud repair range `1..4`.
+3. Compare IVF p99, failure rate, and score against the current bucket candidate.
+4. Promote IVF to submission only if it preserves `0` HTTP errors and improves p99/failure/score.
+5. Track official issue `#2088` for the next preview result from the updated submission branch.
 
 ## License
 

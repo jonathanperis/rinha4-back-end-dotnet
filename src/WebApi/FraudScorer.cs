@@ -3,8 +3,9 @@
 /// </summary>
 /// <remarks>
 /// The scorer uses the production <c>O(1)</c> fine-bucket majority lookup built
-/// from <c>references.bin</c>. The runtime dataset contains grouped labels and
-/// precomputed response indexes, not full reference vectors.
+/// from <c>references.bin</c> by default. An experimental IVF index can be
+/// loaded with <c>SCORER_MODE=ivf</c>; when unavailable, the scorer falls back
+/// to the bucket table.
 /// </remarks>
 internal sealed class FraudScorer
 {
@@ -21,6 +22,8 @@ internal sealed class FraudScorer
     private readonly int maxMerchantAvgAmount;
     private readonly float[] mccRisk;
     private readonly bool[] mccRiskKnown;
+    private readonly IvfIndex? ivfIndex;
+    private readonly IvfSearchOptions ivfOptions;
 
     /// <summary>
     /// Stores immutable dataset, normalization, and MCC state used by all request handlers.
@@ -28,10 +31,14 @@ internal sealed class FraudScorer
     /// <param name="dataset">Loaded dataset layout and precomputed group response indexes.</param>
     /// <param name="normalization">Normalization denominators loaded from <c>normalization.json</c>.</param>
     /// <param name="mcc">MCC risk arrays loaded from <c>mcc_risk.json</c>.</param>
+    /// <param name="ivfIndex">Optional experimental IVF index.</param>
+    /// <param name="ivfOptions">Runtime IVF search controls.</param>
     private FraudScorer(
         ReferenceDataset dataset,
         NormalizationConstants normalization,
-        MccRiskTable mcc)
+        MccRiskTable mcc,
+        IvfIndex? ivfIndex,
+        IvfSearchOptions ivfOptions)
     {
         dims = dataset.Dims;
         paddedDims = dataset.PaddedDims;
@@ -46,6 +53,8 @@ internal sealed class FraudScorer
         maxMerchantAvgAmount = normalization.MaxMerchantAvgAmount;
         mccRisk = mcc.RiskByCode;
         mccRiskKnown = mcc.KnownByCode;
+        this.ivfIndex = ivfIndex;
+        this.ivfOptions = ivfOptions;
     }
 
     /// <summary>
@@ -59,9 +68,11 @@ internal sealed class FraudScorer
         ReferenceDataset dataset = ReferenceDataset.Load(dataPath);
         NormalizationConstants normalization = NormalizationConstants.Load(Path.Combine(dataDirectory, "normalization.json"));
         MccRiskTable mcc = MccRiskTable.Load(Path.Combine(dataDirectory, "mcc_risk.json"));
+        IvfIndex? ivfIndex = TryLoadIvf(dataDirectory);
+        IvfSearchOptions ivfOptions = IvfSearchOptions.FromEnvironment();
 
         Console.WriteLine("Dataset loaded. Ready to serve.");
-        return new FraudScorer(dataset, normalization, mcc);
+        return new FraudScorer(dataset, normalization, mcc, ivfIndex, ivfOptions);
     }
 
     /// <summary>
@@ -124,8 +135,36 @@ internal sealed class FraudScorer
         qv[dims] = 0;
         qv[dims + 1] = 0;
 
+        if (ivfIndex is not null)
+        {
+            byte frauds = ivfIndex.FraudCount(fv, qv, ivfOptions);
+            return HttpResponses.FraudScores[frauds];
+        }
+
         int queryGroup = FraudVectorizer.FineVectorGroup(qv[5], qv[6], qv[0], qv[7], qv[9], qv[10], qv[11], scale);
         return HttpResponses.FraudScores[groupResponseIndexes[queryGroup]];
+    }
+
+    /// <summary>
+    /// Loads the experimental IVF index only when explicitly requested.
+    /// </summary>
+    /// <param name="dataDirectory">Directory containing runtime data files.</param>
+    /// <returns>The loaded IVF index, or <see langword="null"/> for bucket fallback.</returns>
+    private static IvfIndex? TryLoadIvf(string dataDirectory)
+    {
+        string? mode = Environment.GetEnvironmentVariable("SCORER_MODE");
+        if (!string.Equals(mode, "ivf", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        string path = Environment.GetEnvironmentVariable("IVF_PATH") ?? Path.Combine(dataDirectory, "references.ivf.bin");
+        if (IvfIndex.TryLoad(path, out IvfIndex? index, out string error))
+        {
+            Console.WriteLine($"IVF scorer enabled: {path}");
+            return index;
+        }
+
+        Console.WriteLine($"IVF scorer requested but unavailable. Falling back to bucket scorer. {error}");
+        return null;
     }
 
     /// <summary>

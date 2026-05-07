@@ -1,6 +1,9 @@
-string inputDir = args.Length > 0 ? args[0] : "/data";
+string inputDir = DataConverterOptions.InputDirectory(args);
 string inputPath = Path.Combine(inputDir, "references.json.gz");
 string outputPath = Path.Combine(inputDir, "references.bin");
+string ivfOutputPath = Path.Combine(inputDir, "references.ivf.bin");
+bool buildIvf = DataConverterOptions.BuildIvf(args);
+IvfBuildOptions ivfOptions = DataConverterOptions.IvfOptions();
 
 const int Magic = 0x37444852; // RHD7
 const short Scale = 10000;
@@ -13,6 +16,12 @@ Console.WriteLine("Loading references.json.gz...");
 int count;
 var groupCounts = new int[GroupCount];
 var groupFrauds = new int[GroupCount];
+float[]? ivfVectors = null;
+byte[]? ivfLabels = null;
+int ivfRow = 0;
+
+if (buildIvf)
+    Console.WriteLine($"IVF build enabled: clusters={ivfOptions.Clusters}, train_sample={ivfOptions.TrainSample}, iterations={ivfOptions.Iterations}");
 
 // Single pass counts bucket sizes and fraud labels. The API only needs the
 // final majority response table at runtime, so raw labels stay out of the image.
@@ -24,13 +33,30 @@ using (var doc = JsonDocument.Parse(gz))
     count = root.GetArrayLength();
     Console.WriteLine($"Found {count:N0} vectors");
 
+    if (buildIvf)
+    {
+        ivfVectors = GC.AllocateUninitializedArray<float>(count * Dims);
+        ivfLabels = GC.AllocateUninitializedArray<byte>(count);
+    }
+
     foreach (var el in root.EnumerateArray())
     {
         var v = el.GetProperty("vector");
         int group = DataConverterVectorGroups.VectorGroup(v);
+        bool isFraud = el.GetProperty("label").GetString() == "fraud";
         groupCounts[group]++;
-        if (el.GetProperty("label").GetString() == "fraud")
+        if (isFraud)
             groupFrauds[group]++;
+
+        if (buildIvf)
+        {
+            int vectorBase = ivfRow * Dims;
+            for (int dim = 0; dim < Dims; dim++)
+                ivfVectors![vectorBase + dim] = v[dim].GetSingle();
+
+            ivfLabels![ivfRow] = isFraud ? (byte)1 : (byte)0;
+            ivfRow++;
+        }
     }
 }
 
@@ -61,6 +87,78 @@ writer.Flush();
 long size = new FileInfo(outputPath).Length;
 Console.WriteLine($"Done. Output: {size / (1024.0 * 1024.0):F1} MB ({size:N0} bytes)");
 Console.WriteLine($"Format: {count} vectors, {Dims} dims (padded to {PaddedDims}), scale {Scale}");
+
+if (buildIvf)
+{
+    IvfIndexBuilder.Write(ivfOutputPath, ivfVectors!, ivfLabels!, count, ivfOptions);
+    long ivfSize = new FileInfo(ivfOutputPath).Length;
+    Console.WriteLine($"IVF output: {ivfSize / (1024.0 * 1024.0):F1} MB ({ivfSize:N0} bytes)");
+}
+
+/// <summary>
+/// Reads converter command-line and environment options.
+/// </summary>
+/// <remarks>
+/// The default converter output stays the compact bucket table. The IVF file is
+/// opt-in so the production image can keep the small, known-good data path.
+/// </remarks>
+internal static class DataConverterOptions
+{
+    /// <summary>
+    /// Resolves the input directory from positional arguments.
+    /// </summary>
+    /// <param name="args">Command-line arguments passed to the converter.</param>
+    /// <returns>The directory containing Rinha resource files.</returns>
+    public static string InputDirectory(string[] args)
+    {
+        foreach (string arg in args)
+        {
+            if (!arg.StartsWith("--", StringComparison.Ordinal))
+                return arg;
+        }
+
+        return "/data";
+    }
+
+    /// <summary>
+    /// Determines whether the converter should write the experimental IVF index.
+    /// </summary>
+    /// <param name="args">Command-line arguments passed to the converter.</param>
+    /// <returns><see langword="true"/> when <c>--ivf</c> or <c>BUILD_IVF=true</c> is set.</returns>
+    public static bool BuildIvf(string[] args)
+    {
+        foreach (string arg in args)
+        {
+            if (string.Equals(arg, "--ivf", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        string? value = Environment.GetEnvironmentVariable("BUILD_IVF");
+        return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Reads IVF build parameters from environment variables.
+    /// </summary>
+    /// <returns>Configured IVF build options with conservative defaults.</returns>
+    public static IvfBuildOptions IvfOptions() => new(
+        EnvInt("IVF_CLUSTERS", 2048),
+        EnvInt("IVF_TRAIN_SAMPLE", 65_536),
+        EnvInt("IVF_ITERATIONS", 6));
+
+    /// <summary>
+    /// Reads an integer environment variable with fallback.
+    /// </summary>
+    /// <param name="name">Environment variable name.</param>
+    /// <param name="fallback">Value returned when the variable is missing or invalid.</param>
+    /// <returns>The parsed positive value, or <paramref name="fallback"/>.</returns>
+    private static int EnvInt(string name, int fallback)
+    {
+        string? value = Environment.GetEnvironmentVariable(name);
+        return int.TryParse(value, CultureInfo.InvariantCulture, out int parsed) && parsed > 0 ? parsed : fallback;
+    }
+}
 
 /// <summary>
 /// Converter-only helpers for deriving binary dataset grouping metadata.
