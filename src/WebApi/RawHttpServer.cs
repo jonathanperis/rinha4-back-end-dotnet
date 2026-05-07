@@ -1,8 +1,3 @@
-using System.Buffers;
-using System.Net;
-using System.Net.Sockets;
-using System.Runtime.Versioning;
-
 /// <summary>
 /// Raw HTTP/1 server used for the competition container. It binds to the Unix
 /// domain socket used by nginx in Docker, or TCP port 8080 for local runs, then

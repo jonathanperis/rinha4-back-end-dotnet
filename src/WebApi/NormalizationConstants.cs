@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 /// <summary>
 /// Normalization denominators loaded from <c>normalization.json</c>.
 /// </summary>

@@ -1,6 +1,3 @@
-using System.Text;
-using System.Text.Json;
-
 /// <summary>
 /// Allocation-conscious JSON parser for the Rinha fraud-score request body.
 /// </summary>

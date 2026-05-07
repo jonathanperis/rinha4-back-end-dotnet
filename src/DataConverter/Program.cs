@@ -1,6 +1,3 @@
-using System.IO.Compression;
-using System.Text.Json;
-
 string inputDir = args.Length > 0 ? args[0] : "/data";
 string inputPath = Path.Combine(inputDir, "references.json.gz");
 string outputPath = Path.Combine(inputDir, "references.bin");

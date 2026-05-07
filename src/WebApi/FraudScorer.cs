@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 /// <summary>
 /// Converts parsed Rinha fraud-score requests into competition responses.
 /// </summary>

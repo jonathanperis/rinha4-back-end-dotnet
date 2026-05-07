@@ -1,5 +1,3 @@
-using System.Net.Sockets;
-
 /// <summary>
 /// Low-level HTTP/1 byte helpers for the raw socket server. These methods keep
 /// parsing intentionally narrow to the Rinha endpoint contract and avoid string

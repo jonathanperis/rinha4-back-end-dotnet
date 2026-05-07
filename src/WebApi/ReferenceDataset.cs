@@ -1,5 +1,3 @@
-using System.Runtime.InteropServices;
-
 /// <summary>
 /// Runtime dataset layout metadata and precomputed fine-bucket response table.
 /// </summary>

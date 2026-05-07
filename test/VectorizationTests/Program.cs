@@ -1,5 +1,3 @@
-using System.Globalization;
-
 VectorizationTestRunner.Run("parses UTF-8 ISO UTC hour and weekday", () =>
 {
     FraudVectorizer.ParseIsoUtc("2026-03-11T20:23:35Z"u8, out int hour, out int dayOfWeek, out int minuteStamp);

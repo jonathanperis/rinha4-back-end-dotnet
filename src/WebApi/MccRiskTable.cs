@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 /// <summary>
 /// Flat MCC risk lookup tables loaded from <c>mcc_risk.json</c>.
 /// </summary>
