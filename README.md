@@ -350,6 +350,8 @@ CI official-like benchmark:
 - Test source: clones `zanfranceschi/rinha-de-backend-2026` and runs official `test/test.js`
 - Stack start: `docker compose --compatibility` so Compose maps `deploy.resources.limits` into local container limits
 - Artifacts: `benchmark-results/results.json` and `benchmark-results/docker-compose.log`
+- Main build workflow also runs the same benchmark automatically after the amd64 image build/push succeeds.
+- Automatic runs use immutable image tag `ci-${GITHUB_SHA}` instead of rebuilding from checkout.
 
 Run from GitHub Actions:
 
@@ -361,6 +363,9 @@ Run from GitHub Actions:
    - `docker-compose.envoy.yml`
    - `docker-compose.haproxy.yml`
 4. Run workflow.
+
+Manual runs can also benchmark a pushed image by filling `webapi_image`; when set,
+the workflow pulls that image and starts Compose with `--no-build`.
 
 ## Tests And Validation
 

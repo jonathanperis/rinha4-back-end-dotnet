@@ -21,6 +21,10 @@ on:
         description: k6 Docker image
         required: true
         default: grafana/k6:latest
+      webapi_image:
+        description: Optional prebuilt WebApi image; empty means build from checkout
+        required: false
+        default: ""
 
 jobs:
   official-like-benchmark:
@@ -48,6 +52,9 @@ jobs:
           COMPOSE_FILE: ${{ inputs.compose_file }}
           OFFICIAL_REF: ${{ inputs.official_ref }}
           K6_IMAGE: ${{ inputs.k6_image }}
+          WEBAPI_IMAGE: ${{ inputs.webapi_image }}
+          BENCHMARK_PULL_IMAGE: ${{ inputs.webapi_image != '' && 'true' || 'false' }}
+          BENCHMARK_NO_BUILD: ${{ inputs.webapi_image != '' && 'true' || 'false' }}
           RESULTS_DIR: benchmark-results
         run: bash scripts/ci-official-benchmark.sh
 

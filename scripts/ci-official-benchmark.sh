@@ -7,6 +7,8 @@ OFFICIAL_REF="${OFFICIAL_REF:-main}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 RESULTS_DIR="${RESULTS_DIR:-benchmark-results}"
 K6_IMAGE="${K6_IMAGE:-grafana/k6:latest}"
+BENCHMARK_PULL_IMAGE="${BENCHMARK_PULL_IMAGE:-false}"
+BENCHMARK_NO_BUILD="${BENCHMARK_NO_BUILD:-false}"
 
 cd "$ROOT_DIR"
 
@@ -31,7 +33,22 @@ cleanup() {
 trap cleanup EXIT
 
 echo "==> Starting stack with compose resource compatibility"
-docker compose "${compose_args[@]}" up -d --build
+if [[ -n "${WEBAPI_IMAGE:-}" ]]; then
+    echo "Using WEBAPI_IMAGE=$WEBAPI_IMAGE"
+fi
+
+if [[ "$BENCHMARK_PULL_IMAGE" == "true" ]]; then
+    docker compose "${compose_args[@]}" pull webapi1 webapi2
+fi
+
+up_args=(up -d)
+if [[ "$BENCHMARK_NO_BUILD" != "true" ]]; then
+    up_args+=(--build)
+else
+    up_args+=(--no-build)
+fi
+
+docker compose "${compose_args[@]}" "${up_args[@]}"
 
 echo "==> Waiting for /ready"
 ready_url="http://localhost:9999/ready"
@@ -69,6 +86,9 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
         echo "## Rinha Official-Like Benchmark"
         echo
         echo "- Compose file: \`$COMPOSE_FILE\`"
+        if [[ -n "${WEBAPI_IMAGE:-}" ]]; then
+            echo "- WebApi image: \`$WEBAPI_IMAGE\`"
+        fi
         echo "- Official ref: \`$OFFICIAL_REF\`"
         echo "- k6 image: \`$K6_IMAGE\`"
         echo

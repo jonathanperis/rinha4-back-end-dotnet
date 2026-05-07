@@ -15,6 +15,8 @@ jobs:
   build-amd64:
     name: Build amd64 (Production)
     runs-on: ubuntu-latest
+    outputs:
+      benchmark_image: ${{ steps.benchmark-image.outputs.image }}
     permissions:
       contents: write
       packages: write
@@ -56,6 +58,7 @@ jobs:
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ steps.semver.outputs.version }},enable=${{ github.event_name != 'pull_request' }}
+            type=raw,value=ci-${{ github.sha }},enable=${{ github.event_name != 'pull_request' }}
             type=sha
 
       - name: Build and push amd64
@@ -72,6 +75,10 @@ jobs:
             EXTRA_OPTIMIZE=true
             BUILD_CONFIGURATION=Release
             CACHEBUST=${{ github.sha }}
+
+      - name: Set benchmark image
+        id: benchmark-image
+        run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:ci-${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
       - name: Create Release
         if: github.event_name != 'pull_request'
@@ -119,3 +126,53 @@ jobs:
             EXTRA_OPTIMIZE=true
             BUILD_CONFIGURATION=Release
             CACHEBUST=${{ github.sha }}
+
+  benchmark-amd64:
+    name: Benchmark amd64 image
+    runs-on: ubuntu-latest
+    needs: build-amd64
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Show runner capacity
+        run: |
+          uname -a
+          nproc
+          free -h
+          docker version
+          docker compose version
+
+      - name: Run official-like benchmark against built image
+        env:
+          WEBAPI_IMAGE: ${{ needs.build-amd64.outputs.benchmark_image }}
+          BENCHMARK_PULL_IMAGE: "true"
+          BENCHMARK_NO_BUILD: "true"
+          COMPOSE_FILE: docker-compose.yml
+          OFFICIAL_REF: main
+          K6_IMAGE: grafana/k6:latest
+          RESULTS_DIR: benchmark-results
+        run: bash scripts/ci-official-benchmark.sh
+
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rinha-benchmark-${{ github.sha }}
+          path: |
+            benchmark-results/results.json
+            benchmark-results/docker-compose.log
+          if-no-files-found: ignore
