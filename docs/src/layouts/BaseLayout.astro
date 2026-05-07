@@ -13,6 +13,8 @@ const {
 } = Astro.props;
 
 const pageUrl = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : `https://jonathanperis.github.io${Astro.url.pathname}`;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const asset = (path: string) => `${base}${path}`;
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -40,6 +42,7 @@ const jsonLd = {
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/svg+xml" href={asset('/title-mark.svg')} />
     <meta name="description" content={description} />
     <meta name="keywords" content="Rinha de Backend, .NET, NativeAOT, fraud detection, k6, performance, benchmark" />
     <link rel="canonical" href={pageUrl} />
