@@ -85,7 +85,7 @@ for report in "$REPORTS_DIR"/${REPORT_PREFIX}-*.json; do
     }' "$report" >> "$tmp_index"
 done
 
-jq -s 'sort_by(.timestamp) | reverse' "$tmp_index" > "$REPORTS_DIR/index.json"
+jq -s 'sort_by(.file) | reverse' "$tmp_index" > "$REPORTS_DIR/index.json"
 rm -f "$tmp_index"
 
 cat > "$REPORTS_DIR/index.html" <<'HTML'
