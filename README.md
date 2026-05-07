@@ -352,6 +352,11 @@ CI official-like benchmark:
 - Artifacts: `benchmark-results/results.json` and `benchmark-results/docker-compose.log`
 - Main build workflow also runs the same benchmark automatically after the amd64 image build/push succeeds.
 - Automatic runs use immutable image tag `ci-${GITHUB_SHA}` instead of rebuilding from checkout.
+- Automatic main-branch benchmark results are archived under `docs/public/reports/`, matching the historical report style used in the previous Rinha repository:
+  - `index.html` browser-friendly report list
+  - `index.json` machine-readable history
+  - `latest.json` latest run shortcut
+  - `rinha-benchmark-YYYYMMDDHHMMSS-SHA.json` immutable run result
 
 Run from GitHub Actions:
 
