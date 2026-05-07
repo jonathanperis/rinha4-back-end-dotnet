@@ -30,6 +30,16 @@ The default Docker topology follows the Rinha shape:
 - no privileged container
 - total limits: `1.00 CPU / 350 MB`
 
+Submission shape:
+
+- `main` contains source code, tests, docs, and build workflow.
+- `submission` contains only runnable files required by the official runner:
+  - `docker-compose.yml`
+  - `nginx.conf`
+  - `info.json`
+  - `LICENSE`
+- `docker-compose.yml` on `submission` uses the public GHCR image built from `main`.
+
 ## Current Architecture
 
 ```text
@@ -57,6 +67,15 @@ Default path:
 
 Exact KNN modes are still present for validation and experimentation, but the default competition path is the fine-bucket classifier.
 
+The raw HTTP server intentionally implements only the subset required by this workload:
+
+- `GET /ready`
+- `POST /fraud-score`
+- HTTP/1 keep-alive
+- `Content-Length` request bodies
+
+It is not a general-purpose web server.
+
 ## Services And Limits
 
 | Service | CPU | Memory | Notes |
@@ -78,6 +97,8 @@ API memory is dominated by:
 Input data lives in `data/references.json.gz`.
 
 `src/DataConverter` converts it to `data/references.bin` at image build time.
+
+The binary file is embedded in the Docker image. The runtime container does not need to download or transform data before serving.
 
 Binary format:
 
@@ -156,6 +177,12 @@ request -> vector -> fine group -> response index -> JSON bytes
 ```
 
 This is intentionally O(1) after parsing.
+
+Tradeoff:
+
+- This prioritizes ranking performance under load.
+- It is not an exact KNN answer for every request.
+- Exact modes remain available to measure that tradeoff against the reference data.
 
 ## Exact Search Modes
 
@@ -257,6 +284,12 @@ Interpretation:
 - HTTP nginx removes most EOF behavior but costs too much throughput and latency.
 - raw socket API greatly reduced EOF count under 500 VU, but the target remains strict 0 failures.
 
+Local benchmark caveats:
+
+- These runs use local Docker on this machine, not the official Mac Mini runner.
+- k6 rounds very low failure rates to `0.00%`; raw failed request counts still matter.
+- Official preview/final scripts can have different traffic shape and payload mix.
+
 ## Local Development
 
 Generate binary data:
@@ -346,6 +379,20 @@ Build details:
 - converter creates `references.bin`.
 - API is published with NativeAOT.
 - runtime image contains only API binary plus data files.
+
+Publishing:
+
+- pushes to `main` trigger the amd64 build workflow
+- successful workflow publishes `ghcr.io/jonathanperis/rinha4-back-end-dotnet:latest`
+- the `submission` branch references this tag
+
+Official preview trigger:
+
+```text
+rinha/test jonathanperis-dotnet
+```
+
+Preview issues are opened in the official Rinha repository after `main` image build and `submission` branch push finish.
 
 ## Cysharp Library Backlog
 
