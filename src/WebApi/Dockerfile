@@ -28,6 +28,7 @@ WORKDIR /src
 COPY ["src/DataConverter/DataConverter.csproj", "DataConverter/"]
 RUN dotnet restore "DataConverter/DataConverter.csproj"
 COPY ["src/DataConverter/Program.cs", "DataConverter/"]
+COPY ["src/DataConverter/Usings.cs", "DataConverter/"]
 COPY ["src/WebApi/FraudVectorizer.cs", "WebApi/"]
 
 # Copy dataset files
