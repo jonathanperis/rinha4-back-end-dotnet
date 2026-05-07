@@ -12,9 +12,15 @@ ARG AOT
 ARG EXTRA_OPTIMIZE
 ARG BUILD_CONFIGURATION=Release
 ARG CACHEBUST
+ARG TARGETARCH
 
 # Force cache invalidation when SHA changes
 RUN echo "CACHEBUST=${CACHEBUST}"
+RUN case "${TARGETARCH}" in \
+        amd64) echo linux-musl-x64 > /tmp/runtime-id ;; \
+        arm64) echo linux-musl-arm64 > /tmp/runtime-id ;; \
+        *) echo "Unsupported TARGETARCH=${TARGETARCH}" >&2; exit 1 ;; \
+    esac
 
 WORKDIR /src
 
@@ -22,6 +28,7 @@ WORKDIR /src
 COPY ["src/DataConverter/DataConverter.csproj", "DataConverter/"]
 RUN dotnet restore "DataConverter/DataConverter.csproj"
 COPY ["src/DataConverter/Program.cs", "DataConverter/"]
+COPY ["src/WebApi/FraudVectorizer.cs", "WebApi/"]
 
 # Copy dataset files
 COPY ["data/references.json.gz", "data/"]
@@ -33,15 +40,19 @@ RUN /app/build-converter/DataConverter data/
 
 # ── WebApi ──
 COPY ["src/WebApi/WebApi.csproj", "WebApi/"]
-RUN dotnet restore "WebApi/WebApi.csproj" -p:Configuration=${BUILD_CONFIGURATION} -p:AOT=${AOT}
+RUN dotnet restore "WebApi/WebApi.csproj" \
+    -p:Configuration=${BUILD_CONFIGURATION} \
+    -p:AOT=${AOT} \
+    -r $(cat /tmp/runtime-id)
 
 COPY ["src/WebApi/Program.cs", "WebApi/"]
+COPY ["src/WebApi/FraudVectorizer.cs", "WebApi/"]
 WORKDIR "/src/WebApi"
 RUN dotnet publish "WebApi.csproj" \
     -c $BUILD_CONFIGURATION \
     -p:AOT=${AOT} \
     -p:ExtraOptimize=${EXTRA_OPTIMIZE} \
-    -r linux-musl-x64 \
+    -r $(cat /tmp/runtime-id) \
     -o /app/publish \
     --self-contained
 

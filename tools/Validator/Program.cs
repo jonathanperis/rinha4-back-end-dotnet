@@ -1,6 +1,4 @@
-using System.IO.Compression;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.Json;
 
 // Simple offline validator: generates test payloads and verifies brute-force results
@@ -21,10 +19,21 @@ var fileBytes = File.ReadAllBytes(binPath);
 ReadOnlySpan<byte> span = fileBytes;
 int pos = 0;
 
-int count = ReadInt32(span, ref pos);
+const int BinaryMagic = 0x35444852;
+const int GroupCount = FraudVectorizer.FineGroupCount;
+
+int first = ReadInt32(span, ref pos);
+bool hasGroupIndex = first == BinaryMagic;
+int count = hasGroupIndex ? ReadInt32(span, ref pos) : first;
 int dims = ReadInt32(span, ref pos);
 int paddedDims = ReadInt32(span, ref pos);
 int scale = ReadInt32(span, ref pos);
+var groupOffsets = new int[GroupCount + 1];
+if (hasGroupIndex)
+{
+    for (int i = 0; i <= GroupCount; i++)
+        groupOffsets[i] = ReadInt32(span, ref pos);
+}
 
 int vectorsOffset = pos;
 int labelsOffset = pos + count * paddedDims * 2;
@@ -62,7 +71,27 @@ Console.WriteLine($"\nRunning {numTests} validation tests...\n");
 int correct = 0;
 int falsePositives = 0;
 int falseNegatives = 0;
+int approxMatches = 0;
+int approxFalsePositives = 0;
+int approxFalseNegatives = 0;
+int majorityMatches = 0;
+int majorityFalsePositives = 0;
+int majorityFalseNegatives = 0;
 double totalLatencyMs = 0;
+double approxTotalLatencyMs = 0;
+var groupFraudCounts = new int[hasGroupIndex ? GroupCount : 1];
+if (hasGroupIndex)
+{
+    // Precompute fraud counts per bucket so bucket-majority decisions can be
+    // compared against exact KNN decisions without rescanning every test.
+    for (int group = 0; group < GroupCount; group++)
+    {
+        int fraudsInGroup = 0;
+        for (int i = groupOffsets[group]; i < groupOffsets[group + 1]; i++)
+            fraudsInGroup += allLabels[i];
+        groupFraudCounts[group] = fraudsInGroup;
+    }
+}
 
 for (int t = 0; t < numTests; t++)
 {
@@ -71,21 +100,10 @@ for (int t = 0; t < numTests; t++)
     // Build a synthetic request from this vector
     var vector = allVectors.Slice(idx * paddedDims, dims);
 
-    // De-vectorize to create a realistic payload
-    float amount = (vector[0] / (float)scale) * maxAmount;
-    int installments = (int)((vector[1] / (float)scale) * maxInstallments);
-    float avgAmount = amount / ((vector[2] / (float)scale) * amountVsAvgRatio);
-    int hour = (int)((vector[3] / (float)scale) * 23);
-    int dow = (int)((vector[4] / (float)scale) * 6);
-
     // Run brute-force search
     var sw = System.Diagnostics.Stopwatch.StartNew();
 
-    Span<short> qv = stackalloc short[paddedDims];
-    for (int d = 0; d < dims; d++)
-        qv[d] = vector[d];
-    qv[dims] = 0;
-    qv[dims + 1] = 0;
+    ReadOnlySpan<short> qv = vector;
 
     var top = new Top5();
     for (int i = 0; i < count; i++)
@@ -106,6 +124,30 @@ for (int t = 0; t < numTests; t++)
     sw.Stop();
     totalLatencyMs += sw.Elapsed.TotalMilliseconds;
 
+    sw.Restart();
+    var approxTop = new Top5();
+    // Same-bucket approximation is not the production path anymore, but it is
+    // useful evidence when choosing bucket dimensions.
+    int queryGroup = hasGroupIndex
+        ? FraudVectorizer.FineVectorGroup(qv[5], qv[6], qv[0], qv[7], qv[9], qv[10], qv[11], scale)
+        : 0;
+    int approxStart = hasGroupIndex ? groupOffsets[queryGroup] : 0;
+    int approxEnd = hasGroupIndex ? groupOffsets[queryGroup + 1] : count;
+    for (int i = approxStart; i < approxEnd; i++)
+    {
+        float dist = 0;
+        for (int d = 0; d < dims; d++)
+        {
+            float diff = qv[d] - allVectors[i * paddedDims + d];
+            dist += diff * diff;
+        }
+        approxTop.TryInsert(dist, allLabels[i]);
+    }
+    int approxFrauds = approxTop.FraudCount();
+    bool approxApproved = approxFrauds < 3;
+    sw.Stop();
+    approxTotalLatencyMs += sw.Elapsed.TotalMilliseconds;
+
     // Expected: the query vector itself should be in the top-5
     bool expectedApproved = allLabels[idx] == 0;
 
@@ -115,6 +157,25 @@ for (int t = 0; t < numTests; t++)
         falsePositives++;
     else
         falseNegatives++;
+
+    if (approxApproved == approved)
+        approxMatches++;
+    else if (approxApproved && !approved)
+        approxFalseNegatives++;
+    else
+        approxFalsePositives++;
+
+    // Production classifier: a bucket's fraud ratio maps to the same approval
+    // threshold as a top-5 fraud count.
+    bool majorityApproved = hasGroupIndex && groupOffsets[queryGroup + 1] > groupOffsets[queryGroup]
+        ? groupFraudCounts[queryGroup] * 2 < groupOffsets[queryGroup + 1] - groupOffsets[queryGroup]
+        : approxApproved;
+    if (majorityApproved == approved)
+        majorityMatches++;
+    else if (majorityApproved && !approved)
+        majorityFalseNegatives++;
+    else
+        majorityFalsePositives++;
 }
 
 Console.WriteLine($"Results ({numTests} tests):");
@@ -123,6 +184,17 @@ Console.WriteLine($"  False Positives: {falsePositives}");
 Console.WriteLine($"  False Negatives: {falseNegatives}");
 Console.WriteLine($"  Avg Latency:     {totalLatencyMs / numTests:F2} ms");
 Console.WriteLine($"  Total Time:      {totalLatencyMs:F0} ms");
+Console.WriteLine();
+Console.WriteLine("Same-group approximate vs exact:");
+Console.WriteLine($"  Decision Match:  {approxMatches}/{numTests} ({100.0 * approxMatches / numTests:F1}%)");
+Console.WriteLine($"  Approx FP:       {approxFalsePositives}");
+Console.WriteLine($"  Approx FN:       {approxFalseNegatives}");
+Console.WriteLine($"  Avg Latency:     {approxTotalLatencyMs / numTests:F4} ms");
+Console.WriteLine();
+Console.WriteLine("Bucket-majority classifier vs exact:");
+Console.WriteLine($"  Decision Match:  {majorityMatches}/{numTests} ({100.0 * majorityMatches / numTests:F1}%)");
+Console.WriteLine($"  Majority FP:     {majorityFalsePositives}");
+Console.WriteLine($"  Majority FN:     {majorityFalseNegatives}");
 
 static int ReadInt32(ReadOnlySpan<byte> span, ref int pos)
 {
@@ -130,8 +202,6 @@ static int ReadInt32(ReadOnlySpan<byte> span, ref int pos)
     pos += 4;
     return val;
 }
-
-static float Clamp(float v) => v < 0f ? 0f : (v > 1f ? 1f : v);
 
 ref struct Top5
 {

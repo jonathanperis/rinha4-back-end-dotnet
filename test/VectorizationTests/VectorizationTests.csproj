@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="../../src/WebApi/FraudVectorizer.cs" Link="FraudVectorizer.cs" />
+    <ProjectReference Include="../../src/WebApi/WebApi.csproj" />
   </ItemGroup>
 
 </Project>

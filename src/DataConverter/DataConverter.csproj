@@ -7,4 +7,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Include="../WebApi/FraudVectorizer.cs" Link="FraudVectorizer.cs" />
+  </ItemGroup>
+
 </Project>

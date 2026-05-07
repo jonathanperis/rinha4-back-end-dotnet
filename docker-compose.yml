@@ -2,6 +2,7 @@ name: 'rinha-2026-dotnet'
 
 services:
   webapi1: &webapi
+    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:latest
     build:
       context: .
       dockerfile: ./src/WebApi/Dockerfile
@@ -29,7 +30,11 @@ services:
       resources:
         limits:
           cpus: "0.40"
-          memory: "150MB"
+          memory: "165MB"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
 
   webapi2:
     <<: *webapi
@@ -48,7 +53,7 @@ services:
       - sockets:/sockets
 
   nginx:
-    image: nginx:alpine
+    image: nginx:latest
     container_name: nginx-lb
     user: root
     volumes:
@@ -63,7 +68,11 @@ services:
       resources:
         limits:
           cpus: "0.20"
-          memory: "30MB"
+          memory: "20MB"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
 
 volumes:
   sockets:

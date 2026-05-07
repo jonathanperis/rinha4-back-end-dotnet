@@ -1,30 +1,20 @@
-using System.Buffers.Text;
+using System.Buffers;
+using System.Net;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
-var builder = WebApplication.CreateSlimBuilder(args);
+string? socketPath = Environment.GetEnvironmentVariable("SOCKET_PATH");
 
-builder.WebHost.ConfigureKestrel(options =>
-{
-    var socketPath = Environment.GetEnvironmentVariable("SOCKET_PATH");
-    if (!string.IsNullOrEmpty(socketPath))
-        options.ListenUnixSocket(socketPath);
-    else
-        options.ListenAnyIP(8080);
-});
-
-builder.Services.ConfigureHttpJsonOptions(options =>
-{
-    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
-    options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonContext.Default);
-});
-
-var app = builder.Build();
+// Default mode is the O(1) fine-bucket classifier. Exact modes are kept for
+// validation and experiments, but they are too expensive for the target load.
+bool exactSearch = string.Equals(Environment.GetEnvironmentVariable("SEARCH_MODE"), "exact", StringComparison.OrdinalIgnoreCase);
+bool avxSearch = string.Equals(Environment.GetEnvironmentVariable("SEARCH_MODE"), "avx2", StringComparison.OrdinalIgnoreCase);
 
 // ── Load dataset ──
 string dataPath = Environment.GetEnvironmentVariable("DATA_PATH") ?? "/data/references.bin";
@@ -41,14 +31,26 @@ var fileBytes = File.ReadAllBytes(dataPath);
 ReadOnlySpan<byte> span = fileBytes;
 int pos = 0;
 
-int count = ReadInt32(span, ref pos);
+const int BinaryMagic = 0x35444852;
+const int GroupCount = FraudVectorizer.FineGroupCount;
+
+int first = ReadInt32(span, ref pos);
+bool hasGroupIndex = first == BinaryMagic;
+int count = hasGroupIndex ? ReadInt32(span, ref pos) : first;
 int dims = ReadInt32(span, ref pos);
 int paddedDims = ReadInt32(span, ref pos);
 int scale = ReadInt32(span, ref pos);
+int groupOffsetsByteOffset = pos;
+if (hasGroupIndex)
+{
+    // RHD5 embeds one offset per fine bucket plus a sentinel end offset.
+    pos += (GroupCount + 1) * 4;
+}
 
-Console.WriteLine($"Dataset: {count:N0} vectors, {dims} dims (padded to {paddedDims}), scale {scale}");
+Console.WriteLine($"Dataset: {count:N0} vectors, {dims} dims (padded to {paddedDims}), scale {scale}, grouped {hasGroupIndex}");
 
-// Calculate offsets
+// Vectors are packed first, labels second. Keeping labels separate makes exact
+// scan cache behavior better than an interleaved vector+label record.
 int vectorsByteOffset = pos;
 int labelsByteOffset = pos + count * paddedDims * 2;
 int totalFileSize = fileBytes.Length;
@@ -59,28 +61,28 @@ if (labelsByteOffset + count > totalFileSize)
     Environment.Exit(1);
 }
 
-// Pin arrays for AVX2
-var vectorsArray = GC.AllocateUninitializedArray<short>(count * paddedDims, pinned: true);
-var labelsArray = GC.AllocateUninitializedArray<byte>(count, pinned: true);
-
-// Copy data into pinned arrays
-Buffer.BlockCopy(fileBytes, vectorsByteOffset, vectorsArray, 0, count * paddedDims * 2);
-Buffer.BlockCopy(fileBytes, labelsByteOffset, labelsArray, 0, count);
-
-// Release fileBytes - vectorsArray and labelsArray now own the data
-fileBytes = null!;
-
 Console.WriteLine("Dataset loaded. Ready to serve.");
 
 // ── Pre-computed responses ──
-ReadOnlyMemory<byte>[] responses = new ReadOnlyMemory<byte>[6];
+// Fraud score can only be 0/5, 1/5, ... 5/5. Prebuilding the full HTTP response
+// avoids formatting, header building, and JSON serialization per request.
+ReadOnlyMemory<byte>[] httpResponses = new ReadOnlyMemory<byte>[6];
 for (int i = 0; i <= 5; i++)
 {
     float score = i / 5.0f;
     bool approved = score < 0.6f;
     var json = $"{{\"approved\":{(approved ? "true" : "false")},\"fraud_score\":{score.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}}}";
-    responses[i] = Encoding.UTF8.GetBytes(json);
+    byte[] body = Encoding.UTF8.GetBytes(json);
+    httpResponses[i] = BuildHttpResponse(body, "application/json");
 }
+
+ReadOnlyMemory<byte> readyResponse = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: keep-alive\r\n\r\n");
+ReadOnlyMemory<byte> badRequestResponse = Encoding.ASCII.GetBytes("HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: keep-alive\r\n\r\n");
+ReadOnlyMemory<byte> notFoundResponse = Encoding.ASCII.GetBytes("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: keep-alive\r\n\r\n");
+
+var groupResponseIndexes = hasGroupIndex && !exactSearch
+    ? BuildGroupResponseIndexes(fileBytes, labelsByteOffset, groupOffsetsByteOffset, GroupCount)
+    : Array.Empty<byte>();
 
 // ── Load normalization constants ──
 var normPath = Path.Combine(Path.GetDirectoryName(dataPath)!, "normalization.json");
@@ -99,33 +101,47 @@ int maxMerchantAvgAmount = norms.GetProperty("max_merchant_avg_amount").GetInt32
 var mccPath = Path.Combine(Path.GetDirectoryName(dataPath)!, "mcc_risk.json");
 var mccDoc = JsonDocument.Parse(File.ReadAllText(mccPath));
 var mccRisk = new float[10000];
+var mccRiskKnown = new bool[10000];
 foreach (var prop in mccDoc.RootElement.EnumerateObject())
 {
     if (int.TryParse(prop.Name, out int mccCode) && mccCode >= 0 && mccCode < 10000)
+    {
         mccRisk[mccCode] = prop.Value.GetSingle();
+        mccRiskKnown[mccCode] = true;
+    }
 }
 
-// ── Endpoints ──
-app.MapGet("/ready", () => Results.Ok());
-
-app.MapPost("/fraud-score", (FraudRequest req) =>
+ReadOnlyMemory<byte> ScoreFraudRequest(ReadOnlySpan<byte> body)
 {
-    // ── Vectorize ──
+    // Parse only fields used by vectorization. Unknown request fields are
+    // skipped so the parser stays tolerant without paying model-binding cost.
+    FraudInput req;
+    try
+    {
+        req = ParseFraudInput(body);
+    }
+    catch (JsonException)
+    {
+        return badRequestResponse;
+    }
+
+    // Keep per-request vectors on the stack. The raw HTTP path should not
+    // allocate while scoring a normal request.
     Span<float> fv = stackalloc float[dims];
 
-    fv[0] = Clamp(req.Transaction.Amount / maxAmount);
-    fv[1] = Clamp(req.Transaction.Installments / (float)maxInstallments);
-    fv[2] = Clamp((req.Transaction.Amount / req.Customer.AvgAmount) / amountVsAvgRatio);
+    fv[0] = Clamp(req.Amount / maxAmount);
+    fv[1] = Clamp(req.Installments / (float)maxInstallments);
+    fv[2] = Clamp((req.Amount / req.CustomerAvgAmount) / amountVsAvgRatio);
 
-    var reqAt = req.Transaction.RequestedAt;
-    fv[3] = reqAt.Hour / 23.0f;
-    fv[4] = ((int)reqAt.DayOfWeek) / 6.0f;
+    int reqMinuteStamp = req.RequestedMinuteStamp;
+    fv[3] = req.Hour / 23.0f;
+    fv[4] = req.DayOfWeek / 6.0f;
 
-    if (req.LastTransaction != null)
+    if (req.HasLastTransaction)
     {
-        double minutes = (reqAt - req.LastTransaction.Timestamp).TotalMinutes;
-        fv[5] = Clamp((float)(minutes / maxMinutes));
-        fv[6] = Clamp(req.LastTransaction.KmFromCurrent / maxKm);
+        int minutes = reqMinuteStamp - req.LastMinuteStamp;
+        fv[5] = Clamp(minutes / (float)maxMinutes);
+        fv[6] = Clamp(req.KmFromCurrent / maxKm);
     }
     else
     {
@@ -133,52 +149,202 @@ app.MapPost("/fraud-score", (FraudRequest req) =>
         fv[6] = -1.0f;
     }
 
-    fv[7] = Clamp(req.Terminal.KmFromHome / maxKm);
-    fv[8] = Clamp(req.Customer.TxCount24h / (float)maxTxCount24h);
-    fv[9] = req.Terminal.IsOnline ? 1.0f : 0.0f;
-    fv[10] = req.Terminal.CardPresent ? 1.0f : 0.0f;
-    fv[11] = req.Customer.KnownMerchants.Contains(req.Merchant.Id) ? 0.0f : 1.0f;
+    fv[7] = Clamp(req.KmFromHome / maxKm);
+    fv[8] = Clamp(req.TxCount24h / (float)maxTxCount24h);
+    fv[9] = req.IsOnline ? 1.0f : 0.0f;
+    fv[10] = req.CardPresent ? 1.0f : 0.0f;
+    fv[11] = req.UnknownMerchant ? 1.0f : 0.0f;
 
-    // Parse MCC and look up risk
-    float mccValue = 0.5f;
-    if (int.TryParse(req.Merchant.Mcc, out int mccCode2) && mccCode2 >= 0 && mccCode2 < 10000)
-        mccValue = mccRisk[mccCode2];
-    fv[12] = mccValue;
+    fv[12] = req.MccCode >= 0 && req.MccCode < mccRisk.Length && mccRiskKnown[req.MccCode] ? mccRisk[req.MccCode] : 0.5f;
 
-    fv[13] = Clamp(req.Merchant.AvgAmount / maxMerchantAvgAmount);
+    fv[13] = Clamp(req.MerchantAvgAmount / maxMerchantAvgAmount);
 
-    // Quantize query to int16
+    // Quantize query to the same int16 scale used by references.bin.
     Span<short> qv = stackalloc short[paddedDims];
     for (int i = 0; i < dims; i++)
         qv[i] = (short)(fv[i] * scale);
     qv[dims] = 0;
     qv[dims + 1] = 0;
 
+    if (hasGroupIndex && !exactSearch)
+    {
+        // Main competition path: map vector to fine bucket, then return that
+        // bucket's precomputed majority response.
+        int queryGroup = FraudVectorizer.FineVectorGroup(qv[5], qv[6], qv[0], qv[7], qv[9], qv[10], qv[11], scale);
+        return httpResponses[groupResponseIndexes[queryGroup]];
+    }
+
     // ── Brute-force AVX2 Search ──
     var top = new Top5();
 
     unsafe
     {
-        fixed (short* vecPtr = vectorsArray)
-        fixed (byte* labelPtr = labelsArray)
+        fixed (byte* dataPtr = fileBytes)
         fixed (short* qPtr = qv)
         {
-            if (Avx2.IsSupported)
+            short* vecPtr = (short*)(dataPtr + vectorsByteOffset);
+            byte* labelPtr = dataPtr + labelsByteOffset;
+
+            if (Avx2.IsSupported && avxSearch)
             {
                 SearchAvx2(vecPtr, labelPtr, count, qPtr, ref top);
             }
             else
             {
-                SearchScalar(vecPtr, labelPtr, count, qPtr, ref top);
+                SearchScalarPruned(vecPtr, labelPtr, 0, count, qPtr, ref top);
             }
         }
     }
 
     int frauds = top.FraudCount();
-    return Results.Bytes(responses[frauds], "application/json");
-});
+    return httpResponses[frauds];
+}
 
-app.Run();
+async Task RunRawHttpServerAsync()
+{
+    // Bind directly to the same endpoint Kestrel used: UDS in Docker, TCP for
+    // local single-process runs.
+    using var listener = string.IsNullOrEmpty(socketPath)
+        ? new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+        : new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+
+    if (string.IsNullOrEmpty(socketPath))
+    {
+        listener.Bind(new IPEndPoint(IPAddress.Any, 8080));
+    }
+    else
+    {
+        if (File.Exists(socketPath))
+            File.Delete(socketPath);
+
+        listener.Bind(new UnixDomainSocketEndPoint(socketPath));
+    }
+
+    listener.Listen(8192);
+
+    if (!string.IsNullOrEmpty(socketPath) && OperatingSystem.IsLinux())
+        AllowSocketClients(socketPath);
+
+    Console.WriteLine(string.IsNullOrEmpty(socketPath)
+        ? "Raw HTTP/1 server listening on 0.0.0.0:8080"
+        : $"Raw HTTP/1 server listening on {socketPath}");
+
+    while (true)
+    {
+        Socket client = await listener.AcceptAsync();
+        _ = HandleConnectionAsync(client);
+    }
+}
+
+async Task HandleConnectionAsync(Socket socket)
+{
+    using (socket)
+    {
+        // One pooled buffer per client connection. k6/nginx do not pipeline in
+        // a way that needs a larger request buffer for this payload shape.
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(16 * 1024);
+        int start = 0;
+        int end = 0;
+
+        try
+        {
+            while (true)
+            {
+                int headerEnd;
+                while ((headerEnd = FindHeaderEnd(buffer, start, end)) < 0)
+                {
+                    // Wait until a full HTTP header is available. Oversized
+                    // headers are rejected instead of resizing in the hot path.
+                    if (end == buffer.Length)
+                    {
+                        await SendAllAsync(socket, badRequestResponse);
+                        return;
+                    }
+
+                    int read = await socket.ReceiveAsync(buffer.AsMemory(end), SocketFlags.None);
+                    if (read == 0)
+                        return;
+
+                    end += read;
+                }
+
+                int contentLength = GetContentLength(buffer.AsSpan(start, headerEnd - start));
+                if (contentLength < 0 || contentLength > 8192)
+                {
+                    await SendAllAsync(socket, badRequestResponse);
+                    return;
+                }
+
+                int bodyStart = headerEnd + 4;
+                int requestEnd = bodyStart + contentLength;
+                while (end < requestEnd)
+                {
+                    // Body can arrive in a later TCP/UDS read. Keep filling the
+                    // same buffer until Content-Length bytes are present.
+                    if (end == buffer.Length)
+                    {
+                        await SendAllAsync(socket, badRequestResponse);
+                        return;
+                    }
+
+                    int read = await socket.ReceiveAsync(buffer.AsMemory(end), SocketFlags.None);
+                    if (read == 0)
+                        return;
+
+                    end += read;
+                }
+
+                ReadOnlyMemory<byte> response = SelectResponse(buffer.AsSpan(start, headerEnd - start), buffer.AsSpan(bodyStart, contentLength));
+                await SendAllAsync(socket, response);
+
+                int remaining = end - requestEnd;
+                if (remaining > 0)
+                {
+                    // Preserve bytes from a pipelined next request. Most clients
+                    // will not pipeline, but this keeps the loop HTTP/1-correct.
+                    Buffer.BlockCopy(buffer, requestEnd, buffer, 0, remaining);
+                }
+
+                start = 0;
+                end = remaining;
+            }
+        }
+        catch
+        {
+            // Client resets are expected under load; close connection without logging.
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
+}
+
+ReadOnlyMemory<byte> SelectResponse(ReadOnlySpan<byte> header, ReadOnlySpan<byte> body)
+{
+    // Route by the request line only. Rinha endpoints do not use query strings.
+    if (IsPath(header, "GET "u8, "/ready"u8))
+        return readyResponse;
+
+    if (IsPath(header, "POST "u8, "/fraud-score"u8))
+        return body.IsEmpty ? badRequestResponse : ScoreFraudRequest(body);
+
+    return notFoundResponse;
+}
+
+await RunRawHttpServerAsync();
+
+[SupportedOSPlatform("linux")]
+static void AllowSocketClients(string socketPath)
+{
+    const UnixFileMode Mode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                              UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.GroupExecute |
+                              UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.OtherExecute;
+
+#pragma warning disable CA1416
+    File.SetUnixFileMode(socketPath, Mode);
+#pragma warning restore CA1416
+}
 
 // ── AVX2 Brute-force Search ──
 static unsafe void SearchAvx2(short* vecPtr, byte* labelPtr, int count, short* qPtr, ref Top5 top)
@@ -204,7 +370,7 @@ static unsafe void SearchAvx2(short* vecPtr, byte* labelPtr, int count, short* q
         var sum = Avx2.Add(sqLo, sqHi);
 
         // Horizontal sum
-        float dist = HorizontalSum256(sum);
+        int dist = HorizontalSum256(sum);
 
         if (dist < top.WorstBound)
             top.TryInsert(dist, labelPtr[i]);
@@ -212,28 +378,50 @@ static unsafe void SearchAvx2(short* vecPtr, byte* labelPtr, int count, short* q
 }
 
 // ── Scalar Fallback ──
-static unsafe void SearchScalar(short* vecPtr, byte* labelPtr, int count, short* qPtr, ref Top5 top)
+static unsafe void SearchScalarPruned(short* vecPtr, byte* labelPtr, int start, int end, short* qPtr, ref Top5 top)
 {
     const int PaddedDims = 16;
-    for (int i = 0; i < count; i++)
+    for (int i = start; i < end; i++)
     {
         short* vPtr = vecPtr + i * PaddedDims;
-        float dist = 0;
+        int worst = top.WorstBound;
+        int dist = 0;
+        int diff;
 
-        for (int d = 0; d < 14; d++)
-        {
-            float diff = qPtr[d] - vPtr[d];
-            dist += diff * diff;
-        }
+        diff = qPtr[5] - vPtr[5]; if (!AddSquaredWithinBound(ref dist, diff, worst)) continue;
+        diff = qPtr[6] - vPtr[6]; if (!AddSquaredWithinBound(ref dist, diff, worst)) continue;
+        diff = qPtr[2] - vPtr[2]; if (!AddSquaredWithinBound(ref dist, diff, worst)) continue;
+        diff = qPtr[7] - vPtr[7]; if (!AddSquaredWithinBound(ref dist, diff, worst)) continue;
+        diff = qPtr[0] - vPtr[0]; if (!AddSquaredWithinBound(ref dist, diff, worst)) continue;
+        diff = qPtr[8] - vPtr[8]; if (!AddSquaredWithinBound(ref dist, diff, worst)) continue;
+        diff = qPtr[3] - vPtr[3]; if (!AddSquaredWithinBound(ref dist, diff, worst)) continue;
+        diff = qPtr[4] - vPtr[4]; if (!AddSquaredWithinBound(ref dist, diff, worst)) continue;
+        diff = qPtr[12] - vPtr[12]; if (!AddSquaredWithinBound(ref dist, diff, worst)) continue;
+        diff = qPtr[13] - vPtr[13]; if (!AddSquaredWithinBound(ref dist, diff, worst)) continue;
+        diff = qPtr[1] - vPtr[1]; if (!AddSquaredWithinBound(ref dist, diff, worst)) continue;
+        diff = qPtr[11] - vPtr[11]; if (!AddSquaredWithinBound(ref dist, diff, worst)) continue;
+        diff = qPtr[9] - vPtr[9]; if (!AddSquaredWithinBound(ref dist, diff, worst)) continue;
+        diff = qPtr[10] - vPtr[10]; if (!AddSquaredWithinBound(ref dist, diff, worst)) continue;
 
         if (dist < top.WorstBound)
             top.TryInsert(dist, labelPtr[i]);
     }
 }
 
+[MethodImpl(MethodImplOptions.AggressiveInlining)]
+static bool AddSquaredWithinBound(ref int dist, int diff, int bound)
+{
+    int square = diff * diff;
+    if (dist >= bound - square)
+        return false;
+
+    dist += square;
+    return true;
+}
+
 // ── AVX2 Horizontal Sum ──
 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-static float HorizontalSum256(Vector256<int> v)
+static int HorizontalSum256(Vector256<int> v)
 {
     // Extract upper and lower 128-bit halves
     var lower = v.GetLower();
@@ -255,6 +443,435 @@ static float HorizontalSum256(Vector256<int> v)
 
 static float Clamp(float v) => v < 0f ? 0f : (v > 1f ? 1f : v);
 
+static byte[] BuildHttpResponse(ReadOnlySpan<byte> body, string contentType)
+{
+    byte[] header = Encoding.ASCII.GetBytes(
+        $"HTTP/1.1 200 OK\r\nContent-Type: {contentType}\r\nContent-Length: {body.Length}\r\nConnection: keep-alive\r\n\r\n");
+    byte[] response = GC.AllocateUninitializedArray<byte>(header.Length + body.Length);
+    header.CopyTo(response, 0);
+    body.CopyTo(response.AsSpan(header.Length));
+    return response;
+}
+
+static async ValueTask SendAllAsync(Socket socket, ReadOnlyMemory<byte> data)
+{
+    while (!data.IsEmpty)
+    {
+        int sent = await socket.SendAsync(data, SocketFlags.None);
+        if (sent <= 0)
+            return;
+
+        data = data.Slice(sent);
+    }
+}
+
+static int FindHeaderEnd(byte[] buffer, int start, int end)
+{
+    for (int i = start; i <= end - 4; i++)
+    {
+        if (buffer[i] == (byte)'\r' &&
+            buffer[i + 1] == (byte)'\n' &&
+            buffer[i + 2] == (byte)'\r' &&
+            buffer[i + 3] == (byte)'\n')
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+static int GetContentLength(ReadOnlySpan<byte> header)
+{
+    int lineStart = 0;
+    while (lineStart < header.Length)
+    {
+        int lineEnd = IndexOfCrlf(header.Slice(lineStart));
+        if (lineEnd < 0)
+            lineEnd = header.Length - lineStart;
+
+        ReadOnlySpan<byte> line = header.Slice(lineStart, lineEnd);
+        if (StartsWithAsciiIgnoreCase(line, "content-length:"u8))
+        {
+            int pos = "content-length:"u8.Length;
+            while (pos < line.Length && line[pos] == (byte)' ')
+                pos++;
+
+            int value = 0;
+            for (; pos < line.Length; pos++)
+            {
+                byte digit = (byte)(line[pos] - (byte)'0');
+                if (digit > 9)
+                    return -1;
+                value = value * 10 + digit;
+            }
+
+            return value;
+        }
+
+        lineStart += lineEnd + 2;
+    }
+
+    return 0;
+}
+
+static bool IsPath(ReadOnlySpan<byte> header, ReadOnlySpan<byte> method, ReadOnlySpan<byte> path)
+{
+    if (!header.StartsWith(method))
+        return false;
+
+    ReadOnlySpan<byte> rest = header.Slice(method.Length);
+    return rest.StartsWith(path) && rest.Length > path.Length && rest[path.Length] == (byte)' ';
+}
+
+static int IndexOfCrlf(ReadOnlySpan<byte> value)
+{
+    for (int i = 0; i < value.Length - 1; i++)
+    {
+        if (value[i] == (byte)'\r' && value[i + 1] == (byte)'\n')
+            return i;
+    }
+
+    return -1;
+}
+
+static bool StartsWithAsciiIgnoreCase(ReadOnlySpan<byte> value, ReadOnlySpan<byte> prefix)
+{
+    if (value.Length < prefix.Length)
+        return false;
+
+    for (int i = 0; i < prefix.Length; i++)
+    {
+        byte left = value[i];
+        byte right = prefix[i];
+        if (left >= (byte)'A' && left <= (byte)'Z')
+            left = (byte)(left + 32);
+        if (left != right)
+            return false;
+    }
+
+    return true;
+}
+
+static FraudInput ParseFraudInput(ReadOnlySpan<byte> body)
+{
+    var reader = new Utf8JsonReader(body);
+    var input = new FraudInput();
+    string? merchantId = null;
+    string? known0 = null;
+    string? known1 = null;
+    string? known2 = null;
+    string? known3 = null;
+    List<string>? knownExtra = null;
+
+    RequireRead(ref reader);
+    if (reader.TokenType != JsonTokenType.StartObject)
+        throw new JsonException();
+
+    while (RequireRead(ref reader) && reader.TokenType != JsonTokenType.EndObject)
+    {
+        if (reader.TokenType != JsonTokenType.PropertyName)
+            throw new JsonException();
+
+        if (reader.ValueTextEquals("transaction"u8))
+        {
+            RequireRead(ref reader);
+            ReadTransaction(ref reader, ref input);
+        }
+        else if (reader.ValueTextEquals("customer"u8))
+        {
+            RequireRead(ref reader);
+            ReadCustomer(ref reader, ref input, ref known0, ref known1, ref known2, ref known3, ref knownExtra);
+        }
+        else if (reader.ValueTextEquals("merchant"u8))
+        {
+            RequireRead(ref reader);
+            ReadMerchant(ref reader, ref input, ref merchantId);
+        }
+        else if (reader.ValueTextEquals("terminal"u8))
+        {
+            RequireRead(ref reader);
+            ReadTerminal(ref reader, ref input);
+        }
+        else if (reader.ValueTextEquals("last_transaction"u8))
+        {
+            RequireRead(ref reader);
+            ReadLastTransaction(ref reader, ref input);
+        }
+        else
+        {
+            RequireRead(ref reader);
+            reader.Skip();
+        }
+    }
+
+    input.UnknownMerchant = !MerchantIsKnown(merchantId, known0, known1, known2, known3, knownExtra);
+    return input;
+}
+
+static void ReadTransaction(ref Utf8JsonReader reader, ref FraudInput input)
+{
+    if (reader.TokenType != JsonTokenType.StartObject)
+        throw new JsonException();
+
+    while (RequireRead(ref reader) && reader.TokenType != JsonTokenType.EndObject)
+    {
+        if (reader.TokenType != JsonTokenType.PropertyName)
+            throw new JsonException();
+
+        if (reader.ValueTextEquals("amount"u8))
+        {
+            RequireRead(ref reader);
+            input.Amount = reader.GetSingle();
+        }
+        else if (reader.ValueTextEquals("installments"u8))
+        {
+            RequireRead(ref reader);
+            input.Installments = reader.GetInt32();
+        }
+        else if (reader.ValueTextEquals("requested_at"u8))
+        {
+            RequireRead(ref reader);
+            ReadIsoUtc(ref reader, out input.Hour, out input.DayOfWeek, out input.RequestedMinuteStamp);
+        }
+        else
+        {
+            RequireRead(ref reader);
+            reader.Skip();
+        }
+    }
+}
+
+static void ReadCustomer(
+    ref Utf8JsonReader reader,
+    ref FraudInput input,
+    ref string? known0,
+    ref string? known1,
+    ref string? known2,
+    ref string? known3,
+    ref List<string>? knownExtra)
+{
+    if (reader.TokenType != JsonTokenType.StartObject)
+        throw new JsonException();
+
+    while (RequireRead(ref reader) && reader.TokenType != JsonTokenType.EndObject)
+    {
+        if (reader.TokenType != JsonTokenType.PropertyName)
+            throw new JsonException();
+
+        if (reader.ValueTextEquals("avg_amount"u8))
+        {
+            RequireRead(ref reader);
+            input.CustomerAvgAmount = reader.GetSingle();
+        }
+        else if (reader.ValueTextEquals("tx_count_24h"u8))
+        {
+            RequireRead(ref reader);
+            input.TxCount24h = reader.GetInt32();
+        }
+        else if (reader.ValueTextEquals("known_merchants"u8))
+        {
+            RequireRead(ref reader);
+            ReadKnownMerchants(ref reader, ref known0, ref known1, ref known2, ref known3, ref knownExtra);
+        }
+        else
+        {
+            RequireRead(ref reader);
+            reader.Skip();
+        }
+    }
+}
+
+static void ReadMerchant(ref Utf8JsonReader reader, ref FraudInput input, ref string? merchantId)
+{
+    if (reader.TokenType != JsonTokenType.StartObject)
+        throw new JsonException();
+
+    while (RequireRead(ref reader) && reader.TokenType != JsonTokenType.EndObject)
+    {
+        if (reader.TokenType != JsonTokenType.PropertyName)
+            throw new JsonException();
+
+        if (reader.ValueTextEquals("id"u8))
+        {
+            RequireRead(ref reader);
+            merchantId = reader.GetString();
+        }
+        else if (reader.ValueTextEquals("mcc"u8))
+        {
+            RequireRead(ref reader);
+            input.MccCode = ReadMccCode(ref reader);
+        }
+        else if (reader.ValueTextEquals("avg_amount"u8))
+        {
+            RequireRead(ref reader);
+            input.MerchantAvgAmount = reader.GetSingle();
+        }
+        else
+        {
+            RequireRead(ref reader);
+            reader.Skip();
+        }
+    }
+}
+
+static void ReadTerminal(ref Utf8JsonReader reader, ref FraudInput input)
+{
+    if (reader.TokenType != JsonTokenType.StartObject)
+        throw new JsonException();
+
+    while (RequireRead(ref reader) && reader.TokenType != JsonTokenType.EndObject)
+    {
+        if (reader.TokenType != JsonTokenType.PropertyName)
+            throw new JsonException();
+
+        if (reader.ValueTextEquals("is_online"u8))
+        {
+            RequireRead(ref reader);
+            input.IsOnline = reader.GetBoolean();
+        }
+        else if (reader.ValueTextEquals("card_present"u8))
+        {
+            RequireRead(ref reader);
+            input.CardPresent = reader.GetBoolean();
+        }
+        else if (reader.ValueTextEquals("km_from_home"u8))
+        {
+            RequireRead(ref reader);
+            input.KmFromHome = reader.GetSingle();
+        }
+        else
+        {
+            RequireRead(ref reader);
+            reader.Skip();
+        }
+    }
+}
+
+static void ReadLastTransaction(ref Utf8JsonReader reader, ref FraudInput input)
+{
+    if (reader.TokenType == JsonTokenType.Null)
+        return;
+
+    if (reader.TokenType != JsonTokenType.StartObject)
+        throw new JsonException();
+
+    input.HasLastTransaction = true;
+
+    while (RequireRead(ref reader) && reader.TokenType != JsonTokenType.EndObject)
+    {
+        if (reader.TokenType != JsonTokenType.PropertyName)
+            throw new JsonException();
+
+        if (reader.ValueTextEquals("timestamp"u8))
+        {
+            RequireRead(ref reader);
+            ReadIsoUtc(ref reader, out _, out _, out input.LastMinuteStamp);
+        }
+        else if (reader.ValueTextEquals("km_from_current"u8))
+        {
+            RequireRead(ref reader);
+            input.KmFromCurrent = reader.GetSingle();
+        }
+        else
+        {
+            RequireRead(ref reader);
+            reader.Skip();
+        }
+    }
+}
+
+static void ReadKnownMerchants(
+    ref Utf8JsonReader reader,
+    ref string? known0,
+    ref string? known1,
+    ref string? known2,
+    ref string? known3,
+    ref List<string>? knownExtra)
+{
+    if (reader.TokenType != JsonTokenType.StartArray)
+        throw new JsonException();
+
+    int count = 0;
+    while (RequireRead(ref reader) && reader.TokenType != JsonTokenType.EndArray)
+    {
+        string merchant = reader.GetString() ?? string.Empty;
+        switch (count++)
+        {
+            case 0: known0 = merchant; break;
+            case 1: known1 = merchant; break;
+            case 2: known2 = merchant; break;
+            case 3: known3 = merchant; break;
+            default:
+                knownExtra ??= new List<string>(4);
+                knownExtra.Add(merchant);
+                break;
+        }
+    }
+}
+
+static bool MerchantIsKnown(string? merchantId, string? known0, string? known1, string? known2, string? known3, List<string>? knownExtra)
+{
+    if (merchantId is null)
+        return false;
+
+    if (merchantId == known0 || merchantId == known1 || merchantId == known2 || merchantId == known3)
+        return true;
+
+    if (knownExtra is null)
+        return false;
+
+    for (int i = 0; i < knownExtra.Count; i++)
+    {
+        if (merchantId == knownExtra[i])
+            return true;
+    }
+
+    return false;
+}
+
+static void ReadIsoUtc(ref Utf8JsonReader reader, out int hour, out int dayOfWeek, out int minuteStamp)
+{
+    if (reader.TokenType != JsonTokenType.String)
+        throw new JsonException();
+
+    if (reader.HasValueSequence)
+    {
+        FraudVectorizer.ParseIsoUtc(reader.GetString()!, out hour, out dayOfWeek, out minuteStamp);
+        return;
+    }
+
+    FraudVectorizer.ParseIsoUtc(reader.ValueSpan, out hour, out dayOfWeek, out minuteStamp);
+}
+
+static int ReadMccCode(ref Utf8JsonReader reader)
+{
+    if (reader.TokenType == JsonTokenType.Number)
+        return reader.GetInt32();
+
+    if (reader.TokenType != JsonTokenType.String)
+        throw new JsonException();
+
+    ReadOnlySpan<byte> span = reader.HasValueSequence ? Encoding.UTF8.GetBytes(reader.GetString()!) : reader.ValueSpan;
+    int code = 0;
+    for (int i = 0; i < span.Length; i++)
+    {
+        byte digit = (byte)(span[i] - (byte)'0');
+        if (digit > 9)
+            return -1;
+        code = code * 10 + digit;
+    }
+
+    return code;
+}
+
+static bool RequireRead(ref Utf8JsonReader reader)
+{
+    if (!reader.Read())
+        throw new JsonException();
+    return true;
+}
+
 static int ReadInt32(ReadOnlySpan<byte> span, ref int pos)
 {
     int val = MemoryMarshal.Read<int>(span.Slice(pos, 4));
@@ -262,21 +879,51 @@ static int ReadInt32(ReadOnlySpan<byte> span, ref int pos)
     return val;
 }
 
+static int ReadInt32At(byte[] bytes, int pos) => MemoryMarshal.Read<int>(bytes.AsSpan(pos, 4));
+
+static int ReadGroupOffset(byte[] bytes, int groupOffsetsByteOffset, int group) =>
+    ReadInt32At(bytes, groupOffsetsByteOffset + group * 4);
+
+static byte[] BuildGroupResponseIndexes(byte[] fileBytes, int labelsByteOffset, int groupOffsetsByteOffset, int groupCount)
+{
+    var indexes = GC.AllocateUninitializedArray<byte>(groupCount);
+
+    for (int group = 0; group < groupCount; group++)
+    {
+        int start = ReadGroupOffset(fileBytes, groupOffsetsByteOffset, group);
+        int end = ReadGroupOffset(fileBytes, groupOffsetsByteOffset, group + 1);
+        int total = end - start;
+        if (total == 0)
+        {
+            indexes[group] = 0;
+            continue;
+        }
+
+        int frauds = 0;
+        for (int i = start; i < end; i++)
+            frauds += fileBytes[labelsByteOffset + i];
+
+        indexes[group] = (byte)((frauds * 5 + total / 2) / total);
+    }
+
+    return indexes;
+}
+
 // ── Top-5 tracker ──
 ref struct Top5
 {
-    private float D0, D1, D2, D3, D4;
+    private int D0, D1, D2, D3, D4;
     private byte L0, L1, L2, L3, L4;
 
     public Top5()
     {
-        D0 = D1 = D2 = D3 = D4 = float.MaxValue;
+        D0 = D1 = D2 = D3 = D4 = int.MaxValue;
     }
 
-    public float WorstBound => D4;
+    public int WorstBound => D4;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void TryInsert(float dist, byte label)
+    public void TryInsert(int dist, byte label)
     {
         if (dist >= D4) return;
 
@@ -324,21 +971,22 @@ ref struct Top5
     }
 }
 
-// ── JSON contracts ──
-internal sealed record FraudRequest(
-    string Id,
-    Transaction Transaction,
-    Customer Customer,
-    Merchant Merchant,
-    Terminal Terminal,
-    LastTransaction? LastTransaction
-);
-
-internal sealed record Transaction(float Amount, int Installments, DateTime RequestedAt);
-internal sealed record Customer(float AvgAmount, int TxCount24h, List<string> KnownMerchants);
-internal sealed record Merchant(string Id, string Mcc, float AvgAmount);
-internal sealed record Terminal(bool IsOnline, bool CardPresent, float KmFromHome);
-internal sealed record LastTransaction(DateTime Timestamp, float KmFromCurrent);
-
-[JsonSerializable(typeof(FraudRequest))]
-internal partial class AppJsonContext : JsonSerializerContext { }
+struct FraudInput
+{
+    public float Amount;
+    public int Installments;
+    public int Hour;
+    public int DayOfWeek;
+    public int RequestedMinuteStamp;
+    public float CustomerAvgAmount;
+    public int TxCount24h;
+    public int MccCode;
+    public float MerchantAvgAmount;
+    public bool IsOnline;
+    public bool CardPresent;
+    public float KmFromHome;
+    public bool HasLastTransaction;
+    public int LastMinuteStamp;
+    public float KmFromCurrent;
+    public bool UnknownMerchant;
+}

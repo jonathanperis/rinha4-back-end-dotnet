@@ -1,0 +1,7 @@
+services:
+  nginx:
+    image: ${HAPROXY_IMAGE:-haproxy:latest}
+    command: ["haproxy", "-f", "/usr/local/etc/haproxy/haproxy.cfg"]
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - sockets:/sockets
