@@ -1,5 +1,6 @@
 ---
 import '../styles/globals.css';
+import Analytics from '../components/Analytics.astro';
 
 interface Props {
   title?: string;
@@ -51,15 +52,9 @@ const jsonLd = {
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-CSXXW7M050"></script>
-    <script is:inline>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-CSXXW7M050');
-    </script>
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
     <title>{title}</title>
+    <Analytics />
   </head>
   <body>
     <slot />
