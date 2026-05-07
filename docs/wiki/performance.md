@@ -22,4 +22,4 @@ The active bottleneck is detection accuracy. Failure rate must reach 0% to compe
 
 The retained load balancer path is nginx stream. It keeps the proxy byte-oriented on port `9999` and forwards to the API containers over Unix Domain Sockets.
 
-The benchmark workflow can run the default nginx stream compose file, plus the AVX2 search-mode overlay for scorer experiments.
+The benchmark workflow runs the default nginx stream compose file used by the submission.

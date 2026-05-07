@@ -65,8 +65,6 @@ Default path:
 8. Fine-bucket key is computed.
 9. Precomputed bucket majority result maps directly to one of six prebuilt HTTP/JSON byte responses.
 
-Exact KNN modes are still present for validation and experimentation, but the default competition path is the fine-bucket classifier.
-
 The raw HTTP server intentionally implements only the subset required by this workload:
 
 - `GET /ready`
@@ -103,22 +101,21 @@ The binary file is embedded in the Docker image. The runtime container does not 
 Binary format:
 
 ```text
-int32 magic = "RHD5"
+int32 magic = "RHD6"
 int32 count
 int32 dims
 int32 padded_dims
 int32 scale
 int32 group_offsets[FineGroupCount + 1]
-int16 vectors[count * padded_dims]
 byte labels[count]
 ```
 
 Why this format:
 
-- `int16` vectors reduce memory and improve cache behavior.
-- `padded_dims = 16` keeps exact-search data aligned for SIMD.
+- compact labels reduce image size and startup memory.
+- `padded_dims = 16` keeps the API request-vector stride stable.
 - group offsets make bucket lookup O(1).
-- labels are stored separately for tight exact-search scans.
+- labels are stored separately for startup bucket-majority precomputation.
 
 ## Fraud Vector
 
@@ -181,25 +178,8 @@ This is intentionally O(1) after parsing.
 Tradeoff:
 
 - This prioritizes ranking performance under load.
-- It is not an exact KNN answer for every request.
-- Exact modes remain available to measure that tradeoff against the reference data.
-
-## Exact Search Modes
-
-Exact top-5 KNN is still available:
-
-```bash
-SEARCH_MODE=exact
-SEARCH_MODE=avx2
-```
-
-Modes:
-
-- unset: fine-bucket majority classifier
-- `exact`: scalar exact KNN with pruning
-- `avx2`: AVX2 exact scan when supported
-
-Exact modes are useful for correctness studies and validator work, not for the current fastest competition path.
+- It is not guaranteed to match nearest-neighbor reference scoring for every request.
+- The implementation keeps only this production path in the repository.
 
 ## Hot Path Optimizations
 
@@ -224,7 +204,6 @@ Implemented:
 - no hot-path logging
 - grouped binary dataset
 - O(1) default classifier
-- exact SIMD/pruned search retained behind env switch
 
 ## Reverse Proxy
 
@@ -286,20 +265,6 @@ curl -i http://localhost:9999/ready
 
 ## Benchmarks
 
-Debug load:
-
-```bash
-k6 run --quiet benchmarks/k6/status-debug.js
-```
-
-Full local pressure test:
-
-```bash
-k6 run --quiet benchmarks/k6/fraud-score.js
-```
-
-The local k6 scripts are not the official judge. They are smoke and pressure tests used to compare changes.
-
 CI official-like benchmark:
 
 - GitHub Actions workflow: `.github/workflows/benchmark.yml`
@@ -321,7 +286,6 @@ Run from GitHub Actions:
 2. Select **Official-like Benchmark**.
 3. Choose compose file:
    - `docker-compose.yml` for nginx stream baseline
-   - `docker-compose.avx2.yml` for exact reference search with AVX2 enabled on amd64 runners
 4. Run workflow.
 
 Manual runs can also benchmark a pushed image by filling `webapi_image`; when set,
@@ -358,16 +322,7 @@ Build checks:
 ```bash
 dotnet build src/WebApi/WebApi.csproj --no-restore
 dotnet build src/DataConverter/DataConverter.csproj --no-restore
-dotnet build tools/Validator/Validator.csproj --no-restore
 ```
-
-Offline validator:
-
-```bash
-dotnet run --project tools/Validator/Validator.csproj -- data/ 100
-```
-
-The validator compares exact KNN, same-group approximation, and bucket-majority classification over sampled reference vectors.
 
 ## Docker Image
 

@@ -1,86 +1,49 @@
 using System.Runtime.InteropServices;
 
 /// <summary>
-/// Immutable layout metadata and bytes loaded from <c>references.bin</c>.
+/// Runtime dataset layout metadata and precomputed fine-bucket response table.
 /// </summary>
 /// <remarks>
-/// The dataset stores all vectors first and labels second. Keeping those ranges
-/// separate preserves the exact-search pointer layout while allowing the default
-/// scorer to use an O(1) fine-bucket response lookup.
+/// Startup reads <c>references.bin</c> and builds one response index per fine bucket.
 /// </remarks>
 internal readonly struct ReferenceDataset
 {
-    private const int BinaryMagic = 0x35444852;
+    private const int BinaryMagic = 0x36444852;
     private const int GroupCount = FraudVectorizer.FineGroupCount;
-
-    /// <summary>Raw binary contents kept alive for unsafe pointer scans.</summary>
-    public readonly byte[] Bytes;
-
-    /// <summary>Number of reference vectors stored in the dataset.</summary>
-    public readonly int Count;
 
     /// <summary>Logical vector dimension count before padding.</summary>
     public readonly int Dims;
 
-    /// <summary>Physical vector dimension count stored in the binary file.</summary>
+    /// <summary>Physical request-vector stride kept in the binary metadata.</summary>
     public readonly int PaddedDims;
 
     /// <summary>Int16 quantization scale used by converter and API.</summary>
     public readonly int Scale;
 
-    /// <summary>Whether the dataset contains fine-bucket offset metadata.</summary>
-    public readonly bool HasGroupIndex;
-
-    /// <summary>Byte offset where packed int16 vectors begin.</summary>
-    public readonly int VectorsByteOffset;
-
-    /// <summary>Byte offset where one-byte labels begin.</summary>
-    public readonly int LabelsByteOffset;
-
     /// <summary>Precomputed fraud-score response index for each fine bucket.</summary>
     public readonly byte[] GroupResponseIndexes;
 
     /// <summary>
-    /// Creates a dataset descriptor over already loaded binary bytes.
+    /// Creates a dataset descriptor with only runtime-required metadata.
     /// </summary>
-    /// <param name="bytes">Raw <c>references.bin</c> bytes.</param>
-    /// <param name="count">Number of reference vectors.</param>
     /// <param name="dims">Logical vector dimension count.</param>
     /// <param name="paddedDims">Physical padded dimension count.</param>
     /// <param name="scale">Int16 quantization scale.</param>
-    /// <param name="hasGroupIndex">Whether group offsets were present in the binary header.</param>
-    /// <param name="vectorsByteOffset">Byte offset where packed vectors start.</param>
-    /// <param name="labelsByteOffset">Byte offset where labels start.</param>
     /// <param name="groupResponseIndexes">Precomputed response index per group.</param>
-    private ReferenceDataset(
-        byte[] bytes,
-        int count,
-        int dims,
-        int paddedDims,
-        int scale,
-        bool hasGroupIndex,
-        int vectorsByteOffset,
-        int labelsByteOffset,
-        byte[] groupResponseIndexes)
+    private ReferenceDataset(int dims, int paddedDims, int scale, byte[] groupResponseIndexes)
     {
-        Bytes = bytes;
-        Count = count;
         Dims = dims;
         PaddedDims = paddedDims;
         Scale = scale;
-        HasGroupIndex = hasGroupIndex;
-        VectorsByteOffset = vectorsByteOffset;
-        LabelsByteOffset = labelsByteOffset;
         GroupResponseIndexes = groupResponseIndexes;
     }
 
     /// <summary>
-    /// Loads and validates <c>references.bin</c>, including optional fine-bucket indexes.
+    /// Loads and validates <c>references.bin</c>, then precomputes bucket responses.
     /// </summary>
     /// <param name="dataPath">Path to the binary dataset.</param>
-    /// <param name="exactSearch">When <see langword="true"/>, skips bucket-response precomputation.</param>
     /// <returns>A validated dataset descriptor ready for <see cref="FraudScorer"/>.</returns>
-    public static ReferenceDataset Load(string dataPath, bool exactSearch)
+    public static ReferenceDataset Load(string dataPath)
     {
         if (!File.Exists(dataPath))
             ExitWithMessage($"Dataset not found: {dataPath}");
@@ -91,38 +54,25 @@ internal readonly struct ReferenceDataset
         ReadOnlySpan<byte> span = bytes;
         int pos = 0;
 
-        int first = ReadInt32(span, ref pos);
-        bool hasGroupIndex = first == BinaryMagic;
-        int count = hasGroupIndex ? ReadInt32(span, ref pos) : first;
+        int magic = ReadInt32(span, ref pos);
+        if (magic != BinaryMagic)
+            ExitWithMessage("Invalid dataset format: missing grouped binary header.");
+
+        int count = ReadInt32(span, ref pos);
         int dims = ReadInt32(span, ref pos);
         int paddedDims = ReadInt32(span, ref pos);
         int scale = ReadInt32(span, ref pos);
         int groupOffsetsByteOffset = pos;
+        pos += (GroupCount + 1) * sizeof(int);
 
-        if (hasGroupIndex)
-            pos += (GroupCount + 1) * sizeof(int);
+        Console.WriteLine($"Dataset: {count:N0} vectors, {dims} dims (padded to {paddedDims}), scale {scale}");
 
-        Console.WriteLine($"Dataset: {count:N0} vectors, {dims} dims (padded to {paddedDims}), scale {scale}, grouped {hasGroupIndex}");
-
-        int vectorsByteOffset = pos;
-        int labelsByteOffset = pos + count * paddedDims * sizeof(short);
+        int labelsByteOffset = pos;
         if (labelsByteOffset + count > bytes.Length)
             ExitWithMessage($"Invalid file size. Expected at least {labelsByteOffset + count}, got {bytes.Length}");
 
-        byte[] groupResponseIndexes = hasGroupIndex && !exactSearch
-            ? BuildGroupResponseIndexes(bytes, labelsByteOffset, groupOffsetsByteOffset, GroupCount)
-            : Array.Empty<byte>();
-
-        return new ReferenceDataset(
-            bytes,
-            count,
-            dims,
-            paddedDims,
-            scale,
-            hasGroupIndex,
-            vectorsByteOffset,
-            labelsByteOffset,
-            groupResponseIndexes);
+        byte[] groupResponseIndexes = BuildGroupResponseIndexes(bytes, labelsByteOffset, groupOffsetsByteOffset, GroupCount);
+        return new ReferenceDataset(dims, paddedDims, scale, groupResponseIndexes);
     }
 
     /// <summary>

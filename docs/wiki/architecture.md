@@ -30,15 +30,10 @@ The binary format stores:
 
 - metadata header
 - group offsets
-- `int16` vectors with padded dimensions
 - labels
-- precomputed bucket response map
 
-The runtime loads this once and avoids per-request allocation-heavy structures.
+The runtime loads this once, computes the bucket response map at startup, and avoids per-request allocation-heavy structures.
 
 ## Classifier
 
-The hot path uses fine-bucket majority lookup.
-
-Exact KNN modes remain available for validation, but they are not the default competition path because latency would rise.
-
+The hot path uses fine-bucket majority lookup. The repository keeps only this production scoring path.

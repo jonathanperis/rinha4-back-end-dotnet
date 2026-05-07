@@ -1,88 +1,49 @@
 using System.Globalization;
 
-VectorizationTestRunner.Run("maps Monday to zero and Sunday to one", () =>
+VectorizationTestRunner.Run("parses UTF-8 ISO UTC hour and weekday", () =>
 {
-    VectorizationTestRunner.AssertEqual(0.0f, FraudVectorizer.NormalizeDayOfWeek(DateTime.Parse("2026-03-09T12:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal)));
-    VectorizationTestRunner.AssertEqual(1.0f, FraudVectorizer.NormalizeDayOfWeek(DateTime.Parse("2026-03-15T12:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal)));
-});
-
-VectorizationTestRunner.Run("parses ISO UTC hour and day without DateTime", () =>
-{
-    FraudVectorizer.ParseIsoUtc("2026-03-11T20:23:35Z", out int hour, out int dayOfWeek, out int minuteStamp);
+    FraudVectorizer.ParseIsoUtc("2026-03-11T20:23:35Z"u8, out int hour, out int dayOfWeek, out int minuteStamp);
 
     VectorizationTestRunner.AssertEqualInt(20, hour);
     VectorizationTestRunner.AssertEqualInt(2, dayOfWeek);
-    VectorizationTestRunner.AssertEqualInt(0, minuteStamp - FraudVectorizer.IsoUtcMinuteStamp("2026-03-11T20:23:35Z"));
+    if (minuteStamp <= 0)
+        throw new InvalidOperationException($"expected positive minute stamp, got {minuteStamp}");
 });
 
-VectorizationTestRunner.Run("computes ISO UTC minute gaps across dates", () =>
+VectorizationTestRunner.Run("computes UTF-8 ISO UTC minute gaps across dates", () =>
 {
-    int current = FraudVectorizer.IsoUtcMinuteStamp("2026-03-11T00:03:00Z");
-    int previous = FraudVectorizer.IsoUtcMinuteStamp("2026-03-10T23:58:00Z");
+    FraudVectorizer.ParseIsoUtc("2026-03-11T00:03:00Z"u8, out _, out _, out int current);
+    FraudVectorizer.ParseIsoUtc("2026-03-10T23:58:00Z"u8, out _, out _, out int previous);
 
     VectorizationTestRunner.AssertEqualInt(5, current - previous);
 });
 
-VectorizationTestRunner.Run("detects unknown merchant from string array", () =>
+VectorizationTestRunner.Run("parses fallback string ISO UTC without allocation-heavy DateTime", () =>
 {
-    VectorizationTestRunner.AssertEqualInt(0, FraudVectorizer.UnknownMerchant("MERC-001", ["MERC-009", "MERC-001"]));
-    VectorizationTestRunner.AssertEqualInt(1, FraudVectorizer.UnknownMerchant("MERC-002", ["MERC-009", "MERC-001"]));
+    FraudVectorizer.ParseIsoUtc("2026-03-15T07:01:00Z", out int hour, out int dayOfWeek, out int minuteStamp);
+
+    VectorizationTestRunner.AssertEqualInt(7, hour);
+    VectorizationTestRunner.AssertEqualInt(6, dayOfWeek);
+    if (minuteStamp <= 0)
+        throw new InvalidOperationException($"expected positive minute stamp, got {minuteStamp}");
 });
 
-VectorizationTestRunner.Run("builds vector group from last transaction and binary dimensions", () =>
-{
-    VectorizationTestRunner.AssertEqualInt(0b1111, FraudVectorizer.VectorGroup(42, 10_000, 10_000, 10_000));
-    VectorizationTestRunner.AssertEqualInt(0b0000, FraudVectorizer.VectorGroup(-10_000, 0, 0, 0));
-});
-
-VectorizationTestRunner.Run("computes exact lower bound for vector groups", () =>
-{
-    int same = FraudVectorizer.GroupLowerBound(0b1111, 0b1111, 10_000, 1_000, 2_000);
-    int missingLast = FraudVectorizer.GroupLowerBound(0b1111, 0b1110, 10_000, 1_000, 2_000);
-    int binaryMismatch = FraudVectorizer.GroupLowerBound(0b1111, 0b0111, 10_000, 1_000, 2_000);
-
-    VectorizationTestRunner.AssertEqualInt(0, same);
-    VectorizationTestRunner.AssertEqualInt(265_000_000, missingLast);
-    VectorizationTestRunner.AssertEqualInt(100_000_000, binaryMismatch);
-});
-
-VectorizationTestRunner.Run("builds fine group with continuous last transaction bins", () =>
+VectorizationTestRunner.Run("builds stable fine groups for bucket lookup", () =>
 {
     int group = FraudVectorizer.FineVectorGroup(1_000, 2_000, 3_000, 4_000, 0, 10_000, 0, 10_000);
-    int same = FraudVectorizer.FineGroupLowerBound(group, group, 10_000, 1_000, 2_000);
+    int repeat = FraudVectorizer.FineVectorGroup(1_000, 2_000, 3_000, 4_000, 0, 10_000, 0, 10_000);
 
-    VectorizationTestRunner.AssertEqualInt(0, same);
+    VectorizationTestRunner.AssertEqualInt(group, repeat);
 });
 
-VectorizationTestRunner.Run("computes fine group lower bound for neighboring bins", () =>
+VectorizationTestRunner.Run("separates fine groups by continuous bins and flags", () =>
 {
     int query = FraudVectorizer.FineVectorGroup(1_000, 2_000, 3_000, 4_000, 0, 10_000, 0, 10_000);
-    int far = FraudVectorizer.FineVectorGroup(8_000, 8_000, 3_000, 4_000, 0, 10_000, 0, 10_000);
+    int farBins = FraudVectorizer.FineVectorGroup(8_000, 8_000, 3_000, 4_000, 0, 10_000, 0, 10_000);
+    int farFlag = FraudVectorizer.FineVectorGroup(1_000, 2_000, 3_000, 4_000, 10_000, 10_000, 0, 10_000);
 
-    int lower = FraudVectorizer.FineGroupLowerBound(query, far, 10_000, 1_000, 2_000);
-
-    if (lower <= 0)
-        throw new InvalidOperationException($"expected positive lower bound, got {lower}");
-});
-
-VectorizationTestRunner.Run("uses neutral risk for unlisted numeric MCC", () =>
-{
-    var risk = new float[10000];
-    var known = new bool[10000];
-    risk[5411] = 0.2f;
-    known[5411] = true;
-
-    VectorizationTestRunner.AssertEqual(0.2f, FraudVectorizer.LookupMccRisk("5411", risk, known));
-    VectorizationTestRunner.AssertEqual(0.5f, FraudVectorizer.LookupMccRisk("9999", risk, known));
-});
-
-VectorizationTestRunner.Run("preserves listed zero MCC risk", () =>
-{
-    var risk = new float[10000];
-    var known = new bool[10000];
-    known[1234] = true;
-
-    VectorizationTestRunner.AssertEqual(0.0f, FraudVectorizer.LookupMccRisk("1234", risk, known));
+    VectorizationTestRunner.AssertNotEqualInt(query, farBins);
+    VectorizationTestRunner.AssertNotEqualInt(query, farFlag);
 });
 
 /// <summary>
@@ -135,5 +96,17 @@ internal static class VectorizationTestRunner
     {
         if (expected != actual)
             throw new InvalidOperationException($"expected {expected.ToString(CultureInfo.InvariantCulture)}, got {actual.ToString(CultureInfo.InvariantCulture)}");
+    }
+
+    /// <summary>
+    /// Asserts that two integer values differ.
+    /// </summary>
+    /// <param name="left">First integer value.</param>
+    /// <param name="right">Second integer value.</param>
+    /// <exception cref="InvalidOperationException">Thrown when both values are equal.</exception>
+    public static void AssertNotEqualInt(int left, int right)
+    {
+        if (left == right)
+            throw new InvalidOperationException($"expected different values, got {left.ToString(CultureInfo.InvariantCulture)}");
     }
 }

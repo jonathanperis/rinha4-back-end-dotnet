@@ -1,27 +1,18 @@
-using System.Runtime.Intrinsics.X86;
 using System.Text.Json;
 
 /// <summary>
 /// Converts parsed Rinha fraud-score requests into competition responses.
 /// </summary>
 /// <remarks>
-/// The default scoring path is an <c>O(1)</c> fine-bucket majority lookup built
-/// from <c>references.bin</c>. Exact and AVX2 search modes stay available for
-/// validation and local experiments, but the competition path avoids scanning
-/// the full dataset per request.
+/// The scorer uses the production <c>O(1)</c> fine-bucket majority lookup built
+/// from <c>references.bin</c>. The runtime dataset contains grouped labels and
+/// precomputed response indexes, not full reference vectors.
 /// </remarks>
 internal sealed class FraudScorer
 {
-    private readonly bool exactSearch;
-    private readonly bool avxSearch;
-    private readonly byte[] fileBytes;
-    private readonly int count;
     private readonly int dims;
     private readonly int paddedDims;
     private readonly int scale;
-    private readonly bool hasGroupIndex;
-    private readonly int vectorsByteOffset;
-    private readonly int labelsByteOffset;
     private readonly byte[] groupResponseIndexes;
     private readonly float maxAmount;
     private readonly int maxInstallments;
@@ -34,31 +25,19 @@ internal sealed class FraudScorer
     private readonly bool[] mccRiskKnown;
 
     /// <summary>
-    /// Stores immutable dataset, normalization, MCC, and search-mode state used
-    /// by all request handlers.
+    /// Stores immutable dataset, normalization, and MCC state used by all request handlers.
     /// </summary>
-    /// <param name="exactSearch">When <see langword="true"/>, bypasses bucket-majority lookup and runs exact search.</param>
-    /// <param name="avxSearch">When <see langword="true"/>, exact search prefers AVX2 if the CPU supports it.</param>
-    /// <param name="dataset">Loaded reference vectors, labels, layout offsets, and group response indexes.</param>
+    /// <param name="dataset">Loaded dataset layout and precomputed group response indexes.</param>
     /// <param name="normalization">Normalization denominators loaded from <c>normalization.json</c>.</param>
     /// <param name="mcc">MCC risk arrays loaded from <c>mcc_risk.json</c>.</param>
     private FraudScorer(
-        bool exactSearch,
-        bool avxSearch,
         ReferenceDataset dataset,
         NormalizationConstants normalization,
         MccRiskTable mcc)
     {
-        this.exactSearch = exactSearch;
-        this.avxSearch = avxSearch;
-        fileBytes = dataset.Bytes;
-        count = dataset.Count;
         dims = dataset.Dims;
         paddedDims = dataset.PaddedDims;
         scale = dataset.Scale;
-        hasGroupIndex = dataset.HasGroupIndex;
-        vectorsByteOffset = dataset.VectorsByteOffset;
-        labelsByteOffset = dataset.LabelsByteOffset;
         groupResponseIndexes = dataset.GroupResponseIndexes;
         maxAmount = normalization.MaxAmount;
         maxInstallments = normalization.MaxInstallments;
@@ -75,18 +54,16 @@ internal sealed class FraudScorer
     /// Loads <c>references.bin</c>, normalization constants, MCC risk, and bucket-majority responses.
     /// </summary>
     /// <param name="dataPath">Path to <c>references.bin</c>; sibling JSON files are read from the same directory.</param>
-    /// <param name="exactSearch">When <see langword="true"/>, disables the production bucket-majority shortcut.</param>
-    /// <param name="avxSearch">When <see langword="true"/>, exact mode uses AVX2 on supported CPUs.</param>
     /// <returns>A fully initialized scorer ready to share across raw HTTP connections.</returns>
-    public static FraudScorer Load(string dataPath, bool exactSearch, bool avxSearch)
+    public static FraudScorer Load(string dataPath)
     {
         string dataDirectory = Path.GetDirectoryName(dataPath)!;
-        ReferenceDataset dataset = ReferenceDataset.Load(dataPath, exactSearch);
+        ReferenceDataset dataset = ReferenceDataset.Load(dataPath);
         NormalizationConstants normalization = NormalizationConstants.Load(Path.Combine(dataDirectory, "normalization.json"));
         MccRiskTable mcc = MccRiskTable.Load(Path.Combine(dataDirectory, "mcc_risk.json"));
 
         Console.WriteLine("Dataset loaded. Ready to serve.");
-        return new FraudScorer(exactSearch, avxSearch, dataset, normalization, mcc);
+        return new FraudScorer(dataset, normalization, mcc);
     }
 
     /// <summary>
@@ -99,7 +76,7 @@ internal sealed class FraudScorer
     /// </returns>
     /// <remarks>
     /// The method keeps per-request vectors on the stack, quantizes with the same
-    /// scale used by <c>DataConverter</c>, and uses bucket lookup unless exact mode is enabled.
+    /// scale used by <c>DataConverter</c>, and indexes directly into the bucket table.
     /// </remarks>
     public ReadOnlyMemory<byte> ScoreFraudRequest(ReadOnlySpan<byte> body)
     {
@@ -149,31 +126,8 @@ internal sealed class FraudScorer
         qv[dims] = 0;
         qv[dims + 1] = 0;
 
-        if (hasGroupIndex && !exactSearch)
-        {
-            int queryGroup = FraudVectorizer.FineVectorGroup(qv[5], qv[6], qv[0], qv[7], qv[9], qv[10], qv[11], scale);
-            return HttpResponses.FraudScores[groupResponseIndexes[queryGroup]];
-        }
-
-        var top = new Top5();
-
-        unsafe
-        {
-            fixed (byte* dataPtr = fileBytes)
-            fixed (short* qPtr = qv)
-            {
-                short* vecPtr = (short*)(dataPtr + vectorsByteOffset);
-                byte* labelPtr = dataPtr + labelsByteOffset;
-
-                if (Avx2.IsSupported && avxSearch)
-                    VectorSearch.SearchAvx2(vecPtr, labelPtr, count, qPtr, ref top);
-                else
-                    VectorSearch.SearchScalarPruned(vecPtr, labelPtr, 0, count, qPtr, ref top);
-            }
-        }
-
-        int frauds = top.FraudCount();
-        return HttpResponses.FraudScores[frauds];
+        int queryGroup = FraudVectorizer.FineVectorGroup(qv[5], qv[6], qv[0], qv[7], qv[9], qv[10], qv[11], scale);
+        return HttpResponses.FraudScores[groupResponseIndexes[queryGroup]];
     }
 
     /// <summary>

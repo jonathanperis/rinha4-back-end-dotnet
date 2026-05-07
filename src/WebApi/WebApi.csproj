@@ -12,7 +12,6 @@
   <PropertyGroup Condition="'$(AOT)' == 'true'">
     <PublishAot>true</PublishAot>
     <OptimizationPreference>Speed</OptimizationPreference>
-    <IlcInstructionSet Condition="'$(RuntimeIdentifier)' == 'linux-musl-x64' Or '$(RuntimeIdentifier)' == 'linux-x64'">avx2</IlcInstructionSet>
     <IlcOptimizationPreference>Speed</IlcOptimizationPreference>
     <StaticExecutable>true</StaticExecutable>
     <StripSymbols>true</StripSymbols>

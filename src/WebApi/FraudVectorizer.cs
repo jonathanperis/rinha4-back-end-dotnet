@@ -1,11 +1,11 @@
 /// <summary>
-/// Shared feature-vector grouping, ISO timestamp parsing, and low-level risk
-/// helpers used by converter, API, tests, and validator.
+/// Shared feature-vector grouping and ISO timestamp parsing used by converter,
+/// API, and tests.
 /// </summary>
 /// <remarks>
 /// This class is the contract between <c>DataConverter</c> and <c>WebApi</c>.
 /// Any grouping change must remain deterministic across both processes because
-/// <c>references.bin</c> stores vectors grouped by the exact id returned here.
+/// <c>references.bin</c> stores labels grouped by the exact id returned here.
 /// </remarks>
 public static class FraudVectorizer
 {
@@ -25,14 +25,6 @@ public static class FraudVectorizer
     /// Total fine-bucket count used by <c>references.bin</c> group offsets and response indexes.
     /// </summary>
     public const int FineGroupCount = 16 * FineBins * FineBins * ExtraBins * ExtraBins;
-
-    /// <summary>
-    /// Normalizes a DateTime weekday so Monday maps to 0 and Sunday maps to 1.
-    /// </summary>
-    /// <param name="requestedAt">Timestamp whose <see cref="DateTime.DayOfWeek"/> should be normalized.</param>
-    /// <returns>A float in the <c>0..1</c> range, with Monday as <c>0</c> and Sunday as <c>1</c>.</returns>
-    public static float NormalizeDayOfWeek(DateTime requestedAt) =>
-        (((int)requestedAt.DayOfWeek + 6) % 7) / 6.0f;
 
     /// <summary>
     /// Parses a fixed ISO UTC string into hour, weekday, and absolute minute stamp.
@@ -79,34 +71,6 @@ public static class FraudVectorizer
     }
 
     /// <summary>
-    /// Parses a fixed ISO UTC string and returns only the absolute minute stamp.
-    /// </summary>
-    /// <param name="value">Timestamp in the fixed <c>yyyy-MM-ddTHH:mm:ssZ</c> shape.</param>
-    /// <returns>Absolute minute stamp from the Unix epoch calendar basis.</returns>
-    public static int IsoUtcMinuteStamp(string value)
-    {
-        ParseIsoUtc(value, out _, out _, out int minuteStamp);
-        return minuteStamp;
-    }
-
-    /// <summary>
-    /// Returns 1 when a merchant is absent from the customer's known merchant list.
-    /// </summary>
-    /// <param name="merchantId">Merchant id from the current request.</param>
-    /// <param name="knownMerchants">Customer known merchant ids.</param>
-    /// <returns><c>0</c> when known, otherwise <c>1</c> for vector binary feature use.</returns>
-    public static int UnknownMerchant(string merchantId, string[] knownMerchants)
-    {
-        for (int i = 0; i < knownMerchants.Length; i++)
-        {
-            if (knownMerchants[i] == merchantId)
-                return 0;
-        }
-
-        return 1;
-    }
-
-    /// <summary>
     /// Packs the coarse last-transaction and binary fraud dimensions into a group id.
     /// </summary>
     /// <param name="minutesSinceLast">Quantized minutes since last transaction; negative means no last transaction.</param>
@@ -114,7 +78,7 @@ public static class FraudVectorizer
     /// <param name="cardPresent">Quantized card-present flag where positive means true.</param>
     /// <param name="unknownMerchant">Quantized unknown-merchant flag where positive means true.</param>
     /// <returns>A four-bit group id from <c>0</c> through <c>15</c>.</returns>
-    public static int VectorGroup(int minutesSinceLast, int isOnline, int cardPresent, int unknownMerchant)
+    private static int VectorGroup(int minutesSinceLast, int isOnline, int cardPresent, int unknownMerchant)
     {
         // Coarse group packs four binary dimensions into one nibble.
         int group = minutesSinceLast >= 0 ? 1 : 0;
@@ -135,111 +99,17 @@ public static class FraudVectorizer
     /// <param name="cardPresent">Quantized card-present flag where positive means true.</param>
     /// <param name="unknownMerchant">Quantized unknown-merchant flag where positive means true.</param>
     /// <param name="scale">Quantization scale used by both converter and API.</param>
-    /// <returns>A stable fine-bucket id used to index grouped vectors and response majorities.</returns>
+    /// <returns>A stable fine-bucket id used to index grouped labels and response majorities.</returns>
     public static int FineVectorGroup(int minutesSinceLast, int kmFromLast, int amount, int kmFromHome, int isOnline, int cardPresent, int unknownMerchant, int scale)
     {
         // Continuous dimensions are binned after coarse flags. The resulting
-        // integer is stable across converter, API, tests, and validator.
+        // integer is stable across converter, API, and tests.
         int coarse = VectorGroup(minutesSinceLast, isOnline, cardPresent, unknownMerchant);
         int minuteBin = (coarse & 1) != 0 ? ContinuousBin(minutesSinceLast, scale) : 0;
         int kmBin = (coarse & 1) != 0 ? ContinuousBin(kmFromLast, scale) : 0;
         int amountBin = ExtraBin(amount, scale);
         int homeBin = ExtraBin(kmFromHome, scale);
         return (((coarse * FineBins + minuteBin) * FineBins + kmBin) * ExtraBins + amountBin) * ExtraBins + homeBin;
-    }
-
-    /// <summary>
-    /// Computes a coarse squared-distance lower bound between a query and group.
-    /// </summary>
-    /// <param name="queryGroup">Coarse group id for the query vector.</param>
-    /// <param name="group">Coarse group id for the candidate bucket.</param>
-    /// <param name="scale">Quantization scale representing a full binary-feature mismatch.</param>
-    /// <param name="queryMinutesSinceLast">Query recency value used when last-transaction presence differs.</param>
-    /// <param name="queryKmFromLast">Query last-transaction distance used when presence differs.</param>
-    /// <returns>Minimum possible squared distance between the query and any vector in the coarse group.</returns>
-    public static int GroupLowerBound(int queryGroup, int group, int scale, int queryMinutesSinceLast, int queryKmFromLast)
-    {
-        int lower = 0;
-
-        if (((queryGroup ^ group) & 1) != 0)
-        {
-            int minuteDiff = (queryGroup & 1) != 0 ? queryMinutesSinceLast + scale : scale;
-            int kmDiff = (queryGroup & 1) != 0 ? queryKmFromLast + scale : scale;
-            lower = SaturatingAddSquare(lower, minuteDiff, int.MaxValue);
-            lower = SaturatingAddSquare(lower, kmDiff, int.MaxValue);
-        }
-
-        if (((queryGroup ^ group) & 2) != 0)
-            lower = SaturatingAddSquare(lower, scale, int.MaxValue);
-        if (((queryGroup ^ group) & 4) != 0)
-            lower = SaturatingAddSquare(lower, scale, int.MaxValue);
-        if (((queryGroup ^ group) & 8) != 0)
-            lower = SaturatingAddSquare(lower, scale, int.MaxValue);
-
-        return lower;
-    }
-
-    /// <summary>
-    /// Computes a squared-distance lower bound between a query and fine bucket.
-    /// </summary>
-    /// <param name="queryGroup">Fine-bucket id for the query vector.</param>
-    /// <param name="group">Fine-bucket id for the candidate bucket.</param>
-    /// <param name="scale">Quantization scale used to derive bin boundaries.</param>
-    /// <param name="queryMinutesSinceLast">Query recency value used for bin-distance calculation.</param>
-    /// <param name="queryKmFromLast">Query distance-from-last value used for bin-distance calculation.</param>
-    /// <returns>Minimum possible squared distance between the query and any vector in the fine bucket.</returns>
-    /// <remarks>This is used by tests and exact-search experiments, not by the default O(1) production scorer.</remarks>
-    public static int FineGroupLowerBound(int queryGroup, int group, int scale, int queryMinutesSinceLast, int queryKmFromLast)
-    {
-        // Used by tests/experiments for exact-search pruning. It estimates the
-        // minimum possible squared distance from a query to a fine bucket.
-        DecodeFineGroup(queryGroup, out int queryCoarse, out _, out _);
-        DecodeFineGroup(group, out int coarse, out int minuteBin, out int kmBin);
-
-        int lower = 0;
-
-        if (((queryCoarse ^ coarse) & 1) != 0)
-        {
-            if ((queryCoarse & 1) != 0)
-            {
-                lower = SaturatingAddSquare(lower, queryMinutesSinceLast + scale, int.MaxValue);
-                lower = SaturatingAddSquare(lower, queryKmFromLast + scale, int.MaxValue);
-            }
-            else
-            {
-                lower = SaturatingAddSquare(lower, scale + BinLow(minuteBin, scale), int.MaxValue);
-                lower = SaturatingAddSquare(lower, scale + BinLow(kmBin, scale), int.MaxValue);
-            }
-        }
-        else if ((queryCoarse & 1) != 0)
-        {
-            lower = SaturatingAddSquare(lower, DistanceToBin(queryMinutesSinceLast, minuteBin, scale), int.MaxValue);
-            lower = SaturatingAddSquare(lower, DistanceToBin(queryKmFromLast, kmBin, scale), int.MaxValue);
-        }
-
-        if (((queryCoarse ^ coarse) & 2) != 0)
-            lower = SaturatingAddSquare(lower, scale, int.MaxValue);
-        if (((queryCoarse ^ coarse) & 4) != 0)
-            lower = SaturatingAddSquare(lower, scale, int.MaxValue);
-        if (((queryCoarse ^ coarse) & 8) != 0)
-            lower = SaturatingAddSquare(lower, scale, int.MaxValue);
-
-        return lower;
-    }
-
-    /// <summary>
-    /// Looks up MCC risk and falls back to neutral risk for unknown or invalid codes.
-    /// </summary>
-    /// <param name="mcc">Merchant category code as supplied by source JSON.</param>
-    /// <param name="riskByCode">Flat risk table indexed by numeric MCC code.</param>
-    /// <param name="knownRiskByCode">Presence table that distinguishes unknown MCC from listed zero risk.</param>
-    /// <returns>The listed MCC risk, or neutral <c>0.5</c> for invalid/unlisted codes.</returns>
-    public static float LookupMccRisk(string mcc, float[] riskByCode, bool[] knownRiskByCode)
-    {
-        float value = 0.5f;
-        if (int.TryParse(mcc, out int code) && code >= 0 && code < riskByCode.Length)
-            value = knownRiskByCode[code] ? riskByCode[code] : 0.5f;
-        return value;
     }
 
     /// <summary>
@@ -290,19 +160,6 @@ public static class FraudVectorizer
     }
 
     /// <summary>
-    /// Adds a squared distance component and saturates at the provided bound.
-    /// </summary>
-    /// <param name="value">Current accumulated squared distance.</param>
-    /// <param name="diff">Signed feature difference to square.</param>
-    /// <param name="bound">Maximum value to return when the addition would reach or exceed the bound.</param>
-    /// <returns>The accumulated squared distance or <paramref name="bound"/> when saturated.</returns>
-    private static int SaturatingAddSquare(int value, int diff, int bound)
-    {
-        int square = diff * diff;
-        return value >= bound - square ? bound : value + square;
-    }
-
-    /// <summary>
     /// Maps a normalized continuous feature into a fine-bucket bin.
     /// </summary>
     /// <param name="value">Quantized feature value.</param>
@@ -326,62 +183,6 @@ public static class FraudVectorizer
         if (value <= 0) return 0;
         if (value >= scale) return ExtraBins - 1;
         return value * ExtraBins / (scale + 1);
-    }
-
-    /// <summary>
-    /// Decodes a fine-bucket id back into coarse flags and last-transaction bins.
-    /// </summary>
-    /// <param name="group">Fine-bucket id produced by <see cref="FineVectorGroup"/>.</param>
-    /// <param name="coarse">Decoded four-bit coarse flag group.</param>
-    /// <param name="minuteBin">Decoded recency bin.</param>
-    /// <param name="kmBin">Decoded distance-from-last bin.</param>
-    private static void DecodeFineGroup(int group, out int coarse, out int minuteBin, out int kmBin)
-    {
-        group /= ExtraBins;
-        group /= ExtraBins;
-        kmBin = group % FineBins;
-        group /= FineBins;
-        minuteBin = group % FineBins;
-        coarse = group / FineBins;
-    }
-
-    /// <summary>
-    /// Returns the inclusive low value represented by a fine bin.
-    /// </summary>
-    /// <param name="bin">Fine bin id.</param>
-    /// <param name="scale">Quantization scale used to derive bin boundaries.</param>
-    /// <returns>Inclusive lower bound of the bin in quantized units.</returns>
-    private static int BinLow(int bin, int scale) => bin * (scale + 1) / FineBins;
-
-    /// <summary>
-    /// Returns the inclusive high value represented by a fine bin.
-    /// </summary>
-    /// <param name="bin">Fine bin id.</param>
-    /// <param name="scale">Quantization scale used to derive bin boundaries.</param>
-    /// <returns>Inclusive upper bound of the bin in quantized units.</returns>
-    private static int BinHigh(int bin, int scale)
-    {
-        if (bin >= FineBins - 1)
-            return scale;
-
-        return ((bin + 1) * (scale + 1) / FineBins) - 1;
-    }
-
-    /// <summary>
-    /// Computes the minimum distance from a value to a bin interval.
-    /// </summary>
-    /// <param name="value">Quantized feature value to compare with the bin interval.</param>
-    /// <param name="bin">Fine bin id.</param>
-    /// <param name="scale">Quantization scale used to derive bin boundaries.</param>
-    /// <returns><c>0</c> when the value is inside the bin; otherwise distance to nearest boundary.</returns>
-    private static int DistanceToBin(int value, int bin, int scale)
-    {
-        int low = BinLow(bin, scale);
-        if (value < low)
-            return low - value;
-
-        int high = BinHigh(bin, scale);
-        return value > high ? value - high : 0;
     }
 
     /// <summary>

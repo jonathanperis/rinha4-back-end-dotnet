@@ -19,7 +19,7 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
       <p class="eyebrow">CI BENCHMARK ARCHIVE</p>
       <h1>OFFICIAL-LIKE RUN LOG.</h1>
       <p class="tagline">
-        Candidate runs track the default submission stack. Overlays such as AVX2 exact search stay visible as experiments with their own error data.
+        Candidate runs track the default submission stack. Experiment runs stay visible with their own error data.
       </p>
     </section>
 
@@ -94,7 +94,7 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
     {experiments.length > 0 && (
       <section class="report-table-wrap experiment-wrap" data-paginated-table data-page-size={pageSize}>
         <h2>Experiment Runs</h2>
-        <p>Failed or alternate overlays stay here for evidence, not candidate status.</p>
+        <p>Failed or alternate runs stay here for evidence, not candidate status.</p>
         <div class="report-scroll">
           <table class="report-table">
             <thead>
