@@ -71,7 +71,12 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
               <td class="num danger-text">{row.failure_rate}</td>
               <td class="num">{fmtScore(row.final_score)}</td>
               <td class="num">{row.http_errors}</td>
-              <td><a href={`../reports/${row.file}`}>json</a></td>
+              <td>
+                <span class="file-links">
+                  <a href={`../reports/${row.file}`}>json</a>
+                  {row.html_report && <a href={`../reports/${row.html_report}`}>html</a>}
+                </span>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -105,7 +110,12 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
                 <td class="num danger-text">{row.failure_rate}</td>
                 <td class="num">{fmtScore(row.final_score)}</td>
                 <td class="num">{row.http_errors}</td>
-                <td><a href={`../reports/${row.file}`}>json</a></td>
+                <td>
+                  <span class="file-links">
+                    <a href={`../reports/${row.file}`}>json</a>
+                    {row.html_report && <a href={`../reports/${row.html_report}`}>html</a>}
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -173,6 +183,11 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
   .report-table .num { text-align: right; font-variant-numeric: tabular-nums; }
   .report-table a { color: var(--term-green-soft); text-decoration: none; }
   .report-table a:hover { text-shadow: 0 0 10px var(--term-green-glow); }
+  .file-links {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
   .report-table code {
     display: block;
     margin-top: 0.25rem;

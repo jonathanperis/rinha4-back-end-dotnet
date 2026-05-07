@@ -72,11 +72,19 @@ docker run --rm \
     --network host \
     --user "$(id -u):$(id -g)" \
     -e K6_NO_USAGE_REPORT=true \
+    -e K6_WEB_DASHBOARD=true \
+    -e K6_WEB_DASHBOARD_PORT=-1 \
+    -e K6_WEB_DASHBOARD_EXPORT=test/k6-report.html \
     -v "$ROOT_DIR/$RESULTS_DIR/official:/official" \
     -w /official \
     "$K6_IMAGE" run test/test.js
 
 cp "$RESULTS_DIR/official/test/results.json" "$RESULTS_DIR/results.json"
+if [[ -f "$RESULTS_DIR/official/test/k6-report.html" ]]; then
+    cp "$RESULTS_DIR/official/test/k6-report.html" "$RESULTS_DIR/k6-report.html"
+else
+    echo "k6 HTML report was not generated" >&2
+fi
 
 echo "==> Result"
 jq . "$RESULTS_DIR/results.json"

@@ -69,5 +69,6 @@ jobs:
           name: rinha-benchmark-${{ inputs.compose_file }}-${{ github.run_number }}
           path: |
             benchmark-results/results.json
+            benchmark-results/k6-report.html
             benchmark-results/docker-compose.log
           if-no-files-found: ignore

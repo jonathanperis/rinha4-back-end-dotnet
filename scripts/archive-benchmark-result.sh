@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RESULTS_JSON="${RESULTS_JSON:-$ROOT_DIR/benchmark-results/results.json}"
+K6_HTML_REPORT="${K6_HTML_REPORT:-$ROOT_DIR/benchmark-results/k6-report.html}"
 REPORTS_DIR="${REPORTS_DIR:-$ROOT_DIR/docs/public/reports}"
 REPORT_PREFIX="${REPORT_PREFIX:-rinha-benchmark}"
 TIMESTAMP="${BENCHMARK_TIMESTAMP:-${GITHUB_RUN_STARTED_AT:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}}"
@@ -40,6 +41,11 @@ else
 fi
 report_file="${REPORT_PREFIX}-${stamp}-${SHORT_SHA}.json"
 report_path="$REPORTS_DIR/$report_file"
+html_report_file=""
+if [[ -f "$K6_HTML_REPORT" ]]; then
+    html_report_file="${REPORT_PREFIX}-${stamp}-${SHORT_SHA}.html"
+    cp "$K6_HTML_REPORT" "$REPORTS_DIR/$html_report_file"
+fi
 
 jq -n \
     --arg timestamp "$TIMESTAMP" \
@@ -52,6 +58,7 @@ jq -n \
     --arg official_ref "$OFFICIAL_REF" \
     --arg k6_image "$K6_IMAGE" \
     --arg report_kind "$REPORT_KIND" \
+    --arg html_report "$html_report_file" \
     --arg source "zanfranceschi/rinha-de-backend-2026:test/test.js" \
     --slurpfile result "$RESULTS_JSON" \
     '{
@@ -64,6 +71,7 @@ jq -n \
             image: $image,
             compose_file: $compose_file,
             report_kind: $report_kind,
+            html_report: (if $html_report == "" then null else $html_report end),
             official_ref: $official_ref,
             k6_image: $k6_image,
             source: $source,
@@ -86,6 +94,7 @@ for report in "$REPORTS_DIR"/${REPORT_PREFIX}-*.json; do
         image: .metadata.image,
         compose_file: .metadata.compose_file,
         report_kind: (.metadata.report_kind // (if .metadata.compose_file == "docker-compose.yml" then "candidate" else "experiment" end)),
+        html_report: .metadata.html_report,
         p99: .result.p99,
         failure_rate: .result.scoring.failure_rate,
         final_score: .result.scoring.final_score,
