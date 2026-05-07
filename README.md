@@ -367,6 +367,7 @@ Run from GitHub Actions:
    - `docker-compose.nginx-http.yml`
    - `docker-compose.envoy.yml`
    - `docker-compose.haproxy.yml`
+   - `docker-compose.avx2.yml` for exact reference search with AVX2 enabled on amd64 runners
 4. Run workflow.
 
 Manual runs can also benchmark a pushed image by filling `webapi_image`; when set,

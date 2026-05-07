@@ -1,0 +1,8 @@
+services:
+  webapi1:
+    environment:
+      SEARCH_MODE: avx2
+
+  webapi2:
+    environment:
+      SEARCH_MODE: avx2

@@ -13,6 +13,7 @@ on:
           - docker-compose.nginx-http.yml
           - docker-compose.envoy.yml
           - docker-compose.haproxy.yml
+          - docker-compose.avx2.yml
       official_ref:
         description: Rinha official repo ref to clone for test/test.js and test-data.json
         required: true
