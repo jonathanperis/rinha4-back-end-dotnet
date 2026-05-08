@@ -21,14 +21,14 @@ HTTP errors; p99 work is now inside IVF repair and vector scan cost.
 The active bottleneck is balancing full-repair accuracy with p99. Rounded IVF
 matched the public benchmark locally with `0` false positives and `0` false
 negatives, but the full-repair path still needs CI latency improvement.
-The current best zero-failure CI lane uses `2048` IVF clusters with scalar bbox
-repair: p99 `2.76ms`, score `5559.57`. AVX2 bbox repair raised p99 to
-`5.37ms`; a cluster-major bbox copy raised p99 to `6.89ms`; `4096` clusters
-raised p99 to `16.69ms`; `1024` clusters raised p99 to `19.78ms`.
-The active A/B is a first-cluster `5/5` fraud fast accept under a tuned int16
-distance bound. `test/AccuracyProbe profile` showed high-confidence denials are
-the expensive lane, and public replay stays at `0` false positives and `0`
-false negatives with the guarded shortcut.
+The current best zero-failure CI lane uses `2048` IVF clusters, scalar bbox
+repair, and first-cluster `5/5` fraud fast accept under a tuned int16 distance
+bound: p99 `1.46ms`, score `5836.34`. `test/AccuracyProbe profile` showed
+high-confidence denials are the expensive lane, and public replay stays at `0`
+false positives and `0` false negatives with the guarded shortcut. AVX2 bbox
+repair raised p99 to `5.37ms`; a cluster-major bbox copy raised p99 to
+`6.89ms`; `4096` clusters raised p99 to `16.69ms`; `1024` clusters raised p99
+to `19.78ms`.
 Lower-scale IVF3 int32 A/B reduced accumulation cost structurally but was not
 candidate-safe on public replay: scale `1000` missed `21` labels, and scale
 `4096` missed `4` labels.
