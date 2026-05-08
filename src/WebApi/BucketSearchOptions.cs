@@ -24,7 +24,7 @@ internal readonly record struct BucketSearchOptions(
             EnvBool("BUCKET_PROFILE_FASTPATH", true),
             EnvPositiveInt("BUCKET_PROFILE_LEGIT_MIN_COUNT", 5),
             EnvPositiveInt("BUCKET_PROFILE_FRAUD_MIN_COUNT", profileMinCount),
-            EnvBool("BUCKET_EXACT_FALLBACK", true));
+            EnvBool("BUCKET_EXACT_FALLBACK", false));
     }
 
     private static int EnvPositiveInt(string name, int fallback)
