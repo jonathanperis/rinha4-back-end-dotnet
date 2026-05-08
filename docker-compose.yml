@@ -2,7 +2,7 @@ name: 'rinha-2026-dotnet'
 
 services:
   webapi1: &webapi
-    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-23ce4472f631deaf88a530c33ed91d18b9c1c2bb
+    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-780d16603df535d54a0c58d1a8f5b4701d16b7b6
     pull_policy: always
     container_name: webapi-1
     user: root
@@ -28,6 +28,7 @@ services:
       - /tmp
     volumes:
       - sockets:/sockets
+    cpuset: "1,2"
     healthcheck:
       test: ["CMD-SHELL", "test -S \"$${SOCKET_PATH}\""]
       interval: 100ms
@@ -63,6 +64,7 @@ services:
       SOCKET_PATH: /sockets/api2.sock
       DATA_DIR: /data
       IVF_PATH: /data/references.ivf.bin
+    cpuset: "2,3"
 
   nginx:
     image: nginx:latest
@@ -78,6 +80,7 @@ services:
         condition: service_healthy
     ports:
       - "9999:9999"
+    cpuset: "0"
     deploy:
       resources:
         limits:
