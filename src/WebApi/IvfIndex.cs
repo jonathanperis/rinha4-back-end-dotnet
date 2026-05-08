@@ -203,7 +203,7 @@ internal sealed class IvfIndex
     private byte FraudCountOnce(ReadOnlySpan<float> query, ReadOnlySpan<short> quantizedQuery, IvfSearchOptions options, int nProbe, bool repair)
     {
         bool exactRerank = exactVectors is not null && options.ExactRerank;
-        int candidateCount = exactRerank ? Math.Clamp(options.RerankCandidates, 5, 16) : 5;
+        int candidateCount = exactRerank ? Math.Clamp(options.RerankCandidates, 5, 128) : 5;
 
         Span<int> bestClusters = stackalloc int[nProbe];
         Span<float> bestDistances = stackalloc float[nProbe];
