@@ -1,14 +1,14 @@
 {
   "metadata": {
-    "timestamp": "2026-05-08T19:06:26-03:00",
-    "sha": "88274d6eb0a6cb3660adb83007bd5edeee09df79",
-    "short_sha": "88274d6eb0a6",
-    "run_id": "25581962827",
-    "run_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25581962827",
-    "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-88274d6eb0a6cb3660adb83007bd5edeee09df79",
+    "timestamp": "2026-05-08T19:48:50-03:00",
+    "sha": "66ebd2c5f9992745ccf18c574c554667c01be821",
+    "short_sha": "66ebd2c5f999",
+    "run_id": "25583315686",
+    "run_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25583315686",
+    "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-66ebd2c5f9992745ccf18c574c554667c01be821",
     "compose_file": "docker-compose.nginx.yml",
     "report_kind": "candidate",
-    "html_report": "rinha-benchmark-20260508220626-88274d6eb0a6.html",
+    "html_report": "rinha-benchmark-20260508224850-66ebd2c5f999.html",
     "official_ref": "main",
     "k6_image": "grafana/k6:latest",
     "source": "zanfranceschi/rinha-de-backend-2026:test/test.js",
@@ -46,29 +46,29 @@
       "edge_case_count": 797,
       "edge_case_rate": 0.0147
     },
-    "p99": "2002.32ms",
+    "p99": "2000.25ms",
     "scoring": {
       "breakdown": {
-        "false_positive_detections": 1,
-        "false_negative_detections": 0,
-        "true_positive_detections": 2497,
-        "true_negative_detections": 3217,
-        "http_errors": 12474
+        "false_positive_detections": 608,
+        "false_negative_detections": 635,
+        "true_positive_detections": 23020,
+        "true_negative_detections": 28918,
+        "http_errors": 878
       },
-      "failure_rate": "68.59%",
-      "weighted_errors_E": 62371,
-      "error_rate_epsilon": 3.429051,
+      "failure_rate": "3.92%",
+      "weighted_errors_E": 6903,
+      "error_rate_epsilon": 0.127694,
       "p99_score": {
         "value": -3000,
         "cut_triggered": true
       },
       "detection_score": {
-        "value": -3000,
-        "rate_component": null,
-        "absolute_penalty": null,
-        "cut_triggered": true
+        "value": -257.9,
+        "rate_component": 893.83,
+        "absolute_penalty": -1151.73,
+        "cut_triggered": false
       },
-      "final_score": -6000
+      "final_score": -3257.9
     }
   }
 }
