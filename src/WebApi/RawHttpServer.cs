@@ -77,7 +77,10 @@ internal sealed class RawHttpServer
         while (true)
         {
             Socket client = await listener.AcceptAsync();
-            _ = HandleConnectionAsync(client);
+            ThreadPool.UnsafeQueueUserWorkItem(
+                static state => state.Server.HandleConnection(state.Socket),
+                (Server: this, Socket: client),
+                preferLocal: false);
         }
     }
 
@@ -95,7 +98,7 @@ internal sealed class RawHttpServer
     /// Handles all keep-alive requests for one socket using a pooled read buffer.
     /// It accepts bodies up to the expected Rinha payload size and preserves pipelined bytes.
     /// </summary>
-    private async Task HandleConnectionAsync(Socket socket)
+    private void HandleConnection(Socket socket)
     {
         using (socket)
         {
@@ -112,11 +115,11 @@ internal sealed class RawHttpServer
                     {
                         if (end == buffer.Length)
                         {
-                            await HttpWire.SendAllAsync(socket, HttpResponses.BadRequest);
+                            HttpWire.SendAll(socket, HttpResponses.BadRequest.Span);
                             return;
                         }
 
-                        int read = await socket.ReceiveAsync(buffer.AsMemory(end), SocketFlags.None);
+                        int read = socket.Receive(buffer.AsSpan(end), SocketFlags.None);
                         if (read == 0)
                             return;
 
@@ -126,7 +129,7 @@ internal sealed class RawHttpServer
                     int contentLength = HttpWire.GetContentLength(buffer.AsSpan(start, headerEnd - start));
                     if (contentLength < 0 || contentLength > MaxBodyBytes)
                     {
-                        await HttpWire.SendAllAsync(socket, HttpResponses.BadRequest);
+                        HttpWire.SendAll(socket, HttpResponses.BadRequest.Span);
                         return;
                     }
 
@@ -136,11 +139,11 @@ internal sealed class RawHttpServer
                     {
                         if (end == buffer.Length)
                         {
-                            await HttpWire.SendAllAsync(socket, HttpResponses.BadRequest);
+                            HttpWire.SendAll(socket, HttpResponses.BadRequest.Span);
                             return;
                         }
 
-                        int read = await socket.ReceiveAsync(buffer.AsMemory(end), SocketFlags.None);
+                        int read = socket.Receive(buffer.AsSpan(end), SocketFlags.None);
                         if (read == 0)
                             return;
 
@@ -148,7 +151,7 @@ internal sealed class RawHttpServer
                     }
 
                     ReadOnlyMemory<byte> response = SelectResponse(buffer.AsSpan(start, headerEnd - start), buffer.AsSpan(bodyStart, contentLength));
-                    await HttpWire.SendAllAsync(socket, response);
+                    HttpWire.SendAll(socket, response.Span);
 
                     int remaining = end - requestEnd;
                     if (remaining > 0)

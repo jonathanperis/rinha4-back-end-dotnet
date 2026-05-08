@@ -22,6 +22,21 @@ internal static class HttpWire
     }
 
     /// <summary>
+    /// Sends the full response buffer on the synchronous raw-server path.
+    /// </summary>
+    public static void SendAll(Socket socket, ReadOnlySpan<byte> data)
+    {
+        while (!data.IsEmpty)
+        {
+            int sent = socket.Send(data, SocketFlags.None);
+            if (sent <= 0)
+                return;
+
+            data = data[sent..];
+        }
+    }
+
+    /// <summary>
     /// Finds the CRLFCRLF delimiter that terminates an HTTP header block within a buffer window.
     /// Returns -1 when the current window still needs more bytes from the socket.
     /// </summary>

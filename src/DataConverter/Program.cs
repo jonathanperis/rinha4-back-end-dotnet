@@ -1,7 +1,9 @@
 string inputDir = DataConverterOptions.InputDirectory(args);
 string inputPath = Path.Combine(inputDir, "references.json.gz");
 string ivfOutputPath = Path.Combine(inputDir, "references.ivf.bin");
+string bucketOutputPath = Path.Combine(inputDir, "references.bucket.bin");
 IvfBuildOptions ivfOptions = DataConverterOptions.IvfOptions();
+BucketBuildOptions bucketOptions = DataConverterOptions.BucketOptions();
 
 const int Dims = 14;
 
@@ -43,6 +45,10 @@ IvfIndexBuilder.Write(ivfOutputPath, vectors, labels, count, ivfOptions);
 long ivfSize = new FileInfo(ivfOutputPath).Length;
 Console.WriteLine($"IVF output: {ivfSize / (1024.0 * 1024.0):F1} MB ({ivfSize:N0} bytes)");
 
+BucketIndexBuilder.Write(bucketOutputPath, vectors, labels, count, bucketOptions);
+long bucketSize = new FileInfo(bucketOutputPath).Length;
+Console.WriteLine($"Bucket output: {bucketSize / (1024.0 * 1024.0):F1} MB ({bucketSize:N0} bytes)");
+
 /// <summary>
 /// Reads converter command-line and environment options.
 /// </summary>
@@ -76,6 +82,12 @@ internal static class DataConverterOptions
         EnvInt("IVF_TRAIN_SAMPLE", 65_536),
         EnvInt("IVF_ITERATIONS", 6),
         Math.Min(EnvInt("IVF_SCALE", IvfIndexBuilder.DefaultScale), short.MaxValue));
+
+    /// <summary>
+    /// Reads bucket-index build parameters from environment variables.
+    /// </summary>
+    public static BucketBuildOptions BucketOptions() => new(
+        Math.Min(EnvInt("BUCKET_SCALE", EnvInt("IVF_SCALE", IvfIndexBuilder.DefaultScale)), short.MaxValue));
 
     /// <summary>
     /// Reads an integer environment variable with fallback.

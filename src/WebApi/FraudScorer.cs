@@ -20,21 +20,20 @@ internal sealed class FraudScorer
     private readonly int maxMerchantAvgAmount;
     private readonly float[] mccRisk;
     private readonly bool[] mccRiskKnown;
-    private readonly IvfIndex ivfIndex;
+    private readonly IvfIndex? ivfIndex;
     private readonly IvfSearchOptions ivfOptions;
+    private readonly BucketIndex? bucketIndex;
+    private readonly BucketSearchOptions bucketOptions;
+    private readonly bool useBucket;
 
-    /// <summary>
-    /// Stores immutable normalization, MCC, and IVF state used by all request handlers.
-    /// </summary>
-    /// <param name="normalization">Normalization denominators loaded from <c>normalization.json</c>.</param>
-    /// <param name="mcc">MCC risk arrays loaded from <c>mcc_risk.json</c>.</param>
-    /// <param name="ivfIndex">Loaded production IVF index.</param>
-    /// <param name="ivfOptions">Runtime IVF search controls.</param>
     private FraudScorer(
         NormalizationConstants normalization,
         MccRiskTable mcc,
-        IvfIndex ivfIndex,
-        IvfSearchOptions ivfOptions)
+        IvfIndex? ivfIndex,
+        IvfSearchOptions ivfOptions,
+        BucketIndex? bucketIndex,
+        BucketSearchOptions bucketOptions,
+        bool useBucket)
     {
         maxAmount = normalization.MaxAmount;
         maxInstallments = normalization.MaxInstallments;
@@ -47,6 +46,9 @@ internal sealed class FraudScorer
         mccRiskKnown = mcc.KnownByCode;
         this.ivfIndex = ivfIndex;
         this.ivfOptions = ivfOptions;
+        this.bucketIndex = bucketIndex;
+        this.bucketOptions = bucketOptions;
+        this.useBucket = useBucket;
     }
 
     /// <summary>
@@ -58,11 +60,15 @@ internal sealed class FraudScorer
     {
         NormalizationConstants normalization = NormalizationConstants.Load(Path.Combine(dataDirectory, "normalization.json"));
         MccRiskTable mcc = MccRiskTable.Load(Path.Combine(dataDirectory, "mcc_risk.json"));
-        IvfIndex ivfIndex = LoadIvf(dataDirectory);
-        IvfSearchOptions ivfOptions = IvfSearchOptions.FromEnvironment();
+        string scorerMode = Environment.GetEnvironmentVariable("SCORER_MODE") ?? "bucket";
+        bool useBucket = !string.Equals(scorerMode, "ivf", StringComparison.OrdinalIgnoreCase);
+        IvfIndex? ivfIndex = useBucket ? null : LoadIvf(dataDirectory);
+        BucketIndex? bucketIndex = useBucket ? LoadBucket(dataDirectory) : null;
+        IvfSearchOptions ivfOptions = useBucket ? default : IvfSearchOptions.FromEnvironment();
+        BucketSearchOptions bucketOptions = useBucket ? BucketSearchOptions.FromEnvironment() : default;
 
         Console.WriteLine("Dataset loaded. Ready to serve.");
-        return new FraudScorer(normalization, mcc, ivfIndex, ivfOptions);
+        return new FraudScorer(normalization, mcc, ivfIndex, ivfOptions, bucketIndex, bucketOptions, useBucket);
     }
 
     /// <summary>
@@ -89,45 +95,45 @@ internal sealed class FraudScorer
             return HttpResponses.BadRequest;
         }
 
-        Span<float> fv = stackalloc float[Dims];
-
-        fv[0] = Clamp(req.Amount / maxAmount);
-        fv[1] = Clamp(req.Installments / (float)maxInstallments);
-        fv[2] = Clamp((req.Amount / req.CustomerAvgAmount) / amountVsAvgRatio);
-
-        int reqMinuteStamp = req.RequestedMinuteStamp;
-        fv[3] = req.Hour / 23.0f;
-        fv[4] = req.DayOfWeek / 6.0f;
-
-        if (req.HasLastTransaction)
-        {
-            int minutes = reqMinuteStamp - req.LastMinuteStamp;
-            fv[5] = Clamp(minutes / (float)maxMinutes);
-            fv[6] = Clamp(req.KmFromCurrent / maxKm);
-        }
-        else
-        {
-            fv[5] = -1.0f;
-            fv[6] = -1.0f;
-        }
-
-        fv[7] = Clamp(req.KmFromHome / maxKm);
-        fv[8] = Clamp(req.TxCount24h / (float)maxTxCount24h);
-        fv[9] = req.IsOnline ? 1.0f : 0.0f;
-        fv[10] = req.CardPresent ? 1.0f : 0.0f;
-        fv[11] = req.UnknownMerchant ? 1.0f : 0.0f;
-        fv[12] = req.MccCode >= 0 && req.MccCode < mccRisk.Length && mccRiskKnown[req.MccCode] ? mccRisk[req.MccCode] : 0.5f;
-        fv[13] = Clamp(req.MerchantAvgAmount / maxMerchantAvgAmount);
-
         Span<short> qv = stackalloc short[PaddedDims];
-        int scale = ivfIndex.Scale;
-        for (int i = 0; i < Dims; i++)
-            qv[i] = QuantizeRounded(fv[i], scale);
+        int scale = useBucket ? bucketIndex!.Scale : ivfIndex!.Scale;
+        QuantizeRequest(req, qv, scale);
         qv[Dims] = 0;
         qv[Dims + 1] = 0;
 
-        byte frauds = ivfIndex.FraudCount(qv, ivfOptions);
+        byte frauds = useBucket
+            ? bucketIndex!.FraudCount(qv, bucketOptions)
+            : ivfIndex!.FraudCount(qv, ivfOptions);
         return HttpResponses.FraudScores[frauds];
+    }
+
+    private void QuantizeRequest(FraudInput req, Span<short> qv, int scale)
+    {
+        qv[0] = QuantizeRounded(Clamp(req.Amount / maxAmount), scale);
+        qv[1] = QuantizeRounded(Clamp(req.Installments / (float)maxInstallments), scale);
+        qv[2] = QuantizeRounded(Clamp((req.Amount / req.CustomerAvgAmount) / amountVsAvgRatio), scale);
+        qv[3] = QuantizeRounded(req.Hour / 23.0f, scale);
+        qv[4] = QuantizeRounded(req.DayOfWeek / 6.0f, scale);
+
+        if (req.HasLastTransaction)
+        {
+            int minutes = req.RequestedMinuteStamp - req.LastMinuteStamp;
+            qv[5] = QuantizeRounded(Clamp(minutes / (float)maxMinutes), scale);
+            qv[6] = QuantizeRounded(Clamp(req.KmFromCurrent / maxKm), scale);
+        }
+        else
+        {
+            qv[5] = (short)-scale;
+            qv[6] = (short)-scale;
+        }
+
+        qv[7] = QuantizeRounded(Clamp(req.KmFromHome / maxKm), scale);
+        qv[8] = QuantizeRounded(Clamp(req.TxCount24h / (float)maxTxCount24h), scale);
+        qv[9] = req.IsOnline ? (short)scale : (short)0;
+        qv[10] = req.CardPresent ? (short)scale : (short)0;
+        qv[11] = req.UnknownMerchant ? (short)scale : (short)0;
+        qv[12] = QuantizeRounded(req.MccCode >= 0 && req.MccCode < mccRisk.Length && mccRiskKnown[req.MccCode] ? mccRisk[req.MccCode] : 0.5f, scale);
+        qv[13] = QuantizeRounded(Clamp(req.MerchantAvgAmount / maxMerchantAvgAmount), scale);
     }
 
     /// <summary>
@@ -145,6 +151,20 @@ internal sealed class FraudScorer
         }
 
         Console.WriteLine($"IVF scorer unavailable. {error}");
+        Environment.Exit(1);
+        throw new InvalidOperationException(error);
+    }
+
+    private static BucketIndex LoadBucket(string dataDirectory)
+    {
+        string path = Environment.GetEnvironmentVariable("BUCKET_PATH") ?? Path.Combine(dataDirectory, "references.bucket.bin");
+        if (BucketIndex.TryLoad(path, out BucketIndex? index, out string error) && index is not null)
+        {
+            Console.WriteLine($"Bucket scorer enabled: {path}");
+            return index;
+        }
+
+        Console.WriteLine($"Bucket scorer unavailable. {error}");
         Environment.Exit(1);
         throw new InvalidOperationException(error);
     }
