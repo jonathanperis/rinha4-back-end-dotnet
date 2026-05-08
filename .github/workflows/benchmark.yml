@@ -9,11 +9,7 @@ on:
         default: docker-compose.nginx.yml
         type: choice
         options:
-          - all-lb-variants
           - docker-compose.nginx.yml
-          - docker-compose.haproxy.yml
-          - docker-compose.envoy.yml
-          - docker-compose.yarp.yml
       official_ref:
         description: Rinha official repo ref to clone for test/test.js and test-data.json
         required: true
@@ -135,12 +131,6 @@ jobs:
         lb:
           - name: nginx
             compose_file: docker-compose.nginx.yml
-          - name: haproxy
-            compose_file: docker-compose.haproxy.yml
-          - name: envoy
-            compose_file: docker-compose.envoy.yml
-          - name: yarp
-            compose_file: docker-compose.yarp.yml
     concurrency:
       group: benchmark-${{ github.run_id }}-${{ matrix.lb.name }}
       cancel-in-progress: false
@@ -151,13 +141,13 @@ jobs:
 
     steps:
       - name: Checkout
-        if: ${{ inputs.compose_file == 'all-lb-variants' || inputs.compose_file == matrix.lb.compose_file }}
+        if: ${{ inputs.compose_file == matrix.lb.compose_file }}
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Show runner capacity
-        if: ${{ inputs.compose_file == 'all-lb-variants' || inputs.compose_file == matrix.lb.compose_file }}
+        if: ${{ inputs.compose_file == matrix.lb.compose_file }}
         run: |
           uname -a
           nproc
@@ -166,7 +156,7 @@ jobs:
           docker compose version
 
       - name: Run benchmark
-        if: ${{ inputs.compose_file == 'all-lb-variants' || inputs.compose_file == matrix.lb.compose_file }}
+        if: ${{ inputs.compose_file == matrix.lb.compose_file }}
         env:
           COMPOSE_FILE: ${{ matrix.lb.compose_file }}
           OFFICIAL_REF: ${{ inputs.official_ref }}
@@ -197,7 +187,7 @@ jobs:
         run: bash scripts/ci-official-benchmark.sh
 
       - name: Write benchmark metadata
-        if: ${{ always() && (inputs.compose_file == 'all-lb-variants' || inputs.compose_file == matrix.lb.compose_file) }}
+        if: ${{ always() && inputs.compose_file == matrix.lb.compose_file }}
         run: |
           mkdir -p benchmark-results-${{ matrix.lb.name }}
           cat > benchmark-results-${{ matrix.lb.name }}/metadata.env <<'EOF'
@@ -206,7 +196,7 @@ jobs:
           EOF
 
       - name: Upload benchmark artifacts
-        if: ${{ always() && (inputs.compose_file == 'all-lb-variants' || inputs.compose_file == matrix.lb.compose_file) }}
+        if: ${{ always() && inputs.compose_file == matrix.lb.compose_file }}
         uses: actions/upload-artifact@v7
         with:
           name: rinha-benchmark-results-${{ matrix.lb.name }}-${{ github.run_number }}
@@ -251,7 +241,7 @@ jobs:
           BENCHMARK_SHA: ${{ github.sha }}
           BENCHMARK_RUN_ID: ${{ github.run_id }}
           BENCHMARK_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          BENCHMARK_REPORT_KIND: ${{ inputs.compose_file == 'all-lb-variants' && 'experiment' || inputs.report_kind }}
+          BENCHMARK_REPORT_KIND: ${{ inputs.report_kind }}
           OFFICIAL_REF: ${{ inputs.official_ref }}
           K6_IMAGE: ${{ inputs.k6_image }}
           IVF_CLUSTERS: ${{ inputs.ivf_clusters }}
@@ -274,6 +264,8 @@ jobs:
           BENCHMARK_PROXY_MEMORY: ${{ inputs.benchmark_proxy_memory }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase origin main
           archived=false
           for metadata in benchmark-artifacts/*/metadata.env; do

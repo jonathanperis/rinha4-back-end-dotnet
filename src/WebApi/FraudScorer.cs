@@ -2,8 +2,8 @@
 /// Converts parsed Rinha fraud-score requests into competition responses.
 /// </summary>
 /// <remarks>
-/// The scorer requires the rounded int16 IVF index produced by
-/// <c>DataConverter</c>. Missing or invalid IVF data is a startup failure so
+/// The scorer requires the rounded int16 exact index produced by
+/// <c>DataConverter</c>. Missing or invalid reference data is a startup failure so
 /// benchmark runs cannot silently fall back to a weaker classifier.
 /// </remarks>
 internal sealed class FraudScorer
@@ -20,19 +20,25 @@ internal sealed class FraudScorer
     private readonly int maxMerchantAvgAmount;
     private readonly float[] mccRisk;
     private readonly bool[] mccRiskKnown;
+    private readonly ExactIndex? exactIndex;
     private readonly IvfIndex? ivfIndex;
     private readonly IvfSearchOptions ivfOptions;
     private readonly BucketIndex? bucketIndex;
     private readonly BucketSearchOptions bucketOptions;
+    private readonly bool useExact;
+    private readonly bool useIvf;
     private readonly bool useBucket;
 
     private FraudScorer(
         NormalizationConstants normalization,
         MccRiskTable mcc,
+        ExactIndex? exactIndex,
         IvfIndex? ivfIndex,
         IvfSearchOptions ivfOptions,
         BucketIndex? bucketIndex,
         BucketSearchOptions bucketOptions,
+        bool useExact,
+        bool useIvf,
         bool useBucket)
     {
         maxAmount = normalization.MaxAmount;
@@ -44,10 +50,13 @@ internal sealed class FraudScorer
         maxMerchantAvgAmount = normalization.MaxMerchantAvgAmount;
         mccRisk = mcc.RiskByCode;
         mccRiskKnown = mcc.KnownByCode;
+        this.exactIndex = exactIndex;
         this.ivfIndex = ivfIndex;
         this.ivfOptions = ivfOptions;
         this.bucketIndex = bucketIndex;
         this.bucketOptions = bucketOptions;
+        this.useExact = useExact;
+        this.useIvf = useIvf;
         this.useBucket = useBucket;
     }
 
@@ -60,15 +69,18 @@ internal sealed class FraudScorer
     {
         NormalizationConstants normalization = NormalizationConstants.Load(Path.Combine(dataDirectory, "normalization.json"));
         MccRiskTable mcc = MccRiskTable.Load(Path.Combine(dataDirectory, "mcc_risk.json"));
-        string scorerMode = Environment.GetEnvironmentVariable("SCORER_MODE") ?? "bucket";
-        bool useBucket = !string.Equals(scorerMode, "ivf", StringComparison.OrdinalIgnoreCase);
-        IvfIndex? ivfIndex = useBucket ? null : LoadIvf(dataDirectory);
+        string scorerMode = Environment.GetEnvironmentVariable("SCORER_MODE") ?? "exact";
+        bool useBucket = string.Equals(scorerMode, "bucket", StringComparison.OrdinalIgnoreCase);
+        bool useIvf = string.Equals(scorerMode, "ivf", StringComparison.OrdinalIgnoreCase);
+        bool useExact = !useBucket && !useIvf;
+        ExactIndex? exactIndex = useExact ? LoadExact(dataDirectory) : null;
+        IvfIndex? ivfIndex = useIvf ? LoadIvf(dataDirectory) : null;
         BucketIndex? bucketIndex = useBucket ? LoadBucket(dataDirectory) : null;
-        IvfSearchOptions ivfOptions = useBucket ? default : IvfSearchOptions.FromEnvironment();
+        IvfSearchOptions ivfOptions = useIvf ? IvfSearchOptions.FromEnvironment() : default;
         BucketSearchOptions bucketOptions = useBucket ? BucketSearchOptions.FromEnvironment() : default;
 
         Console.WriteLine("Dataset loaded. Ready to serve.");
-        return new FraudScorer(normalization, mcc, ivfIndex, ivfOptions, bucketIndex, bucketOptions, useBucket);
+        return new FraudScorer(normalization, mcc, exactIndex, ivfIndex, ivfOptions, bucketIndex, bucketOptions, useExact, useIvf, useBucket);
     }
 
     /// <summary>
@@ -96,14 +108,14 @@ internal sealed class FraudScorer
         }
 
         Span<short> qv = stackalloc short[PaddedDims];
-        int scale = useBucket ? bucketIndex!.Scale : ivfIndex!.Scale;
+        int scale = useBucket ? bucketIndex!.Scale : (useIvf ? ivfIndex!.Scale : exactIndex!.Scale);
         QuantizeRequest(req, qv, scale);
         qv[Dims] = 0;
         qv[Dims + 1] = 0;
 
-        byte frauds = useBucket
-            ? bucketIndex!.FraudCount(qv, bucketOptions)
-            : ivfIndex!.FraudCount(qv, ivfOptions);
+        byte frauds = useExact
+            ? exactIndex!.FraudCount(qv)
+            : (useBucket ? bucketIndex!.FraudCount(qv, bucketOptions) : ivfIndex!.FraudCount(qv, ivfOptions));
         return HttpResponses.FraudScores[frauds];
     }
 
@@ -151,6 +163,20 @@ internal sealed class FraudScorer
         }
 
         Console.WriteLine($"IVF scorer unavailable. {error}");
+        Environment.Exit(1);
+        throw new InvalidOperationException(error);
+    }
+
+    private static ExactIndex LoadExact(string dataDirectory)
+    {
+        string path = Environment.GetEnvironmentVariable("EXACT_PATH") ?? Path.Combine(dataDirectory, "references.bin");
+        if (ExactIndex.TryLoad(path, out ExactIndex? index, out string error) && index is not null)
+        {
+            Console.WriteLine($"Exact scorer enabled: {path}");
+            return index;
+        }
+
+        Console.WriteLine($"Exact scorer unavailable. {error}");
         Environment.Exit(1);
         throw new InvalidOperationException(error);
     }
