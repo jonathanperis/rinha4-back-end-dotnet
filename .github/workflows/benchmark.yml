@@ -166,7 +166,9 @@ jobs:
           IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
           BENCHMARK_STACK_CPUSET: ${{ inputs.benchmark_stack_cpuset }}
           BENCHMARK_K6_CPUSET: ${{ inputs.benchmark_k6_cpuset }}
-        run: bash scripts/archive-benchmark-result.sh
+        run: |
+          git pull --rebase origin main
+          bash scripts/archive-benchmark-result.sh
 
       - name: Commit benchmark report
         id: commit-benchmark-report
@@ -180,7 +182,6 @@ jobs:
             echo "committed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "docs: archive rinha benchmark"
-            git pull --rebase origin main
             git push
             echo "committed=true" >> "$GITHUB_OUTPUT"
           fi

@@ -215,7 +215,9 @@ jobs:
           IVF_REPAIR_MIN_FRAUDS: "0"
           IVF_REPAIR_MAX_FRAUDS: "5"
           BENCHMARK_STACK_CPUSET: "0"
-        run: bash scripts/archive-benchmark-result.sh
+        run: |
+          git pull --rebase origin main
+          bash scripts/archive-benchmark-result.sh
 
       - name: Commit benchmark report
         id: commit-benchmark-report
@@ -228,7 +230,6 @@ jobs:
             echo "committed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "docs: archive rinha benchmark"
-            git pull --rebase origin main
             git push
             echo "committed=true" >> "$GITHUB_OUTPUT"
           fi
