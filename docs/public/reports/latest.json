@@ -1,20 +1,27 @@
 {
   "metadata": {
-    "timestamp": "2026-05-08T15:11:01Z",
-    "sha": "749a790e0f9845d285923f28d61320d02e44760f",
-    "short_sha": "749a790e0f98",
-    "run_id": "25563081070",
-    "run_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25563081070",
-    "image": "",
+    "timestamp": "2026-05-08T12:59:34-03:00",
+    "sha": "3703b516ae2c6b64b287b6dfbb9f2bb9c7c8b179",
+    "short_sha": "3703b516ae2c",
+    "run_id": "25565639928",
+    "run_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25565639928",
+    "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-3703b516ae2c6b64b287b6dfbb9f2bb9c7c8b179",
     "compose_file": "docker-compose.yml",
     "report_kind": "candidate",
-    "html_report": "rinha-benchmark-20260508151101-749a790e0f98.html",
+    "html_report": "rinha-benchmark-20260508155934-3703b516ae2c.html",
     "official_ref": "main",
     "k6_image": "grafana/k6:latest",
     "source": "zanfranceschi/rinha-de-backend-2026:test/test.js",
     "environment": "GitHub Actions ubuntu-latest; official-like only, not official Rinha hardware",
     "benchmark_stack_cpuset": "",
     "benchmark_k6_cpuset": "",
+    "benchmark_api_cpuset": "",
+    "benchmark_proxy_cpuset": "",
+    "benchmark_api_cpus": "",
+    "benchmark_proxy_cpus": "",
+    "benchmark_api_memory": "",
+    "benchmark_proxy_memory": "",
+    "benchmark_repetitions": "1",
     "benchmark_config": {
       "ivf_clusters": "2048",
       "ivf_train_sample": "65536",
@@ -26,7 +33,8 @@
       "ivf_bbox_repair": "true",
       "ivf_repair_min_frauds": "0",
       "ivf_repair_max_frauds": "5"
-    }
+    },
+    "repetition_summary": null
   },
   "result": {
     "expected": {
@@ -38,20 +46,20 @@
       "edge_case_count": 797,
       "edge_case_rate": 0.0147
     },
-    "p99": "1.80ms",
+    "p99": "1.60ms",
     "scoring": {
       "breakdown": {
         "false_positive_detections": 0,
         "false_negative_detections": 0,
         "true_positive_detections": 24037,
-        "true_negative_detections": 30022,
+        "true_negative_detections": 30021,
         "http_errors": 0
       },
       "failure_rate": "0%",
       "weighted_errors_E": 0,
       "error_rate_epsilon": 0,
       "p99_score": {
-        "value": 2745.68,
+        "value": 2795.87,
         "cut_triggered": false
       },
       "detection_score": {
@@ -60,7 +68,7 @@
         "absolute_penalty": 0,
         "cut_triggered": false
       },
-      "final_score": 5745.68
+      "final_score": 5795.87
     }
   }
 }
