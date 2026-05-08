@@ -62,6 +62,18 @@ VectorizationTestRunner.Run("loads IVF index and repairs boundary fraud counts",
     }
 });
 
+VectorizationTestRunner.Run("reads zero as valid IVF repair boundary", () =>
+{
+    using var env = new ScopedEnvironment(
+        ("IVF_REPAIR_MIN_FRAUDS", "0"),
+        ("IVF_REPAIR_MAX_FRAUDS", "5"));
+
+    IvfSearchOptions options = IvfSearchOptions.FromEnvironment();
+
+    VectorizationTestRunner.AssertEqualInt(0, options.RepairMinFrauds);
+    VectorizationTestRunner.AssertEqualInt(5, options.RepairMaxFrauds);
+});
+
 VectorizationTestRunner.Run("reranks IVF candidates with exact vectors", () =>
 {
     string ivfPath = Path.Combine(Path.GetTempPath(), $"rinha-ivf-test-{Guid.NewGuid():N}.bin");
@@ -183,6 +195,41 @@ internal static class IvfRepairAssertions
 
         VectorizationTestRunner.AssertEqualInt(expectedFastOnly, fastOnly);
         VectorizationTestRunner.AssertEqualInt(expectedRepaired, repaired);
+    }
+}
+
+/// <summary>
+/// Restores environment variables after one test case.
+/// </summary>
+/// <remarks>
+/// Tests exercise runtime knobs that the production scorer reads from process
+/// environment. Restoring values keeps one assertion from leaking into another.
+/// </remarks>
+internal sealed class ScopedEnvironment : IDisposable
+{
+    private readonly (string Name, string? Value)[] previousValues;
+
+    /// <summary>
+    /// Sets environment variables until <see cref="Dispose"/> is called.
+    /// </summary>
+    /// <param name="values">Variable names and temporary values.</param>
+    public ScopedEnvironment(params (string Name, string Value)[] values)
+    {
+        previousValues = new (string Name, string? Value)[values.Length];
+        for (int i = 0; i < values.Length; i++)
+        {
+            previousValues[i] = (values[i].Name, Environment.GetEnvironmentVariable(values[i].Name));
+            Environment.SetEnvironmentVariable(values[i].Name, values[i].Value);
+        }
+    }
+
+    /// <summary>
+    /// Restores all variables captured by the constructor.
+    /// </summary>
+    public void Dispose()
+    {
+        foreach ((string name, string? value) in previousValues)
+            Environment.SetEnvironmentVariable(name, value);
     }
 }
 

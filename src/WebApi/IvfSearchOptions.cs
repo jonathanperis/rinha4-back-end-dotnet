@@ -23,15 +23,23 @@ internal readonly record struct IvfSearchOptions(
     /// Reads IVF search controls from environment variables.
     /// </summary>
     /// <returns>Search options matching the current experiment defaults.</returns>
-    public static IvfSearchOptions FromEnvironment() => new(
-        EnvInt("IVF_FAST_NPROBE", 1),
-        EnvInt("IVF_FULL_NPROBE", 1),
-        EnvBool("IVF_BOUNDARY_FULL", true),
-        EnvBool("IVF_BBOX_REPAIR", true),
-        EnvBool("IVF_EXACT_RERANK", true),
-        EnvInt("IVF_RERANK_CANDIDATES", 6),
-        (byte)Math.Min(5, EnvInt("IVF_REPAIR_MIN_FRAUDS", 1)),
-        (byte)Math.Min(5, EnvInt("IVF_REPAIR_MAX_FRAUDS", 4)));
+    public static IvfSearchOptions FromEnvironment()
+    {
+        byte repairMin = (byte)Math.Clamp(EnvNonNegativeInt("IVF_REPAIR_MIN_FRAUDS", 1), 0, 5);
+        byte repairMax = (byte)Math.Clamp(EnvNonNegativeInt("IVF_REPAIR_MAX_FRAUDS", 4), 0, 5);
+        if (repairMin > repairMax)
+            (repairMin, repairMax) = (repairMax, repairMin);
+
+        return new IvfSearchOptions(
+            EnvPositiveInt("IVF_FAST_NPROBE", 1),
+            EnvPositiveInt("IVF_FULL_NPROBE", 1),
+            EnvBool("IVF_BOUNDARY_FULL", true),
+            EnvBool("IVF_BBOX_REPAIR", true),
+            EnvBool("IVF_EXACT_RERANK", true),
+            EnvPositiveInt("IVF_RERANK_CANDIDATES", 6),
+            repairMin,
+            repairMax);
+    }
 
     /// <summary>
     /// Parses an integer environment variable with fallback.
@@ -39,10 +47,22 @@ internal readonly record struct IvfSearchOptions(
     /// <param name="name">Environment variable name.</param>
     /// <param name="fallback">Value used when parsing fails.</param>
     /// <returns>A positive integer value.</returns>
-    private static int EnvInt(string name, int fallback)
+    private static int EnvPositiveInt(string name, int fallback)
     {
         string? value = Environment.GetEnvironmentVariable(name);
         return int.TryParse(value, CultureInfo.InvariantCulture, out int parsed) && parsed > 0 ? parsed : fallback;
+    }
+
+    /// <summary>
+    /// Parses a non-negative integer environment variable with fallback.
+    /// </summary>
+    /// <param name="name">Environment variable name.</param>
+    /// <param name="fallback">Value used when parsing fails.</param>
+    /// <returns>A zero-or-positive integer value.</returns>
+    private static int EnvNonNegativeInt(string name, int fallback)
+    {
+        string? value = Environment.GetEnvironmentVariable(name);
+        return int.TryParse(value, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0 ? parsed : fallback;
     }
 
     /// <summary>
