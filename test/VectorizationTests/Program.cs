@@ -1,29 +1,29 @@
 VectorizationTestRunner.Run("parses UTF-8 ISO UTC hour and weekday", () =>
 {
-    FraudVectorizer.ParseIsoUtc("2026-03-11T20:23:35Z"u8, out int hour, out int dayOfWeek, out int minuteStamp);
+    FraudVectorizer.ParseIsoUtc("2026-03-11T20:23:35Z"u8, out int hour, out int dayOfWeek, out int secondStamp);
 
     VectorizationTestRunner.AssertEqualInt(20, hour);
     VectorizationTestRunner.AssertEqualInt(2, dayOfWeek);
-    if (minuteStamp <= 0)
-        throw new InvalidOperationException($"expected positive minute stamp, got {minuteStamp}");
+    if (secondStamp <= 0)
+        throw new InvalidOperationException($"expected positive second stamp, got {secondStamp}");
 });
 
-VectorizationTestRunner.Run("computes UTF-8 ISO UTC minute gaps across dates", () =>
+VectorizationTestRunner.Run("computes UTF-8 ISO UTC second gaps across dates", () =>
 {
     FraudVectorizer.ParseIsoUtc("2026-03-11T00:03:00Z"u8, out _, out _, out int current);
     FraudVectorizer.ParseIsoUtc("2026-03-10T23:58:00Z"u8, out _, out _, out int previous);
 
-    VectorizationTestRunner.AssertEqualInt(5, current - previous);
+    VectorizationTestRunner.AssertEqualInt(300, current - previous);
 });
 
 VectorizationTestRunner.Run("parses string ISO UTC without allocation-heavy DateTime", () =>
 {
-    FraudVectorizer.ParseIsoUtc("2026-03-15T07:01:00Z", out int hour, out int dayOfWeek, out int minuteStamp);
+    FraudVectorizer.ParseIsoUtc("2026-03-15T07:01:00Z", out int hour, out int dayOfWeek, out int secondStamp);
 
     VectorizationTestRunner.AssertEqualInt(7, hour);
     VectorizationTestRunner.AssertEqualInt(6, dayOfWeek);
-    if (minuteStamp <= 0)
-        throw new InvalidOperationException($"expected positive minute stamp, got {minuteStamp}");
+    if (secondStamp <= 0)
+        throw new InvalidOperationException($"expected positive second stamp, got {secondStamp}");
 });
 
 VectorizationTestRunner.Run("matches known merchant through hash parser", () =>

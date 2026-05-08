@@ -8,13 +8,13 @@
 internal readonly struct NormalizationConstants
 {
     /// <summary>Maximum transaction amount denominator.</summary>
-    public readonly float MaxAmount;
+    public readonly double MaxAmount;
 
     /// <summary>Maximum installments denominator.</summary>
     public readonly int MaxInstallments;
 
     /// <summary>Amount-versus-customer-average ratio denominator.</summary>
-    public readonly float AmountVsAvgRatio;
+    public readonly double AmountVsAvgRatio;
 
     /// <summary>Maximum minutes-since-last-transaction denominator.</summary>
     public readonly int MaxMinutes;
@@ -32,9 +32,9 @@ internal readonly struct NormalizationConstants
     /// Creates a normalization constant set from parsed JSON values.
     /// </summary>
     private NormalizationConstants(
-        float maxAmount,
+        double maxAmount,
         int maxInstallments,
-        float amountVsAvgRatio,
+        double amountVsAvgRatio,
         int maxMinutes,
         int maxKm,
         int maxTxCount24h,
@@ -60,9 +60,9 @@ internal readonly struct NormalizationConstants
         JsonElement norms = doc.RootElement;
 
         return new NormalizationConstants(
-            norms.GetProperty("max_amount").GetSingle(),
+            norms.GetProperty("max_amount").GetDouble(),
             norms.GetProperty("max_installments").GetInt32(),
-            norms.GetProperty("amount_vs_avg_ratio").GetSingle(),
+            norms.GetProperty("amount_vs_avg_ratio").GetDouble(),
             norms.GetProperty("max_minutes").GetInt32(),
             norms.GetProperty("max_km").GetInt32(),
             norms.GetProperty("max_tx_count_24h").GetInt32(),

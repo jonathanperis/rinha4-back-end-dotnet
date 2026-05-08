@@ -8,11 +8,11 @@ const int Dims = 14;
 Console.WriteLine("Loading references.json.gz...");
 
 int count;
-float[] vectors;
+double[] vectors;
 byte[] labels;
 int row = 0;
 
-// Single pass loads vectors and labels needed for reduced exact-reference storage.
+// Single pass loads vectors and labels needed for Zan-style exact-reference storage.
 using (var fs = File.OpenRead(inputPath))
 using (var gz = new GZipStream(fs, CompressionMode.Decompress))
 using (var doc = JsonDocument.Parse(gz))
@@ -21,7 +21,7 @@ using (var doc = JsonDocument.Parse(gz))
     count = root.GetArrayLength();
     Console.WriteLine($"Found {count:N0} vectors");
 
-    vectors = GC.AllocateUninitializedArray<float>(count * Dims);
+    vectors = GC.AllocateUninitializedArray<double>(count * Dims);
     labels = GC.AllocateUninitializedArray<byte>(count);
 
     foreach (var el in root.EnumerateArray())
@@ -31,7 +31,7 @@ using (var doc = JsonDocument.Parse(gz))
 
         int vectorBase = row * Dims;
         for (int dim = 0; dim < Dims; dim++)
-            vectors[vectorBase + dim] = v[dim].GetSingle();
+            vectors[vectorBase + dim] = v[dim].GetDouble();
 
         labels[row] = isFraud ? (byte)1 : (byte)0;
         row++;
@@ -72,7 +72,7 @@ internal static class DataConverterOptions
     public static int ExactMaxRefs()
     {
         string? value = Environment.GetEnvironmentVariable("EXACT_MAX_REFS");
-        return int.TryParse(value, CultureInfo.InvariantCulture, out int parsed) ? parsed : 100_000;
+        return int.TryParse(value, CultureInfo.InvariantCulture, out int parsed) ? parsed : 0;
     }
 
 }

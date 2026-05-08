@@ -7,7 +7,7 @@ internal static class ExactIndexBuilder
     private const int Stride = 16;
     public const int Scale = 8192;
 
-    public static void Write(string outputPath, float[] vectors, byte[] labels, int count, int maxRefs)
+    public static void Write(string outputPath, double[] vectors, byte[] labels, int count, int maxRefs)
     {
         int targetCount = maxRefs <= 0 ? count : Math.Min(maxRefs, count);
         (int targetFrauds, int targetLegits) = TargetLabelCounts(labels, count, targetCount);
@@ -59,7 +59,10 @@ internal static class ExactIndexBuilder
     {
         int fraudTotal = CountLabel(labels, count, 1);
         int legitTotal = count - fraudTotal;
-        int targetFraud = (int)MathF.Round(targetCount * (fraudTotal / (float)count));
+        if (targetCount == count)
+            return (fraudTotal, legitTotal);
+
+        int targetFraud = (int)Math.Round(targetCount * (fraudTotal / (double)count));
         if (fraudTotal > 0)
             targetFraud = Math.Clamp(targetFraud, 1, fraudTotal);
 
@@ -95,7 +98,7 @@ internal static class ExactIndexBuilder
     private static bool ShouldTake(int seen, int total, int written, int target) =>
         target > 0 && (long)seen * target / total >= written;
 
-    private static void WriteRow(float[] vectors, byte[] labels, int sourceRow, short[] output, byte[] outputLabels, int outputRow)
+    private static void WriteRow(double[] vectors, byte[] labels, int sourceRow, short[] output, byte[] outputLabels, int outputRow)
     {
         int sourceBase = sourceRow * Dims;
         int targetBase = outputRow * Stride;
@@ -108,9 +111,9 @@ internal static class ExactIndexBuilder
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static short Quantize(float value)
+    private static short Quantize(double value)
     {
-        float q = MathF.Round(value * Scale);
+        double q = Math.Round(value * Scale);
         if (q > short.MaxValue) q = short.MaxValue;
         if (q < short.MinValue) q = short.MinValue;
         return (short)q;

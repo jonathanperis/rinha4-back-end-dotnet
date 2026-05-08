@@ -331,7 +331,7 @@ static void VectorizeRequestDouble(JsonElement request, NormalizationConstants n
     double amount = transaction.GetProperty("amount").GetDouble();
     double customerAvgAmount = customer.GetProperty("avg_amount").GetDouble();
     double merchantAvgAmount = merchant.GetProperty("avg_amount").GetDouble();
-    FraudVectorizer.ParseIsoUtc(transaction.GetProperty("requested_at").GetString()!, out int hour, out int dayOfWeek, out int requestedMinuteStamp);
+    FraudVectorizer.ParseIsoUtc(transaction.GetProperty("requested_at").GetString()!, out int hour, out int dayOfWeek, out int requestedSecondStamp);
 
     fv[0] = Clamp(amount / normalization.MaxAmount);
     fv[1] = Clamp(transaction.GetProperty("installments").GetInt32() / (double)normalization.MaxInstallments);
@@ -347,8 +347,8 @@ static void VectorizeRequestDouble(JsonElement request, NormalizationConstants n
     }
     else
     {
-        FraudVectorizer.ParseIsoUtc(lastTransaction.GetProperty("timestamp").GetString()!, out _, out _, out int lastMinuteStamp);
-        fv[5] = Clamp((requestedMinuteStamp - lastMinuteStamp) / (double)normalization.MaxMinutes);
+        FraudVectorizer.ParseIsoUtc(lastTransaction.GetProperty("timestamp").GetString()!, out _, out _, out int lastSecondStamp);
+        fv[5] = Clamp(((requestedSecondStamp - lastSecondStamp) / 60.0) / normalization.MaxMinutes);
         fv[6] = Clamp(lastTransaction.GetProperty("km_from_current").GetDouble() / normalization.MaxKm);
     }
 

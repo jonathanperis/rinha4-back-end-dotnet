@@ -9,7 +9,7 @@
 internal struct FraudInput
 {
     /// <summary>Transaction amount before normalization.</summary>
-    public float Amount;
+    public double Amount;
 
     /// <summary>Installment count before normalization.</summary>
     public int Installments;
@@ -20,11 +20,11 @@ internal struct FraudInput
     /// <summary>Monday-based request weekday from 0 through 6.</summary>
     public int DayOfWeek;
 
-    /// <summary>Absolute UTC minute stamp used to subtract last-transaction time.</summary>
-    public int RequestedMinuteStamp;
+    /// <summary>Absolute UTC second stamp used to subtract last-transaction time.</summary>
+    public int RequestedSecondStamp;
 
     /// <summary>Customer historical average amount before normalization.</summary>
-    public float CustomerAvgAmount;
+    public double CustomerAvgAmount;
 
     /// <summary>Customer transaction count in the previous 24 hours.</summary>
     public int TxCount24h;
@@ -33,7 +33,7 @@ internal struct FraudInput
     public int MccCode;
 
     /// <summary>Merchant historical average amount before normalization.</summary>
-    public float MerchantAvgAmount;
+    public double MerchantAvgAmount;
 
     /// <summary>Whether the terminal reports an online transaction.</summary>
     public bool IsOnline;
@@ -42,16 +42,16 @@ internal struct FraudInput
     public bool CardPresent;
 
     /// <summary>Distance in kilometers from customer home before normalization.</summary>
-    public float KmFromHome;
+    public double KmFromHome;
 
     /// <summary>Whether the nullable last-transaction object was present.</summary>
     public bool HasLastTransaction;
 
-    /// <summary>Absolute UTC minute stamp for the last transaction.</summary>
-    public int LastMinuteStamp;
+    /// <summary>Absolute UTC second stamp for the last transaction.</summary>
+    public int LastSecondStamp;
 
     /// <summary>Distance in kilometers from the last transaction before normalization.</summary>
-    public float KmFromCurrent;
+    public double KmFromCurrent;
 
     /// <summary>Whether the merchant id is absent from the customer's known merchants.</summary>
     public bool UnknownMerchant;

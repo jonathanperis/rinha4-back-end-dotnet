@@ -8,14 +8,14 @@
 public static class FraudVectorizer
 {
     /// <summary>
-    /// Parses a fixed ISO UTC string into hour, weekday, and absolute minute stamp.
+    /// Parses a fixed ISO UTC string into hour, weekday, and absolute second stamp.
     /// </summary>
     /// <param name="value">Timestamp in the fixed <c>yyyy-MM-ddTHH:mm:ssZ</c> shape.</param>
     /// <param name="hour">Parsed UTC hour from 0 through 23.</param>
     /// <param name="dayOfWeek">Parsed Monday-based weekday from 0 through 6.</param>
-    /// <param name="minuteStamp">Absolute minute stamp used for fast elapsed-time subtraction.</param>
+    /// <param name="secondStamp">Absolute second stamp used for fast elapsed-time subtraction.</param>
     /// <remarks>Manual parsing avoids <see cref="DateTime"/>, culture, timezone, and allocation overhead.</remarks>
-    public static void ParseIsoUtc(string value, out int hour, out int dayOfWeek, out int minuteStamp)
+    public static void ParseIsoUtc(string value, out int hour, out int dayOfWeek, out int secondStamp)
     {
         // Inputs are fixed ISO UTC strings. Manual parsing avoids DateTime,
         // culture, timezone, and allocation overhead in the hot path.
@@ -24,31 +24,33 @@ public static class FraudVectorizer
         int day = Parse2(value, 8);
         hour = Parse2(value, 11);
         int minute = Parse2(value, 14);
+        int second = Parse2(value, 17);
 
         int days = DaysFromCivil(year, month, day);
         dayOfWeek = Mod7(days + 3);
-        minuteStamp = days * 1440 + hour * 60 + minute;
+        secondStamp = ((days * 24 + hour) * 60 + minute) * 60 + second;
     }
 
     /// <summary>
-    /// Parses a fixed UTF-8 ISO UTC span into hour, weekday, and absolute minute stamp.
+    /// Parses a fixed UTF-8 ISO UTC span into hour, weekday, and absolute second stamp.
     /// </summary>
     /// <param name="value">UTF-8 timestamp in the fixed <c>yyyy-MM-ddTHH:mm:ssZ</c> shape.</param>
     /// <param name="hour">Parsed UTC hour from 0 through 23.</param>
     /// <param name="dayOfWeek">Parsed Monday-based weekday from 0 through 6.</param>
-    /// <param name="minuteStamp">Absolute minute stamp used for fast elapsed-time subtraction.</param>
+    /// <param name="secondStamp">Absolute second stamp used for fast elapsed-time subtraction.</param>
     /// <remarks>This overload is the raw request hot path because <c>Utf8JsonReader</c> exposes UTF-8 spans.</remarks>
-    public static void ParseIsoUtc(ReadOnlySpan<byte> value, out int hour, out int dayOfWeek, out int minuteStamp)
+    public static void ParseIsoUtc(ReadOnlySpan<byte> value, out int hour, out int dayOfWeek, out int secondStamp)
     {
         int year = Parse4(value, 0);
         int month = Parse2(value, 5);
         int day = Parse2(value, 8);
         hour = Parse2(value, 11);
         int minute = Parse2(value, 14);
+        int second = Parse2(value, 17);
 
         int days = DaysFromCivil(year, month, day);
         dayOfWeek = Mod7(days + 3);
-        minuteStamp = days * 1440 + hour * 60 + minute;
+        secondStamp = ((days * 24 + hour) * 60 + minute) * 60 + second;
     }
 
     /// <summary>

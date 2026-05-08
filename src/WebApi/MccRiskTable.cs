@@ -10,7 +10,7 @@ internal readonly struct MccRiskTable
     private const int MccCodeCount = 10000;
 
     /// <summary>Risk values indexed by numeric MCC code.</summary>
-    public readonly float[] RiskByCode;
+    public readonly double[] RiskByCode;
 
     /// <summary>Presence bitmap indexed by numeric MCC code.</summary>
     public readonly bool[] KnownByCode;
@@ -18,7 +18,7 @@ internal readonly struct MccRiskTable
     /// <summary>
     /// Stores loaded MCC risk and presence arrays.
     /// </summary>
-    private MccRiskTable(float[] riskByCode, bool[] knownByCode)
+    private MccRiskTable(double[] riskByCode, bool[] knownByCode)
     {
         RiskByCode = riskByCode;
         KnownByCode = knownByCode;
@@ -32,14 +32,14 @@ internal readonly struct MccRiskTable
     public static MccRiskTable Load(string path)
     {
         using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(path));
-        var riskByCode = new float[MccCodeCount];
+        var riskByCode = new double[MccCodeCount];
         var knownByCode = new bool[MccCodeCount];
 
         foreach (var prop in doc.RootElement.EnumerateObject())
         {
             if (int.TryParse(prop.Name, out int code) && code >= 0 && code < riskByCode.Length)
             {
-                riskByCode[code] = prop.Value.GetSingle();
+                riskByCode[code] = prop.Value.GetDouble();
                 knownByCode[code] = true;
             }
         }

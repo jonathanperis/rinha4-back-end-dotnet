@@ -90,7 +90,7 @@ internal static class FraudRequestParser
             if (reader.ValueTextEquals("amount"u8))
             {
                 RequireRead(ref reader);
-                input.Amount = reader.GetSingle();
+                input.Amount = reader.GetDouble();
             }
             else if (reader.ValueTextEquals("installments"u8))
             {
@@ -100,7 +100,7 @@ internal static class FraudRequestParser
             else if (reader.ValueTextEquals("requested_at"u8))
             {
                 RequireRead(ref reader);
-                ReadIsoUtc(ref reader, out input.Hour, out input.DayOfWeek, out input.RequestedMinuteStamp);
+                ReadIsoUtc(ref reader, out input.Hour, out input.DayOfWeek, out input.RequestedSecondStamp);
             }
             else
             {
@@ -139,7 +139,7 @@ internal static class FraudRequestParser
             if (reader.ValueTextEquals("avg_amount"u8))
             {
                 RequireRead(ref reader);
-                input.CustomerAvgAmount = reader.GetSingle();
+                input.CustomerAvgAmount = reader.GetDouble();
             }
             else if (reader.ValueTextEquals("tx_count_24h"u8))
             {
@@ -196,7 +196,7 @@ internal static class FraudRequestParser
             else if (reader.ValueTextEquals("avg_amount"u8))
             {
                 RequireRead(ref reader);
-                input.MerchantAvgAmount = reader.GetSingle();
+                input.MerchantAvgAmount = reader.GetDouble();
             }
             else
             {
@@ -235,7 +235,7 @@ internal static class FraudRequestParser
             else if (reader.ValueTextEquals("km_from_home"u8))
             {
                 RequireRead(ref reader);
-                input.KmFromHome = reader.GetSingle();
+                input.KmFromHome = reader.GetDouble();
             }
             else
             {
@@ -269,12 +269,12 @@ internal static class FraudRequestParser
             if (reader.ValueTextEquals("timestamp"u8))
             {
                 RequireRead(ref reader);
-                ReadIsoUtc(ref reader, out _, out _, out input.LastMinuteStamp);
+                ReadIsoUtc(ref reader, out _, out _, out input.LastSecondStamp);
             }
             else if (reader.ValueTextEquals("km_from_current"u8))
             {
                 RequireRead(ref reader);
-                input.KmFromCurrent = reader.GetSingle();
+                input.KmFromCurrent = reader.GetDouble();
             }
             else
             {
@@ -401,25 +401,25 @@ internal static class FraudRequestParser
     }
 
     /// <summary>
-    /// Reads an ISO UTC JSON string into hour, Monday-based weekday, and absolute minute stamp.
+    /// Reads an ISO UTC JSON string into hour, Monday-based weekday, and absolute second stamp.
     /// </summary>
     /// <param name="reader">JSON reader positioned on the timestamp string token.</param>
     /// <param name="hour">Parsed UTC hour from 0 through 23.</param>
     /// <param name="dayOfWeek">Parsed Monday-based weekday from 0 through 6.</param>
-    /// <param name="minuteStamp">Parsed absolute minute stamp used for fast elapsed-time subtraction.</param>
+    /// <param name="secondStamp">Parsed absolute second stamp used for fast elapsed-time subtraction.</param>
     /// <exception cref="JsonException">Thrown when the token is not a string.</exception>
-    private static void ReadIsoUtc(ref Utf8JsonReader reader, out int hour, out int dayOfWeek, out int minuteStamp)
+    private static void ReadIsoUtc(ref Utf8JsonReader reader, out int hour, out int dayOfWeek, out int secondStamp)
     {
         if (reader.TokenType != JsonTokenType.String)
             throw new JsonException();
 
         if (reader.HasValueSequence)
         {
-            FraudVectorizer.ParseIsoUtc(reader.GetString()!, out hour, out dayOfWeek, out minuteStamp);
+            FraudVectorizer.ParseIsoUtc(reader.GetString()!, out hour, out dayOfWeek, out secondStamp);
             return;
         }
 
-        FraudVectorizer.ParseIsoUtc(reader.ValueSpan, out hour, out dayOfWeek, out minuteStamp);
+        FraudVectorizer.ParseIsoUtc(reader.ValueSpan, out hour, out dayOfWeek, out secondStamp);
     }
 
     /// <summary>
