@@ -25,6 +25,10 @@ The current best zero-failure CI lane uses `2048` IVF clusters with scalar bbox
 repair: p99 `2.76ms`, score `5559.57`. AVX2 bbox repair raised p99 to
 `5.37ms`; a cluster-major bbox copy raised p99 to `6.89ms`; `4096` clusters
 raised p99 to `16.69ms`; `1024` clusters raised p99 to `19.78ms`.
+The active A/B is a first-cluster `5/5` fraud fast accept under a tuned int16
+distance bound. `test/AccuracyProbe profile` showed high-confidence denials are
+the expensive lane, and public replay stays at `0` false positives and `0`
+false negatives with the guarded shortcut.
 Lower-scale IVF3 int32 A/B reduced accumulation cost structurally but was not
 candidate-safe on public replay: scale `1000` missed `21` labels, and scale
 `4096` missed `4` labels.
@@ -40,6 +44,7 @@ The current production lane is IVF approximate nearest-neighbor search:
 - load `references.ivf.bin` at startup
 - scan the nearest cluster first with `IVF_FAST_NPROBE=1`
 - use scalar bbox repair with early exit to scan only clusters whose bounding box can still beat the current top-five bound
+- skip repair for first-cluster `5/5` fraud candidates below the tuned distance bound
 - rank candidates with rounded int16 squared L2 distance
 - use one-pass full bbox repair for the accuracy candidate
 

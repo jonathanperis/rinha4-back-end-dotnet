@@ -235,6 +235,13 @@ DATA_DIR=data IVF_PATH=data/references.ivf.bin \
   dotnet run --project src/WebApi/WebApi.csproj
 ```
 
+Profile IVF repair cost:
+
+```bash
+dotnet run --project test/AccuracyProbe/AccuracyProbe.csproj -- \
+  /path/to/test-data.json data profile
+```
+
 Check readiness:
 
 ```bash
@@ -286,6 +293,9 @@ Current local/CI signal:
 - rounded IVF local replay over public `test-data.json`: `0` FP, `0` FN
 - best zero-failure CI candidate so far uses `IVF_CLUSTERS=2048` with scalar bbox repair:
   p99 `2.76ms`, score `5559.57`, image `ci-ab39517336c46a807c16559f70fad9270cb2ff4f`
+- active A/B: first-cluster `5/5` fraud fast accept below an int16 distance bound
+  tuned by `test/AccuracyProbe profile`; public replay stays `0` FP/FN and skips
+  expensive repair for high-confidence denials
 - rejected A/Bs: AVX2 bbox repair regressed to p99 `5.37ms`, cluster-major bbox copy regressed to p99 `6.89ms`, `4096` clusters was p99 `16.69ms`, and `1024` clusters was p99 `19.78ms`
 - IVF3 lower-scale local replay was tested as A/B and is not candidate-safe yet:
   `IVF_SCALE=1000` produced `10` FP and `11` FN; `IVF_SCALE=4096` produced `1` FP and `3` FN

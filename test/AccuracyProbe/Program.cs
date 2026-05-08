@@ -2,11 +2,15 @@ if (args.Length < 2)
 {
     Console.Error.WriteLine("Usage: AccuracyProbe <test-data.json> <data-dir> [repair-min] [repair-max]");
     Console.Error.WriteLine("       AccuracyProbe <test-data.json> <data-dir> exact <request-id>");
+    Console.Error.WriteLine("       AccuracyProbe <test-data.json> <data-dir> profile");
     return 2;
 }
 
 string testDataPath = args[0];
 string dataDirectory = args[1];
+
+if (args.Length >= 3 && string.Equals(args[2], "profile", StringComparison.OrdinalIgnoreCase))
+    return RunProfileProbe(testDataPath, dataDirectory);
 
 if (args.Length >= 4 && string.Equals(args[2], "exact", StringComparison.OrdinalIgnoreCase))
     return RunExactProbe(testDataPath, dataDirectory, args[3]);
@@ -93,6 +97,101 @@ static bool ParseApproved(ReadOnlySpan<byte> response, out double fraudScore)
     }
 
     return approved;
+}
+
+static int RunProfileProbe(string testDataPath, string dataDirectory)
+{
+    NormalizationConstants normalization = NormalizationConstants.Load(Path.Combine(dataDirectory, "normalization.json"));
+    MccRiskTable mcc = MccRiskTable.Load(Path.Combine(dataDirectory, "mcc_risk.json"));
+    ProfileIvfIndex index = ProfileIvfIndex.Load(Path.Combine(dataDirectory, "references.ivf.bin"));
+    using JsonDocument testDoc = JsonDocument.Parse(File.ReadAllBytes(testDataPath));
+
+    var samples = new List<ProfileSample>(54100);
+    var byFrauds = new ProfileBucket[6];
+    for (int i = 0; i < byFrauds.Length; i++)
+        byFrauds[i] = new ProfileBucket();
+
+    Span<double> fv = stackalloc double[14];
+    Span<short> qv = stackalloc short[16];
+    foreach (JsonElement entry in testDoc.RootElement.GetProperty("entries").EnumerateArray())
+    {
+        VectorizeRequestDouble(entry.GetProperty("request"), normalization, mcc, fv);
+        for (int i = 0; i < 14; i++)
+            qv[i] = QuantizeRounded(fv[i], index.Scale);
+        qv[14] = 0;
+        qv[15] = 0;
+
+        ProfileSample sample = index.Profile(qv);
+        samples.Add(sample);
+        byFrauds[sample.Frauds].Add(sample);
+    }
+
+    samples.Sort(static (left, right) => left.TotalBlocks.CompareTo(right.TotalBlocks));
+    Console.WriteLine($"requests={samples.Count} clusters={index.Clusters} total_index_blocks={index.TotalBlocks}");
+    PrintPercentiles("repair_clusters", samples, static sample => sample.RepairClusters);
+    PrintPercentiles("repair_blocks", samples, static sample => sample.RepairBlocks);
+    PrintPercentiles("total_blocks", samples, static sample => sample.TotalBlocks);
+    PrintPercentiles("bbox_checks", samples, static sample => sample.BboxChecks);
+    PrintEarlyFiveStats(samples);
+    for (int frauds = 0; frauds < byFrauds.Length; frauds++)
+        Console.WriteLine($"frauds={frauds} count={byFrauds[frauds].Count} avg_total_blocks={byFrauds[frauds].AverageTotalBlocks():F2} avg_repair_clusters={byFrauds[frauds].AverageRepairClusters():F2}");
+
+    return 0;
+}
+
+static void PrintPercentiles(string name, List<ProfileSample> samples, Func<ProfileSample, int> selector)
+{
+    int[] values = new int[samples.Count];
+    for (int i = 0; i < samples.Count; i++)
+        values[i] = selector(samples[i]);
+    Array.Sort(values);
+
+    Console.WriteLine(
+        $"{name}=avg:{values.Average().ToString("F2", CultureInfo.InvariantCulture)} " +
+        $"p50:{Percentile(values, 0.50)} p90:{Percentile(values, 0.90)} " +
+        $"p95:{Percentile(values, 0.95)} p99:{Percentile(values, 0.99)} max:{values[^1]}");
+}
+
+static int Percentile(int[] sorted, double percentile)
+{
+    if (sorted.Length == 0)
+        return 0;
+
+    int index = (int)Math.Ceiling(percentile * sorted.Length) - 1;
+    return sorted[Math.Clamp(index, 0, sorted.Length - 1)];
+}
+
+static void PrintEarlyFiveStats(List<ProfileSample> samples)
+{
+    long safe = 0;
+    long unsafeCount = 0;
+    long minSafeWorst = long.MaxValue;
+    long maxSafeWorst = 0;
+    long minUnsafeWorst = long.MaxValue;
+    long maxUnsafeWorst = 0;
+
+    foreach (ProfileSample sample in samples)
+    {
+        if (sample.InitialFrauds != 5)
+            continue;
+
+        if (sample.Frauds == 5)
+        {
+            safe++;
+            minSafeWorst = Math.Min(minSafeWorst, sample.InitialWorstDistance);
+            maxSafeWorst = Math.Max(maxSafeWorst, sample.InitialWorstDistance);
+        }
+        else
+        {
+            unsafeCount++;
+            minUnsafeWorst = Math.Min(minUnsafeWorst, sample.InitialWorstDistance);
+            maxUnsafeWorst = Math.Max(maxUnsafeWorst, sample.InitialWorstDistance);
+        }
+    }
+
+    Console.WriteLine(
+        $"initial_five=safe:{safe} unsafe:{unsafeCount} " +
+        $"safe_worst:{minSafeWorst}..{maxSafeWorst} unsafe_worst:{minUnsafeWorst}..{maxUnsafeWorst}");
 }
 
 static int RunExactProbe(string testDataPath, string dataDirectory, string requestId)
@@ -249,3 +348,275 @@ static int FraudCount(ReadOnlySpan<byte> labels)
 }
 
 static double Clamp(double value) => value < 0.0 ? 0.0 : (value > 1.0 ? 1.0 : value);
+
+static short QuantizeRounded(double value, int scale) => (short)Math.Round(value * scale, MidpointRounding.AwayFromZero);
+
+internal readonly record struct ProfileSample(
+    int Frauds,
+    int InitialFrauds,
+    long InitialWorstDistance,
+    int BboxChecks,
+    int RepairClusters,
+    int InitialBlocks,
+    int RepairBlocks)
+{
+    public int TotalBlocks => InitialBlocks + RepairBlocks;
+}
+
+internal sealed class ProfileBucket
+{
+    private long totalBlocks;
+    private long repairClusters;
+
+    public int Count { get; private set; }
+
+    public void Add(ProfileSample sample)
+    {
+        Count++;
+        totalBlocks += sample.TotalBlocks;
+        repairClusters += sample.RepairClusters;
+    }
+
+    public double AverageTotalBlocks() => Count == 0 ? 0.0 : totalBlocks / (double)Count;
+
+    public double AverageRepairClusters() => Count == 0 ? 0.0 : repairClusters / (double)Count;
+}
+
+internal sealed class ProfileIvfIndex
+{
+    private const int MagicV2 = 0x32465649;
+    private const int MagicV3 = 0x33465649;
+    private const int Dims = 14;
+
+    private readonly int blockLanes;
+    private readonly short[] centroids;
+    private readonly short[] bboxMin;
+    private readonly short[] bboxMax;
+    private readonly int[] offsets;
+    private readonly byte[] labels;
+    private readonly int[] ids;
+    private readonly short[] blocks;
+
+    private ProfileIvfIndex(
+        int clusters,
+        int scale,
+        int blockLanes,
+        int totalBlocks,
+        short[] centroids,
+        short[] bboxMin,
+        short[] bboxMax,
+        int[] offsets,
+        byte[] labels,
+        int[] ids,
+        short[] blocks)
+    {
+        Clusters = clusters;
+        Scale = scale;
+        this.blockLanes = blockLanes;
+        TotalBlocks = totalBlocks;
+        this.centroids = centroids;
+        this.bboxMin = bboxMin;
+        this.bboxMax = bboxMax;
+        this.offsets = offsets;
+        this.labels = labels;
+        this.ids = ids;
+        this.blocks = blocks;
+    }
+
+    public int Clusters { get; }
+
+    public int Scale { get; }
+
+    public int TotalBlocks { get; }
+
+    public static ProfileIvfIndex Load(string path)
+    {
+        using var stream = File.OpenRead(path);
+        using var reader = new BinaryReader(stream);
+        int magic = reader.ReadInt32();
+        if (magic != MagicV2 && magic != MagicV3)
+            throw new InvalidOperationException("Only IVF2/IVF3 profile is supported.");
+
+        _ = reader.ReadInt32();
+        int clusters = reader.ReadInt32();
+        int dims = reader.ReadInt32();
+        int scale = reader.ReadInt32();
+        int blockLanes = reader.ReadInt32();
+        int totalBlocks = reader.ReadInt32();
+        if (dims != Dims)
+            throw new InvalidOperationException("Unexpected IVF dimensions.");
+
+        int paddedRows = checked(totalBlocks * blockLanes);
+        var centroids = new short[checked(clusters * Dims)];
+        var bboxMin = new short[checked(clusters * Dims)];
+        var bboxMax = new short[checked(clusters * Dims)];
+        var offsets = new int[clusters + 1];
+        var labels = new byte[paddedRows];
+        var ids = new int[paddedRows];
+        var blocks = new short[checked(totalBlocks * Dims * blockLanes)];
+
+        ReadArray(stream, centroids);
+        ReadArray(stream, bboxMin);
+        ReadArray(stream, bboxMax);
+        ReadArray(stream, offsets);
+        stream.ReadExactly(labels);
+        ReadArray(stream, ids);
+        ReadArray(stream, blocks);
+
+        return new ProfileIvfIndex(clusters, scale, blockLanes, totalBlocks, centroids, bboxMin, bboxMax, offsets, labels, ids, blocks);
+    }
+
+    public ProfileSample Profile(ReadOnlySpan<short> query)
+    {
+        Span<long> candidateDistances = stackalloc long[5];
+        Span<int> candidateIds = stackalloc int[5];
+        Span<byte> candidateLabels = stackalloc byte[5];
+        candidateDistances.Fill(long.MaxValue);
+        candidateIds.Fill(int.MaxValue);
+
+        int bestCluster = 0;
+        long bestDistance = long.MaxValue;
+        for (int cluster = 0; cluster < Clusters; cluster++)
+        {
+            long distance = CentroidDistance(cluster, query);
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                bestCluster = cluster;
+            }
+        }
+
+        int initialBlocks = offsets[bestCluster + 1] - offsets[bestCluster];
+        ScanBlocks(candidateDistances, candidateIds, candidateLabels, offsets[bestCluster], offsets[bestCluster + 1], query);
+        int initialFrauds = FraudCount(candidateLabels);
+        long initialWorstDistance = candidateDistances[^1];
+
+        int bboxChecks = 0;
+        int repairClusters = 0;
+        int repairBlocks = 0;
+        long worstDistance = candidateDistances[^1];
+        for (int cluster = 0; cluster < Clusters; cluster++)
+        {
+            if (cluster == bestCluster || offsets[cluster] == offsets[cluster + 1])
+                continue;
+
+            bboxChecks++;
+            if (!BoundingBoxCanImprove(cluster, query, worstDistance))
+                continue;
+
+            repairClusters++;
+            int clusterBlocks = offsets[cluster + 1] - offsets[cluster];
+            repairBlocks += clusterBlocks;
+            ScanBlocks(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], query);
+            worstDistance = candidateDistances[^1];
+        }
+
+        return new ProfileSample(FraudCount(candidateLabels), initialFrauds, initialWorstDistance, bboxChecks, repairClusters, initialBlocks, repairBlocks);
+    }
+
+    private static void ReadArray<T>(Stream stream, T[] values) where T : unmanaged =>
+        stream.ReadExactly(MemoryMarshal.AsBytes(values.AsSpan()));
+
+    private long CentroidDistance(int cluster, ReadOnlySpan<short> query)
+    {
+        long distance = 0;
+        for (int dim = 0; dim < Dims; dim++)
+        {
+            int diff = query[dim] - centroids[dim * Clusters + cluster];
+            distance += (long)diff * diff;
+        }
+
+        return distance;
+    }
+
+    private bool BoundingBoxCanImprove(int cluster, ReadOnlySpan<short> query, long worstDistance)
+    {
+        long distance = 0;
+        for (int dim = 0; dim < Dims; dim++)
+        {
+            short value = query[dim];
+            short min = bboxMin[dim * Clusters + cluster];
+            short max = bboxMax[dim * Clusters + cluster];
+            if (value < min)
+            {
+                int diff = value - min;
+                distance += (long)diff * diff;
+                if (distance > worstDistance)
+                    return false;
+            }
+            else if (value > max)
+            {
+                int diff = value - max;
+                distance += (long)diff * diff;
+                if (distance > worstDistance)
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void ScanBlocks(
+        Span<long> candidateDistances,
+        Span<int> candidateIds,
+        Span<byte> candidateLabels,
+        int startBlock,
+        int endBlock,
+        ReadOnlySpan<short> query)
+    {
+        for (int block = startBlock; block < endBlock; block++)
+        {
+            int blockBase = block * Dims * blockLanes;
+            int labelBase = block * blockLanes;
+            for (int lane = 0; lane < blockLanes; lane++)
+            {
+                int id = ids[labelBase + lane];
+                if (id < 0)
+                    continue;
+
+                long distance = 0;
+                for (int dim = 0; dim < Dims; dim++)
+                {
+                    int diff = query[dim] - blocks[blockBase + dim * blockLanes + lane];
+                    distance += (long)diff * diff;
+                    if (distance > candidateDistances[^1])
+                        break;
+                }
+
+                InsertCandidate(candidateDistances, candidateIds, candidateLabels, distance, labels[labelBase + lane], id);
+            }
+        }
+    }
+
+    private static void InsertCandidate(Span<long> distances, Span<int> ids, Span<byte> labels, long distance, byte label, int id)
+    {
+        int last = distances.Length - 1;
+        if (distance > distances[last] || (distance == distances[last] && id >= ids[last]))
+            return;
+
+        int pos = last;
+        while (pos > 0 && (distance < distances[pos - 1] || (distance == distances[pos - 1] && id < ids[pos - 1])))
+        {
+            distances[pos] = distances[pos - 1];
+            ids[pos] = ids[pos - 1];
+            labels[pos] = labels[pos - 1];
+            pos--;
+        }
+
+        distances[pos] = distance;
+        ids[pos] = id;
+        labels[pos] = label;
+    }
+
+    private static int FraudCount(ReadOnlySpan<byte> labels)
+    {
+        int frauds = 0;
+        for (int i = 0; i < 5; i++)
+        {
+            if (labels[i] != 0)
+                frauds++;
+        }
+
+        return frauds;
+    }
+}

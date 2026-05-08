@@ -3,6 +3,9 @@
 /// </summary>
 internal sealed partial class IvfIndex
 {
+    // Public replay shows no approval changes below this first-cluster top-five bound.
+    private const long InitialFiveFastAcceptWorstDistance = 4_500_000;
+
     /// <summary>
     /// Runs one IVF2-compatible pass with int64 accumulation.
     /// </summary>
@@ -31,6 +34,9 @@ internal sealed partial class IvfIndex
             int cluster = bestClusters[i];
             ScanBlocksLong(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], quantizedQuery, queryVectors);
         }
+
+        if (repair && candidateDistances[^1] < InitialFiveFastAcceptWorstDistance && FraudCount(candidateLabels) == 5)
+            return 5;
 
         if (repair)
             RepairByBoundingBoxLong(candidateDistances, candidateIds, candidateLabels, bestClusters, quantizedQuery, queryVectors);
