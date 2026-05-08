@@ -10,6 +10,7 @@ services:
         AOT: true
         EXTRA_OPTIMIZE: true
         BUILD_CONFIGURATION: Release
+        EXACT_MAX_REFS: ${EXACT_MAX_REFS:-100000}
     container_name: webapi-1
     user: root
     restart: always

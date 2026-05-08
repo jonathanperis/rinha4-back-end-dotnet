@@ -11,6 +11,7 @@ RUN apk add --no-cache \
 ARG AOT
 ARG EXTRA_OPTIMIZE
 ARG BUILD_CONFIGURATION=Release
+ARG EXACT_MAX_REFS=100000
 ARG CACHEBUST
 ARG TARGETARCH
 
@@ -37,7 +38,7 @@ COPY ["data/mcc_risk.json", "data/"]
 COPY ["data/normalization.json", "data/"]
 
 RUN dotnet build "DataConverter/DataConverter.csproj" -c Release -o /app/build-converter
-RUN /app/build-converter/DataConverter data/
+RUN EXACT_MAX_REFS=$EXACT_MAX_REFS /app/build-converter/DataConverter data/
 
 # ── WebApi ──
 COPY ["src/WebApi/WebApi.csproj", "WebApi/"]
