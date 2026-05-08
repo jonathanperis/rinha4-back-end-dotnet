@@ -20,17 +20,20 @@ internal sealed partial class IvfIndex
         Span<byte> candidateLabels = stackalloc byte[5];
         candidateDistances.Fill(long.MaxValue);
         candidateIds.Fill(int.MaxValue);
+        Span<Vector256<int>> queryVectors = stackalloc Vector256<int>[Dims];
+        if (Avx2.IsSupported)
+            FillQueryVectors(quantizedQuery, queryVectors);
 
-        FindNearestCentroidsLong(quantizedQuery, bestClusters, bestDistances);
+        FindNearestCentroidsLong(quantizedQuery, queryVectors, bestClusters, bestDistances);
 
         for (int i = 0; i < nProbe; i++)
         {
             int cluster = bestClusters[i];
-            ScanBlocksLong(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], quantizedQuery);
+            ScanBlocksLong(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], quantizedQuery, queryVectors);
         }
 
         if (repair)
-            RepairByBoundingBoxLong(candidateDistances, candidateIds, candidateLabels, bestClusters, quantizedQuery);
+            RepairByBoundingBoxLong(candidateDistances, candidateIds, candidateLabels, bestClusters, quantizedQuery, queryVectors);
 
         return FraudCount(candidateLabels);
     }
@@ -43,16 +46,18 @@ internal sealed partial class IvfIndex
     /// <param name="candidateLabels">Mutable candidate labels.</param>
     /// <param name="probedClusters">Clusters already scanned by centroid distance.</param>
     /// <param name="query">Int16 query vector.</param>
+    /// <param name="queryVectors">Pre-broadcast AVX2 query vectors, used only when AVX2 is available.</param>
     private void RepairByBoundingBoxLong(
         Span<long> candidateDistances,
         Span<int> candidateIds,
         Span<byte> candidateLabels,
         scoped ReadOnlySpan<int> probedClusters,
-        ReadOnlySpan<short> query)
+        ReadOnlySpan<short> query,
+        scoped ReadOnlySpan<Vector256<int>> queryVectors)
     {
         if (Avx2.IsSupported)
         {
-            RepairByBoundingBoxAvx2Long(candidateDistances, candidateIds, candidateLabels, probedClusters, query);
+            RepairByBoundingBoxAvx2Long(candidateDistances, candidateIds, candidateLabels, probedClusters, query, queryVectors);
             return;
         }
 
@@ -65,7 +70,7 @@ internal sealed partial class IvfIndex
 
             if (BoundingBoxCanImproveLong(cluster, query, worstDistance))
             {
-                ScanBlocksLong(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], query);
+                ScanBlocksLong(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], query, queryVectors);
                 worstDistance = candidateDistances[^1];
             }
         }
@@ -79,17 +84,15 @@ internal sealed partial class IvfIndex
     /// <param name="candidateLabels">Mutable candidate labels.</param>
     /// <param name="probedClusters">Clusters already scanned by centroid distance.</param>
     /// <param name="query">Int16 query vector.</param>
+    /// <param name="queryVectors">Pre-broadcast AVX2 query vectors.</param>
     private void RepairByBoundingBoxAvx2Long(
         Span<long> candidateDistances,
         Span<int> candidateIds,
         Span<byte> candidateLabels,
         scoped ReadOnlySpan<int> probedClusters,
-        ReadOnlySpan<short> query)
+        ReadOnlySpan<short> query,
+        scoped ReadOnlySpan<Vector256<int>> queryVectors)
     {
-        Span<Vector256<int>> queryVectors = stackalloc Vector256<int>[Dims];
-        for (int dim = 0; dim < Dims; dim++)
-            queryVectors[dim] = Vector256.Create((int)query[dim]);
-
         Span<long> laneDistances = stackalloc long[8];
         long worstDistance = candidateDistances[^1];
         int cluster = 0;
@@ -128,7 +131,7 @@ internal sealed partial class IvfIndex
                     IsProbed(laneCluster, probedClusters))
                     continue;
 
-                ScanBlocksLong(candidateDistances, candidateIds, candidateLabels, offsets[laneCluster], offsets[laneCluster + 1], query);
+                ScanBlocksLong(candidateDistances, candidateIds, candidateLabels, offsets[laneCluster], offsets[laneCluster + 1], query, queryVectors);
                 worstDistance = candidateDistances[^1];
             }
         }
@@ -141,7 +144,7 @@ internal sealed partial class IvfIndex
 
             if (BoundingBoxCanImproveLong(cluster, query, worstDistance))
             {
-                ScanBlocksLong(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], query);
+                ScanBlocksLong(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], query, queryVectors);
                 worstDistance = candidateDistances[^1];
             }
         }
@@ -156,17 +159,19 @@ internal sealed partial class IvfIndex
     /// <param name="startBlock">Inclusive block offset.</param>
     /// <param name="endBlock">Exclusive block offset.</param>
     /// <param name="query">Int16 query vector.</param>
+    /// <param name="queryVectors">Pre-broadcast AVX2 query vectors, used only when AVX2 is available.</param>
     private void ScanBlocksLong(
         Span<long> candidateDistances,
         Span<int> candidateIds,
         Span<byte> candidateLabels,
         int startBlock,
         int endBlock,
-        ReadOnlySpan<short> query)
+        ReadOnlySpan<short> query,
+        scoped ReadOnlySpan<Vector256<int>> queryVectors)
     {
         if (Avx2.IsSupported && blockLanes == 8)
         {
-            ScanBlocksAvx2Long(candidateDistances, candidateIds, candidateLabels, startBlock, endBlock, query);
+            ScanBlocksAvx2Long(candidateDistances, candidateIds, candidateLabels, startBlock, endBlock, queryVectors);
             return;
         }
 
@@ -181,19 +186,15 @@ internal sealed partial class IvfIndex
     /// <param name="candidateLabels">Mutable candidate labels.</param>
     /// <param name="startBlock">Inclusive block offset.</param>
     /// <param name="endBlock">Exclusive block offset.</param>
-    /// <param name="query">Int16 query vector.</param>
+    /// <param name="queryVectors">Pre-broadcast AVX2 query vectors.</param>
     private void ScanBlocksAvx2Long(
         Span<long> candidateDistances,
         Span<int> candidateIds,
         Span<byte> candidateLabels,
         int startBlock,
         int endBlock,
-        ReadOnlySpan<short> query)
+        scoped ReadOnlySpan<Vector256<int>> queryVectors)
     {
-        Span<Vector256<int>> queryVectors = stackalloc Vector256<int>[Dims];
-        for (int dim = 0; dim < Dims; dim++)
-            queryVectors[dim] = Vector256.Create((int)query[dim]);
-
         Span<long> laneDistances = stackalloc long[8];
         for (int block = startBlock; block < endBlock; block++)
         {
@@ -346,11 +347,16 @@ internal sealed partial class IvfIndex
     /// <param name="query">Int16 query vector.</param>
     /// <param name="bestClusters">Mutable best cluster ids.</param>
     /// <param name="bestDistances">Mutable best centroid distances.</param>
-    private void FindNearestCentroidsLong(ReadOnlySpan<short> query, Span<int> bestClusters, Span<long> bestDistances)
+    /// <param name="queryVectors">Pre-broadcast AVX2 query vectors, used only when AVX2 is available.</param>
+    private void FindNearestCentroidsLong(
+        ReadOnlySpan<short> query,
+        scoped ReadOnlySpan<Vector256<int>> queryVectors,
+        Span<int> bestClusters,
+        Span<long> bestDistances)
     {
         if (Avx2.IsSupported)
         {
-            FindNearestCentroidsAvx2Long(query, bestClusters, bestDistances);
+            FindNearestCentroidsAvx2Long(query, queryVectors, bestClusters, bestDistances);
             return;
         }
 
@@ -361,15 +367,16 @@ internal sealed partial class IvfIndex
     /// <summary>
     /// Finds nearest IVF2 centroids eight clusters at a time with AVX2.
     /// </summary>
-    /// <param name="query">Int16 query vector.</param>
+    /// <param name="query">Int16 query vector used for scalar tail clusters.</param>
+    /// <param name="queryVectors">Pre-broadcast AVX2 query vectors.</param>
     /// <param name="bestClusters">Mutable best cluster ids.</param>
     /// <param name="bestDistances">Mutable best centroid distances.</param>
-    private void FindNearestCentroidsAvx2Long(ReadOnlySpan<short> query, Span<int> bestClusters, Span<long> bestDistances)
+    private void FindNearestCentroidsAvx2Long(
+        ReadOnlySpan<short> query,
+        scoped ReadOnlySpan<Vector256<int>> queryVectors,
+        Span<int> bestClusters,
+        Span<long> bestDistances)
     {
-        Span<Vector256<int>> queryVectors = stackalloc Vector256<int>[Dims];
-        for (int dim = 0; dim < Dims; dim++)
-            queryVectors[dim] = Vector256.Create((int)query[dim]);
-
         Span<long> laneDistances = stackalloc long[8];
         int cluster = 0;
         int simdLimit = clusters & ~7;

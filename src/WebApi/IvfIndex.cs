@@ -192,4 +192,15 @@ internal sealed partial class IvfIndex
     /// <param name="values">Destination array.</param>
     private static void ReadArray<T>(Stream stream, T[] values) where T : unmanaged =>
         stream.ReadExactly(MemoryMarshal.AsBytes(values.AsSpan()));
+
+    /// <summary>
+    /// Broadcasts one quantized query into per-dimension AVX2 vectors.
+    /// </summary>
+    /// <param name="query">Int16 query vector.</param>
+    /// <param name="queryVectors">Destination vector span with one broadcast vector per dimension.</param>
+    private static void FillQueryVectors(ReadOnlySpan<short> query, Span<Vector256<int>> queryVectors)
+    {
+        for (int dim = 0; dim < Dims; dim++)
+            queryVectors[dim] = Vector256.Create((int)query[dim]);
+    }
 }
