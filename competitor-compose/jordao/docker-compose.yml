@@ -1,0 +1,67 @@
+services:
+  haproxy:
+    image: haproxy:3.1-alpine
+    platform: linux/amd64
+    ports:
+      - "9999:9999"
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - sock:/run/sock
+    cpuset: "0"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.20"
+          memory: "16MB"
+    depends_on:
+      - api1
+      - api2
+    networks:
+      - rinha
+
+  api1:
+    image: ghcr.io/jordaogustavo/rinha-api:latest
+    platform: linux/amd64
+    environment:
+      - SOCKET_PATH=/run/sock/api1.sock
+      - NPROBE_FULL=5
+      - CUSTOM_HTTP=1
+    volumes:
+      - sock:/run/sock
+    cpuset: "1,2"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.40"
+          memory: "162MB"
+    networks:
+      - rinha
+
+  api2:
+    image: ghcr.io/jordaogustavo/rinha-api:latest
+    platform: linux/amd64
+    environment:
+      - SOCKET_PATH=/run/sock/api2.sock
+      - NPROBE_FULL=5
+      - CUSTOM_HTTP=1
+    volumes:
+      - sock:/run/sock
+    cpuset: "2,3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.40"
+          memory: "162MB"
+    networks:
+      - rinha
+
+volumes:
+  sock:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: "size=1m,nr_inodes=8,mode=0777,noatime,nosuid,nodev"
+
+networks:
+  rinha:
+    driver: bridge

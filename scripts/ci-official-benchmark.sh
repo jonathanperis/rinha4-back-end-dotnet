@@ -18,6 +18,7 @@ BENCHMARK_PROXY_CPUS="${BENCHMARK_PROXY_CPUS:-}"
 BENCHMARK_API_MEMORY="${BENCHMARK_API_MEMORY:-}"
 BENCHMARK_PROXY_MEMORY="${BENCHMARK_PROXY_MEMORY:-}"
 BENCHMARK_REPETITIONS="${BENCHMARK_REPETITIONS:-1}"
+BENCHMARK_STANDALONE_COMPOSE="${BENCHMARK_STANDALONE_COMPOSE:-false}"
 
 cd "$ROOT_DIR"
 
@@ -25,8 +26,12 @@ if [[ -z "$COMPOSE_FILE" || "$COMPOSE_FILE" == "docker-compose.yml" ]]; then
     COMPOSE_FILE="docker-compose.nginx.yml"
 fi
 
-compose_args=(--compatibility -f docker-compose.yml)
-compose_args+=(-f "$COMPOSE_FILE")
+if [[ "$BENCHMARK_STANDALONE_COMPOSE" == "true" ]]; then
+    compose_args=(--compatibility -f "$COMPOSE_FILE")
+else
+    compose_args=(--compatibility -f docker-compose.yml)
+    compose_args+=(-f "$COMPOSE_FILE")
+fi
 
 mkdir -p "$RESULTS_DIR"
 rm -rf "$RESULTS_DIR/official"
@@ -39,7 +44,11 @@ fi
 CALIBRATION_COMPOSE_FILE="$RESULTS_DIR/docker-compose.calibration.yml"
 api_cpuset="${BENCHMARK_API_CPUSET:-$BENCHMARK_STACK_CPUSET}"
 proxy_cpuset="${BENCHMARK_PROXY_CPUSET:-$BENCHMARK_STACK_CPUSET}"
-if [[ -n "$api_cpuset$proxy_cpuset$BENCHMARK_API_CPUS$BENCHMARK_PROXY_CPUS$BENCHMARK_API_MEMORY$BENCHMARK_PROXY_MEMORY" ]]; then
+if [[ "$BENCHMARK_STANDALONE_COMPOSE" == "true" ]]; then
+    if [[ -n "$api_cpuset$proxy_cpuset$BENCHMARK_API_CPUS$BENCHMARK_PROXY_CPUS$BENCHMARK_API_MEMORY$BENCHMARK_PROXY_MEMORY" ]]; then
+        echo "Ignoring calibration overrides for standalone compose: service names are compose-specific."
+    fi
+elif [[ -n "$api_cpuset$proxy_cpuset$BENCHMARK_API_CPUS$BENCHMARK_PROXY_CPUS$BENCHMARK_API_MEMORY$BENCHMARK_PROXY_MEMORY" ]]; then
     {
         echo "services:"
         for service in webapi1 webapi2; do
@@ -105,6 +114,7 @@ capture_docker_state() {
         echo "benchmark_api_memory=$BENCHMARK_API_MEMORY"
         echo "benchmark_proxy_memory=$BENCHMARK_PROXY_MEMORY"
         echo "benchmark_repetitions=$BENCHMARK_REPETITIONS"
+        echo "benchmark_standalone_compose=$BENCHMARK_STANDALONE_COMPOSE"
         echo
         echo "host_uname=$(uname -a)"
         echo "host_nproc=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || true)"
@@ -155,7 +165,11 @@ if [[ -n "${WEBAPI_IMAGE:-}" ]]; then
 fi
 
 if [[ "$BENCHMARK_PULL_IMAGE" == "true" ]]; then
-    docker compose "${compose_args[@]}" pull webapi1 webapi2
+    if [[ "$BENCHMARK_STANDALONE_COMPOSE" == "true" ]]; then
+        docker compose "${compose_args[@]}" pull
+    else
+        docker compose "${compose_args[@]}" pull webapi1 webapi2
+    fi
 fi
 
 up_args=(up -d)

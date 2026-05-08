@@ -9,11 +9,15 @@ on:
         default: docker-compose.nginx.yml
         type: choice
         options:
+          - all-comparison
           - all-lb-variants
           - docker-compose.nginx.yml
           - docker-compose.haproxy.yml
           - docker-compose.envoy.yml
           - docker-compose.yarp.yml
+          - competitor-compose/zan/docker-compose.yml
+          - competitor-compose/danilo/docker-compose.yml
+          - competitor-compose/jordao/docker-compose.yml
       official_ref:
         description: Rinha official repo ref to clone for test/test.js and test-data.json
         required: true
@@ -34,6 +38,7 @@ on:
         options:
           - experiment
           - candidate
+          - comparison
           - official-calibrated
       ivf_clusters:
         description: IVF build cluster count
@@ -135,12 +140,46 @@ jobs:
         lb:
           - name: nginx
             compose_file: docker-compose.nginx.yml
+            group: ours-lb comparison
+            standalone: "false"
+            pull_image: "false"
+            no_build: "false"
           - name: haproxy
             compose_file: docker-compose.haproxy.yml
+            group: ours-lb
+            standalone: "false"
+            pull_image: "false"
+            no_build: "false"
           - name: envoy
             compose_file: docker-compose.envoy.yml
+            group: ours-lb
+            standalone: "false"
+            pull_image: "false"
+            no_build: "false"
           - name: yarp
             compose_file: docker-compose.yarp.yml
+            group: ours-lb
+            standalone: "false"
+            pull_image: "false"
+            no_build: "false"
+          - name: zan
+            compose_file: competitor-compose/zan/docker-compose.yml
+            group: comparison
+            standalone: "true"
+            pull_image: "true"
+            no_build: "true"
+          - name: danilo
+            compose_file: competitor-compose/danilo/docker-compose.yml
+            group: comparison
+            standalone: "true"
+            pull_image: "true"
+            no_build: "true"
+          - name: jordao
+            compose_file: competitor-compose/jordao/docker-compose.yml
+            group: comparison
+            standalone: "true"
+            pull_image: "true"
+            no_build: "true"
     concurrency:
       group: benchmark-${{ github.run_id }}-${{ matrix.lb.name }}
       cancel-in-progress: false
@@ -151,13 +190,13 @@ jobs:
 
     steps:
       - name: Checkout
-        if: ${{ inputs.compose_file == 'all-lb-variants' || inputs.compose_file == matrix.lb.compose_file }}
+        if: ${{ inputs.compose_file == matrix.lb.compose_file || (inputs.compose_file == 'all-lb-variants' && contains(matrix.lb.group, 'ours-lb')) || (inputs.compose_file == 'all-comparison' && contains(matrix.lb.group, 'comparison')) }}
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Show runner capacity
-        if: ${{ inputs.compose_file == 'all-lb-variants' || inputs.compose_file == matrix.lb.compose_file }}
+        if: ${{ inputs.compose_file == matrix.lb.compose_file || (inputs.compose_file == 'all-lb-variants' && contains(matrix.lb.group, 'ours-lb')) || (inputs.compose_file == 'all-comparison' && contains(matrix.lb.group, 'comparison')) }}
         run: |
           uname -a
           nproc
@@ -166,14 +205,15 @@ jobs:
           docker compose version
 
       - name: Run benchmark
-        if: ${{ inputs.compose_file == 'all-lb-variants' || inputs.compose_file == matrix.lb.compose_file }}
+        if: ${{ inputs.compose_file == matrix.lb.compose_file || (inputs.compose_file == 'all-lb-variants' && contains(matrix.lb.group, 'ours-lb')) || (inputs.compose_file == 'all-comparison' && contains(matrix.lb.group, 'comparison')) }}
         env:
           COMPOSE_FILE: ${{ matrix.lb.compose_file }}
           OFFICIAL_REF: ${{ inputs.official_ref }}
           K6_IMAGE: ${{ inputs.k6_image }}
           WEBAPI_IMAGE: ${{ inputs.webapi_image }}
-          BENCHMARK_PULL_IMAGE: ${{ inputs.webapi_image != '' && 'true' || 'false' }}
-          BENCHMARK_NO_BUILD: ${{ inputs.webapi_image != '' && 'true' || 'false' }}
+          BENCHMARK_PULL_IMAGE: ${{ matrix.lb.pull_image == 'true' && 'true' || (inputs.webapi_image != '' && 'true' || 'false') }}
+          BENCHMARK_NO_BUILD: ${{ matrix.lb.no_build == 'true' && 'true' || (inputs.webapi_image != '' && 'true' || 'false') }}
+          BENCHMARK_STANDALONE_COMPOSE: ${{ matrix.lb.standalone }}
           RESULTS_DIR: benchmark-results-${{ matrix.lb.name }}
           IVF_CLUSTERS: ${{ inputs.ivf_clusters }}
           IVF_TRAIN_SAMPLE: ${{ inputs.ivf_train_sample }}
@@ -197,7 +237,7 @@ jobs:
         run: bash scripts/ci-official-benchmark.sh
 
       - name: Write benchmark metadata
-        if: ${{ always() && (inputs.compose_file == 'all-lb-variants' || inputs.compose_file == matrix.lb.compose_file) }}
+        if: ${{ always() && (inputs.compose_file == matrix.lb.compose_file || (inputs.compose_file == 'all-lb-variants' && contains(matrix.lb.group, 'ours-lb')) || (inputs.compose_file == 'all-comparison' && contains(matrix.lb.group, 'comparison'))) }}
         run: |
           mkdir -p benchmark-results-${{ matrix.lb.name }}
           cat > benchmark-results-${{ matrix.lb.name }}/metadata.env <<'EOF'
@@ -206,7 +246,7 @@ jobs:
           EOF
 
       - name: Upload benchmark artifacts
-        if: ${{ always() && (inputs.compose_file == 'all-lb-variants' || inputs.compose_file == matrix.lb.compose_file) }}
+        if: ${{ always() && (inputs.compose_file == matrix.lb.compose_file || (inputs.compose_file == 'all-lb-variants' && contains(matrix.lb.group, 'ours-lb')) || (inputs.compose_file == 'all-comparison' && contains(matrix.lb.group, 'comparison'))) }}
         uses: actions/upload-artifact@v7
         with:
           name: rinha-benchmark-results-${{ matrix.lb.name }}-${{ github.run_number }}
@@ -251,7 +291,7 @@ jobs:
           BENCHMARK_SHA: ${{ github.sha }}
           BENCHMARK_RUN_ID: ${{ github.run_id }}
           BENCHMARK_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          BENCHMARK_REPORT_KIND: ${{ inputs.compose_file == 'all-lb-variants' && 'experiment' || inputs.report_kind }}
+          BENCHMARK_REPORT_KIND: ${{ inputs.compose_file == 'all-lb-variants' && 'experiment' || (inputs.compose_file == 'all-comparison' && 'comparison' || inputs.report_kind) }}
           OFFICIAL_REF: ${{ inputs.official_ref }}
           K6_IMAGE: ${{ inputs.k6_image }}
           IVF_CLUSTERS: ${{ inputs.ivf_clusters }}
@@ -274,7 +314,7 @@ jobs:
           BENCHMARK_PROXY_MEMORY: ${{ inputs.benchmark_proxy_memory }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
         run: |
-          git pull --rebase origin main
+          git pull --rebase origin "${GITHUB_REF_NAME:-main}"
           archived=false
           for metadata in benchmark-artifacts/*/metadata.env; do
             [ -f "$metadata" ] || continue
