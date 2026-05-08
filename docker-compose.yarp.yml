@@ -1,9 +1,12 @@
 services:
   nginx:
-    image: rinha-yarp-lb:local
+    image: ${YARP_IMAGE:-rinha-yarp-lb:local}
     build:
       context: .
       dockerfile: ./src/YarpLb/Dockerfile
+      args:
+        BUILD_CONFIGURATION: Release
+        AOT: true
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
