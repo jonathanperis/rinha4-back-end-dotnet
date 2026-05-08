@@ -5,7 +5,10 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
+      - 'scripts/sync-official-rinha-result.mjs'
       - '.github/workflows/pages.yml'
+  schedule:
+    - cron: '17 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -44,6 +47,12 @@ jobs:
       - name: Install dependencies
         working-directory: docs
         run: bun install --frozen-lockfile
+
+      - name: Sync official Rinha result
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/sync-official-rinha-result.mjs
 
       - name: Build site
         working-directory: docs

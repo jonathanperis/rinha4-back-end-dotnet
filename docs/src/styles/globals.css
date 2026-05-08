@@ -235,7 +235,8 @@ footer {
 .term-line:nth-child(4) { animation-delay: 1.15s; color: var(--term-green-soft); }
 .term-line:nth-child(5) { animation-delay: 1.45s; color: var(--kill-red); }
 .term-line:nth-child(6) { animation-delay: 1.75s; }
-.term-line:nth-child(7) { animation-delay: 2.05s; }
+.term-line:nth-child(7) { animation-delay: 2.05s; color: var(--kill-red); }
+.term-line:nth-child(8) { animation-delay: 2.35s; }
 
 @keyframes showLine {
   from { opacity: 0; transform: translateY(8px); }
@@ -296,6 +297,58 @@ footer {
   opacity: 0.72;
   font-size: 0.82rem;
   margin-top: 0.6rem;
+}
+
+.official-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  border: 1px solid rgba(255, 179, 0, 0.28);
+  background: linear-gradient(90deg, rgba(255, 179, 0, 0.08), rgba(92, 255, 177, 0.035));
+  padding: 1.25rem 1.5rem;
+  margin: -3rem 0 5rem;
+}
+
+.official-strip p {
+  color: var(--text-muted);
+  max-width: 760px;
+}
+
+.official-strip code {
+  color: var(--term-green-soft);
+  font-family: var(--font-mono);
+}
+
+.official-kicker {
+  display: block;
+  color: var(--warn-amber);
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+}
+
+.official-links {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.official-links a {
+  border: 1px solid rgba(255, 179, 0, 0.36);
+  color: var(--warn-amber);
+  padding: 0.55rem 0.8rem;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.official-links a:hover {
+  background: var(--warn-amber);
+  color: var(--bg-deep);
+  box-shadow: 0 0 18px rgba(255, 179, 0, 0.38);
 }
 
 .section-title {
@@ -445,6 +498,12 @@ footer {
   font-size: 0.9rem;
 }
 
+.stress-link.ghost {
+  border-style: dashed;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
 footer {
   display: flex;
   justify-content: space-between;
@@ -478,6 +537,8 @@ footer a:hover { text-shadow: 0 0 10px var(--term-green-glow); }
   footer { width: min(100% - 2rem, 1400px); }
   .site-nav,
   footer { flex-direction: column; align-items: flex-start; }
+  .official-strip { align-items: flex-start; flex-direction: column; margin-top: -2rem; }
+  .official-links { justify-content: flex-start; }
   .nav-links { justify-content: flex-start; }
   .stats-grid,
   .stress-metrics { grid-template-columns: 1fr; }
