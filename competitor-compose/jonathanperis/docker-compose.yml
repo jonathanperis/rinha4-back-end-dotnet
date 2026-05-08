@@ -54,7 +54,7 @@ services:
     cpuset: "2,3"
 
   nginx:
-    image: nginx:latest
+    image: nginx:alpine
     platform: linux/amd64
     user: root
     volumes:
