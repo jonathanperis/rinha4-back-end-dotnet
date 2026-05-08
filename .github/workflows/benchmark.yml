@@ -84,7 +84,7 @@ on:
         required: true
         default: "5"
       benchmark_stack_cpuset:
-        description: Optional Docker cpuset for WebApi/nginx containers; set 0 for one-core contention probe
+        description: Optional Docker cpuset for WebApi/LB containers; set 0 for one-core contention probe
         required: false
         default: ""
       benchmark_k6_cpuset:

@@ -1,6 +1,8 @@
 services:
-  nginx:
+  lb:
     image: ${YARP_IMAGE:-rinha-yarp-lb:local}
+    container_name: rinha-lb
+    user: root
     build:
       context: .
       dockerfile: ./src/YarpLb/Dockerfile
@@ -14,3 +16,20 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
     volumes:
       - sockets:/sockets
+    depends_on:
+      webapi1:
+        condition: service_healthy
+      webapi2:
+        condition: service_healthy
+    ports:
+      - "9999:9999"
+    cpuset: "0"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.20"
+          memory: "20MB"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535

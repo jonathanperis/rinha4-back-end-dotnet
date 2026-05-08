@@ -1,7 +1,26 @@
 services:
-  nginx:
+  lb:
     image: ${ENVOY_IMAGE:-envoyproxy/envoy:v1.34-latest}
+    container_name: rinha-lb
+    user: root
     command: ["envoy", "-c", "/etc/envoy/envoy.yaml", "--log-level", "critical"]
     volumes:
       - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
       - sockets:/sockets
+    depends_on:
+      webapi1:
+        condition: service_healthy
+      webapi2:
+        condition: service_healthy
+    ports:
+      - "9999:9999"
+    cpuset: "0"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.20"
+          memory: "20MB"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535

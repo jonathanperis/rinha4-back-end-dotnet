@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OFFICIAL_REPO="${OFFICIAL_REPO:-https://github.com/zanfranceschi/rinha-de-backend-2026.git}"
 OFFICIAL_REF="${OFFICIAL_REF:-main}"
-COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.nginx.yml}"
 RESULTS_DIR="${RESULTS_DIR:-benchmark-results}"
 K6_IMAGE="${K6_IMAGE:-grafana/k6:latest}"
 BENCHMARK_PULL_IMAGE="${BENCHMARK_PULL_IMAGE:-false}"
@@ -21,10 +21,12 @@ BENCHMARK_REPETITIONS="${BENCHMARK_REPETITIONS:-1}"
 
 cd "$ROOT_DIR"
 
-compose_args=(--compatibility -f docker-compose.yml)
-if [[ "$COMPOSE_FILE" != "docker-compose.yml" ]]; then
-    compose_args+=(-f "$COMPOSE_FILE")
+if [[ -z "$COMPOSE_FILE" || "$COMPOSE_FILE" == "docker-compose.yml" ]]; then
+    COMPOSE_FILE="docker-compose.nginx.yml"
 fi
+
+compose_args=(--compatibility -f docker-compose.yml)
+compose_args+=(-f "$COMPOSE_FILE")
 
 mkdir -p "$RESULTS_DIR"
 rm -rf "$RESULTS_DIR/official"
@@ -57,7 +59,7 @@ if [[ -n "$api_cpuset$proxy_cpuset$BENCHMARK_API_CPUS$BENCHMARK_PROXY_CPUS$BENCH
                 fi
             fi
         done
-        echo "  nginx:"
+        echo "  lb:"
         if [[ -n "$proxy_cpuset" ]]; then
             echo "    cpuset: \"$proxy_cpuset\""
         fi
@@ -81,7 +83,7 @@ services:
     cpuset: "$BENCHMARK_STACK_CPUSET"
   webapi2:
     cpuset: "$BENCHMARK_STACK_CPUSET"
-  nginx:
+  lb:
     cpuset: "$BENCHMARK_STACK_CPUSET"
 YAML
     compose_args+=(-f "$CALIBRATION_COMPOSE_FILE")
