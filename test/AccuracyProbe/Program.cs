@@ -133,6 +133,7 @@ static int RunProfileProbe(string testDataPath, string dataDirectory)
     PrintPercentiles("total_blocks", samples, static sample => sample.TotalBlocks);
     PrintPercentiles("bbox_checks", samples, static sample => sample.BboxChecks);
     PrintEarlyFiveStats(samples);
+    PrintInitialDecisionStats(samples);
     for (int frauds = 0; frauds < byFrauds.Length; frauds++)
         Console.WriteLine($"frauds={frauds} count={byFrauds[frauds].Count} avg_total_blocks={byFrauds[frauds].AverageTotalBlocks():F2} avg_repair_clusters={byFrauds[frauds].AverageRepairClusters():F2}");
 
@@ -192,6 +193,63 @@ static void PrintEarlyFiveStats(List<ProfileSample> samples)
     Console.WriteLine(
         $"initial_five=safe:{safe} unsafe:{unsafeCount} " +
         $"safe_worst:{minSafeWorst}..{maxSafeWorst} unsafe_worst:{minUnsafeWorst}..{maxUnsafeWorst}");
+}
+
+static void PrintInitialDecisionStats(List<ProfileSample> samples)
+{
+    for (int initialFrauds = 0; initialFrauds <= 5; initialFrauds++)
+    {
+        long approveSafe = 0;
+        long approveUnsafe = 0;
+        long denySafe = 0;
+        long denyUnsafe = 0;
+        long approveSafeMax = 0;
+        long approveUnsafeMin = long.MaxValue;
+        long denySafeMax = 0;
+        long denyUnsafeMin = long.MaxValue;
+
+        foreach (ProfileSample sample in samples)
+        {
+            if (sample.InitialFrauds != initialFrauds)
+                continue;
+
+            bool initialApproves = initialFrauds < 3;
+            bool finalApproves = sample.Frauds < 3;
+            if (initialApproves)
+            {
+                if (finalApproves)
+                {
+                    approveSafe++;
+                    approveSafeMax = Math.Max(approveSafeMax, sample.InitialWorstDistance);
+                }
+                else
+                {
+                    approveUnsafe++;
+                    approveUnsafeMin = Math.Min(approveUnsafeMin, sample.InitialWorstDistance);
+                }
+            }
+            else
+            {
+                if (!finalApproves)
+                {
+                    denySafe++;
+                    denySafeMax = Math.Max(denySafeMax, sample.InitialWorstDistance);
+                }
+                else
+                {
+                    denyUnsafe++;
+                    denyUnsafeMin = Math.Min(denyUnsafeMin, sample.InitialWorstDistance);
+                }
+            }
+        }
+
+        string approveUnsafeText = approveUnsafe == 0 ? "none" : approveUnsafeMin.ToString(CultureInfo.InvariantCulture);
+        string denyUnsafeText = denyUnsafe == 0 ? "none" : denyUnsafeMin.ToString(CultureInfo.InvariantCulture);
+        Console.WriteLine(
+            $"initial_decision={initialFrauds} approve_safe:{approveSafe} approve_safe_max:{approveSafeMax} " +
+            $"approve_unsafe:{approveUnsafe} approve_unsafe_min:{approveUnsafeText} " +
+            $"deny_safe:{denySafe} deny_safe_max:{denySafeMax} deny_unsafe:{denyUnsafe} deny_unsafe_min:{denyUnsafeText}");
+    }
 }
 
 static int RunExactProbe(string testDataPath, string dataDirectory, string requestId)

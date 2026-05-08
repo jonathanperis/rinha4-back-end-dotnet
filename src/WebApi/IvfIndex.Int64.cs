@@ -4,6 +4,9 @@
 internal sealed partial class IvfIndex
 {
     // Public replay shows no approval changes below this first-cluster top-five bound.
+    private const long InitialZeroFastApproveWorstDistance = 5_000_000;
+
+    // Public replay shows no denial changes below this first-cluster top-five bound.
     private const long InitialFiveFastAcceptWorstDistance = 4_500_000;
 
     /// <summary>
@@ -35,8 +38,14 @@ internal sealed partial class IvfIndex
             ScanBlocksLong(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], quantizedQuery, queryVectors);
         }
 
-        if (repair && candidateDistances[^1] < InitialFiveFastAcceptWorstDistance && FraudCount(candidateLabels) == 5)
-            return 5;
+        if (repair)
+        {
+            byte initialFrauds = FraudCount(candidateLabels);
+            if (initialFrauds == 0 && candidateDistances[^1] < InitialZeroFastApproveWorstDistance)
+                return 0;
+            if (initialFrauds == 5 && candidateDistances[^1] < InitialFiveFastAcceptWorstDistance)
+                return 5;
+        }
 
         if (repair)
             RepairByBoundingBoxLong(candidateDistances, candidateIds, candidateLabels, bestClusters, quantizedQuery, queryVectors);

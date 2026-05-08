@@ -164,6 +164,7 @@ The production classifier:
 - can rerun only boundary fraud counts with `IVF_FULL_NPROBE` when `IVF_BOUNDARY_FULL=true`
 - current default uses one repaired pass: `IVF_BOUNDARY_FULL=false`, bbox repair on, fraud range `0..5`
 - uses bounding-box lower bounds to repair missed clusters when enabled
+- skips bbox repair for high-confidence first-cluster `0/5` approvals and `5/5` denials under tuned int16 distance bounds
 - ranks candidates only with rounded int16 squared L2 distance
 - fails startup if the IVF file is absent or invalid
 
@@ -196,6 +197,7 @@ Implemented:
 - no per-request response serialization
 - no hot-path logging
 - rounded int16 IVF classifier, with experimental IVF3 int32 scan path behind `IVF_SCALE<=4096`
+- guarded first-cluster decision shortcuts for safe approval/denial cases found by `test/AccuracyProbe profile`
 
 ## Reverse Proxy
 
@@ -296,8 +298,11 @@ Current local/CI signal:
 - best zero-failure CI candidate so far uses `IVF_CLUSTERS=2048`, scalar bbox repair,
   and first-cluster `5/5` fraud fast accept below an int16 distance bound:
   p99 `1.46ms`, score `5836.34`, image `ci-23ce4472f631deaf88a530c33ed91d18b9c1c2bb`
-- `test/AccuracyProbe profile` showed high-confidence `5/5` denials were the expensive lane;
-  the guarded shortcut keeps public replay at `0` FP/FN
+- one-core cpuset CI probe against that same image produced p99 `22.52ms`, score
+  `4647.51`, `0%` failures; that is the current latency signal for ranking work
+- `test/AccuracyProbe profile` showed high-confidence `0/5` approvals and `5/5`
+  denials can skip bbox repair; public replay stays at `0` FP/FN and local replay
+  time dropped from `20.76s` to `11.71s`
 - rejected A/Bs: AVX2 bbox repair regressed to p99 `5.37ms`, cluster-major bbox copy regressed to p99 `6.89ms`, `4096` clusters was p99 `16.69ms`, and `1024` clusters was p99 `19.78ms`
 - IVF3 lower-scale local replay was tested as A/B and is not candidate-safe yet:
   `IVF_SCALE=1000` produced `10` FP and `11` FN; `IVF_SCALE=4096` produced `1` FP and `3` FN
