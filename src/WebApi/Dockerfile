@@ -12,6 +12,10 @@ ARG AOT
 ARG EXTRA_OPTIMIZE
 ARG BUILD_CONFIGURATION=Release
 ARG EXACT_MAX_REFS=100000
+ARG IVF_CLUSTERS=2048
+ARG IVF_TRAIN_SAMPLE=65536
+ARG IVF_ITERATIONS=6
+ARG IVF_SCALE=10000
 ARG CACHEBUST
 ARG TARGETARCH
 
@@ -31,6 +35,8 @@ RUN dotnet restore "DataConverter/DataConverter.csproj"
 COPY ["src/DataConverter/Program.cs", "DataConverter/"]
 COPY ["src/DataConverter/Usings.cs", "DataConverter/"]
 COPY ["src/DataConverter/ExactIndexBuilder.cs", "DataConverter/"]
+COPY ["src/DataConverter/IvfIndexBuilder.cs", "DataConverter/"]
+COPY ["src/DataConverter/BucketIndexBuilder.cs", "DataConverter/"]
 
 # Copy dataset files
 COPY ["data/references.json.gz", "data/"]
@@ -38,7 +44,8 @@ COPY ["data/mcc_risk.json", "data/"]
 COPY ["data/normalization.json", "data/"]
 
 RUN dotnet build "DataConverter/DataConverter.csproj" -c Release -o /app/build-converter
-RUN EXACT_MAX_REFS=$EXACT_MAX_REFS /app/build-converter/DataConverter data/
+RUN EXACT_MAX_REFS=$EXACT_MAX_REFS IVF_CLUSTERS=$IVF_CLUSTERS IVF_TRAIN_SAMPLE=$IVF_TRAIN_SAMPLE IVF_ITERATIONS=$IVF_ITERATIONS IVF_SCALE=$IVF_SCALE \
+    /app/build-converter/DataConverter data/
 
 # ── WebApi ──
 COPY ["src/WebApi/WebApi.csproj", "WebApi/"]
@@ -64,12 +71,16 @@ WORKDIR /app
 
 COPY --from=build /app/publish/WebApi /WebApi
 COPY --from=build /src/data/references.bin /data/
+COPY --from=build /src/data/references.ivf.bin /data/
+COPY --from=build /src/data/references.bucket.bin /data/
 COPY --from=build /src/data/mcc_risk.json /data/
 COPY --from=build /src/data/normalization.json /data/
 
 ENV DATA_DIR=/data
 ENV EXACT_PATH=/data/references.bin
-ENV SCORER_MODE=exact
+ENV IVF_PATH=/data/references.ivf.bin
+ENV BUCKET_PATH=/data/references.bucket.bin
+ENV SCORER_MODE=bucket
 ENV DOTNET_PROCESSOR_COUNT=1
 ENV DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS=1
 ENV DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT=1

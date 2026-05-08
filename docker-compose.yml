@@ -11,6 +11,10 @@ services:
         EXTRA_OPTIMIZE: true
         BUILD_CONFIGURATION: Release
         EXACT_MAX_REFS: ${EXACT_MAX_REFS:-100000}
+        IVF_CLUSTERS: ${IVF_CLUSTERS:-2048}
+        IVF_TRAIN_SAMPLE: ${IVF_TRAIN_SAMPLE:-65536}
+        IVF_ITERATIONS: ${IVF_ITERATIONS:-6}
+        IVF_SCALE: ${IVF_SCALE:-10000}
     container_name: webapi-1
     user: root
     restart: always
@@ -22,10 +26,12 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "1"
-      SCORER_MODE: exact
+      SCORER_MODE: bucket
       SOCKET_PATH: /sockets/api1.sock
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
+      IVF_PATH: /data/references.ivf.bin
+      BUCKET_PATH: /data/references.bucket.bin
     tmpfs:
       - /tmp
     volumes:
@@ -57,10 +63,12 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "1"
-      SCORER_MODE: exact
+      SCORER_MODE: bucket
       SOCKET_PATH: /sockets/api2.sock
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
+      IVF_PATH: /data/references.ivf.bin
+      BUCKET_PATH: /data/references.bucket.bin
     tmpfs:
       - /tmp
     volumes:

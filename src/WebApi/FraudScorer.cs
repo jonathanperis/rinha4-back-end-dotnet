@@ -2,7 +2,7 @@
 /// Converts parsed Rinha fraud-score requests into competition responses.
 /// </summary>
 /// <remarks>
-/// The scorer requires the rounded int16 exact index produced by
+/// The scorer requires one of the rounded int16 indexes produced by
 /// <c>DataConverter</c>. Missing or invalid reference data is a startup failure so
 /// benchmark runs cannot silently fall back to a weaker classifier.
 /// </remarks>
@@ -20,12 +20,22 @@ internal sealed class FraudScorer
     private readonly int maxMerchantAvgAmount;
     private readonly double[] mccRisk;
     private readonly bool[] mccRiskKnown;
-    private readonly ExactIndex exactIndex;
+    private readonly ExactIndex? exactIndex;
+    private readonly IvfIndex? ivfIndex;
+    private readonly IvfSearchOptions ivfOptions;
+    private readonly BucketIndex? bucketIndex;
+    private readonly BucketSearchOptions bucketOptions;
+    private readonly ScorerMode mode;
 
     private FraudScorer(
         NormalizationConstants normalization,
         MccRiskTable mcc,
-        ExactIndex exactIndex)
+        ExactIndex? exactIndex,
+        IvfIndex? ivfIndex,
+        IvfSearchOptions ivfOptions,
+        BucketIndex? bucketIndex,
+        BucketSearchOptions bucketOptions,
+        ScorerMode mode)
     {
         maxAmount = normalization.MaxAmount;
         maxInstallments = normalization.MaxInstallments;
@@ -37,10 +47,15 @@ internal sealed class FraudScorer
         mccRisk = mcc.RiskByCode;
         mccRiskKnown = mcc.KnownByCode;
         this.exactIndex = exactIndex;
+        this.ivfIndex = ivfIndex;
+        this.ivfOptions = ivfOptions;
+        this.bucketIndex = bucketIndex;
+        this.bucketOptions = bucketOptions;
+        this.mode = mode;
     }
 
     /// <summary>
-    /// Loads normalization constants, MCC risk, and the production exact index.
+    /// Loads normalization constants, MCC risk, and the production scorer index.
     /// </summary>
     /// <param name="dataDirectory">Directory containing generated runtime data files.</param>
     /// <returns>A fully initialized scorer ready to share across raw HTTP connections.</returns>
@@ -48,10 +63,15 @@ internal sealed class FraudScorer
     {
         NormalizationConstants normalization = NormalizationConstants.Load(Path.Combine(dataDirectory, "normalization.json"));
         MccRiskTable mcc = MccRiskTable.Load(Path.Combine(dataDirectory, "mcc_risk.json"));
-        ExactIndex exactIndex = LoadExact(dataDirectory);
+        ScorerMode mode = ResolveMode();
+        ExactIndex? exactIndex = mode == ScorerMode.Exact ? LoadExact(dataDirectory) : null;
+        IvfIndex? ivfIndex = mode == ScorerMode.Ivf ? LoadIvf(dataDirectory) : null;
+        BucketIndex? bucketIndex = mode == ScorerMode.Bucket ? LoadBucket(dataDirectory) : null;
+        IvfSearchOptions ivfOptions = mode == ScorerMode.Ivf ? IvfSearchOptions.FromEnvironment() : default;
+        BucketSearchOptions bucketOptions = mode == ScorerMode.Bucket ? BucketSearchOptions.FromEnvironment() : default;
 
         Console.WriteLine("Dataset loaded. Ready to serve.");
-        return new FraudScorer(normalization, mcc, exactIndex);
+        return new FraudScorer(normalization, mcc, exactIndex, ivfIndex, ivfOptions, bucketIndex, bucketOptions, mode);
     }
 
     /// <summary>
@@ -79,12 +99,22 @@ internal sealed class FraudScorer
         }
 
         Span<short> qv = stackalloc short[PaddedDims];
-        int scale = exactIndex.Scale;
+        int scale = mode switch
+        {
+            ScorerMode.Exact => exactIndex!.Scale,
+            ScorerMode.Ivf => ivfIndex!.Scale,
+            _ => bucketIndex!.Scale
+        };
         QuantizeRequest(req, qv, scale);
         qv[Dims] = 0;
         qv[Dims + 1] = 0;
 
-        byte frauds = exactIndex.FraudCount(qv);
+        byte frauds = mode switch
+        {
+            ScorerMode.Exact => exactIndex!.FraudCount(qv),
+            ScorerMode.Ivf => ivfIndex!.FraudCount(qv, ivfOptions),
+            _ => bucketIndex!.FraudCount(qv, bucketOptions)
+        };
         return HttpResponses.FraudScores[frauds];
     }
 
@@ -131,6 +161,45 @@ internal sealed class FraudScorer
         throw new InvalidOperationException(error);
     }
 
+    private static IvfIndex LoadIvf(string dataDirectory)
+    {
+        string path = Environment.GetEnvironmentVariable("IVF_PATH") ?? Path.Combine(dataDirectory, "references.ivf.bin");
+        if (IvfIndex.TryLoad(path, out IvfIndex? index, out string error) && index is not null)
+        {
+            Console.WriteLine($"IVF scorer enabled: {path}");
+            return index;
+        }
+
+        Console.WriteLine($"IVF scorer unavailable. {error}");
+        Environment.Exit(1);
+        throw new InvalidOperationException(error);
+    }
+
+    private static BucketIndex LoadBucket(string dataDirectory)
+    {
+        string path = Environment.GetEnvironmentVariable("BUCKET_PATH") ?? Path.Combine(dataDirectory, "references.bucket.bin");
+        if (BucketIndex.TryLoad(path, out BucketIndex? index, out string error) && index is not null)
+        {
+            Console.WriteLine($"Bucket scorer enabled: {path}");
+            return index;
+        }
+
+        Console.WriteLine($"Bucket scorer unavailable. {error}");
+        Environment.Exit(1);
+        throw new InvalidOperationException(error);
+    }
+
+    private static ScorerMode ResolveMode()
+    {
+        string? value = Environment.GetEnvironmentVariable("SCORER_MODE");
+        if (string.Equals(value, "exact", StringComparison.OrdinalIgnoreCase))
+            return ScorerMode.Exact;
+        if (string.Equals(value, "ivf", StringComparison.OrdinalIgnoreCase))
+            return ScorerMode.Ivf;
+
+        return ScorerMode.Bucket;
+    }
+
     /// <summary>
     /// Clamps a normalized feature value into the <c>0..1</c> interval.
     /// </summary>
@@ -145,5 +214,12 @@ internal sealed class FraudScorer
     /// <param name="scale">Dataset quantization scale.</param>
     /// <returns>Rounded int16 coordinate used by the exact scorer.</returns>
     private static short QuantizeRounded(double value, int scale) => (short)Math.Round(value * scale);
+
+    private enum ScorerMode
+    {
+        Bucket,
+        Ivf,
+        Exact
+    }
 
 }
