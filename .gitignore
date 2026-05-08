@@ -8,6 +8,8 @@
 
 # Generated data
 data/references.bin
+data/references.exact.bin
+data/references.ivf.bin
 
 # IDE
 .vs/

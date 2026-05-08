@@ -292,6 +292,90 @@ internal sealed class IvfIndex
         int endBlock,
         ReadOnlySpan<short> query)
     {
+        if (Avx2.IsSupported && blockLanes == 8)
+        {
+            ScanBlocksAvx2(candidateDistances, candidateIds, candidateLabels, startBlock, endBlock, query);
+            return;
+        }
+
+        ScanBlocksScalar(candidateDistances, candidateIds, candidateLabels, startBlock, endBlock, query);
+    }
+
+    /// <summary>
+    /// Scans packed eight-lane blocks with AVX2 int32 squares and int64 accumulation.
+    /// </summary>
+    /// <param name="candidateDistances">Mutable candidate int16 distances.</param>
+    /// <param name="candidateIds">Mutable candidate original ids.</param>
+    /// <param name="candidateLabels">Mutable candidate labels.</param>
+    /// <param name="startBlock">Inclusive block offset.</param>
+    /// <param name="endBlock">Exclusive block offset.</param>
+    /// <param name="query">Int16 query vector.</param>
+    private void ScanBlocksAvx2(
+        Span<long> candidateDistances,
+        Span<int> candidateIds,
+        Span<byte> candidateLabels,
+        int startBlock,
+        int endBlock,
+        ReadOnlySpan<short> query)
+    {
+        Span<long> laneDistances = stackalloc long[8];
+        for (int block = startBlock; block < endBlock; block++)
+        {
+            int blockBase = block * Dims * blockLanes;
+            int labelBase = block * blockLanes;
+            Vector256<long> accLo = Vector256<long>.Zero;
+            Vector256<long> accHi = Vector256<long>.Zero;
+
+            for (int dim = 0; dim < Dims; dim++)
+            {
+                ref short blockRef = ref blocks[blockBase + dim * blockLanes];
+                Vector128<short> packedValues = Unsafe.ReadUnaligned<Vector128<short>>(ref Unsafe.As<short, byte>(ref blockRef));
+                Vector256<int> values = Avx2.ConvertToVector256Int32(packedValues);
+                Vector256<int> queryValues = Vector256.Create((int)query[dim]);
+                Vector256<int> diff = Avx2.Subtract(queryValues, values);
+                Vector256<int> squared = Avx2.MultiplyLow(diff, diff);
+
+                accLo = Avx2.Add(accLo, Avx2.ConvertToVector256Int64(squared.GetLower()));
+                accHi = Avx2.Add(accHi, Avx2.ConvertToVector256Int64(squared.GetUpper()));
+            }
+
+            accLo.CopyTo(laneDistances);
+            accHi.CopyTo(laneDistances[4..]);
+
+            long worstDistance = candidateDistances[^1];
+            for (int lane = 0; lane < blockLanes; lane++)
+            {
+                long distance = laneDistances[lane];
+                if (distance > worstDistance)
+                    continue;
+
+                int id = ids[labelBase + lane];
+                if (id < 0)
+                    continue;
+
+                InsertCandidate(candidateDistances, candidateIds, candidateLabels, distance, labels[labelBase + lane], id);
+                worstDistance = candidateDistances[^1];
+            }
+        }
+    }
+
+    /// <summary>
+    /// Scans packed blocks with scalar int64 distances for non-AVX2 runtimes.
+    /// </summary>
+    /// <param name="candidateDistances">Mutable candidate int16 distances.</param>
+    /// <param name="candidateIds">Mutable candidate original ids.</param>
+    /// <param name="candidateLabels">Mutable candidate labels.</param>
+    /// <param name="startBlock">Inclusive block offset.</param>
+    /// <param name="endBlock">Exclusive block offset.</param>
+    /// <param name="query">Int16 query vector.</param>
+    private void ScanBlocksScalar(
+        Span<long> candidateDistances,
+        Span<int> candidateIds,
+        Span<byte> candidateLabels,
+        int startBlock,
+        int endBlock,
+        ReadOnlySpan<short> query)
+    {
         for (int block = startBlock; block < endBlock; block++)
         {
             int blockBase = block * Dims * blockLanes;
