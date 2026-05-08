@@ -18,12 +18,13 @@ internal static class FraudRequestParser
     {
         var reader = new Utf8JsonReader(body);
         var input = new FraudInput();
-        string? merchantId = null;
-        string? known0 = null;
-        string? known1 = null;
-        string? known2 = null;
-        string? known3 = null;
-        List<string>? knownExtra = null;
+        ulong merchantHash = 0;
+        int merchantLength = 0;
+        bool hasMerchant = false;
+        Span<ulong> knownHashes = stackalloc ulong[32];
+        Span<int> knownLengths = stackalloc int[32];
+        int knownCount = 0;
+        List<(ulong Hash, int Length)>? knownExtra = null;
 
         RequireRead(ref reader);
         if (reader.TokenType != JsonTokenType.StartObject)
@@ -42,12 +43,12 @@ internal static class FraudRequestParser
             else if (reader.ValueTextEquals("customer"u8))
             {
                 RequireRead(ref reader);
-                ReadCustomer(ref reader, ref input, ref known0, ref known1, ref known2, ref known3, ref knownExtra);
+                ReadCustomer(ref reader, ref input, knownHashes, knownLengths, ref knownCount, ref knownExtra);
             }
             else if (reader.ValueTextEquals("merchant"u8))
             {
                 RequireRead(ref reader);
-                ReadMerchant(ref reader, ref input, ref merchantId);
+                ReadMerchant(ref reader, ref input, out merchantHash, out merchantLength, out hasMerchant);
             }
             else if (reader.ValueTextEquals("terminal"u8))
             {
@@ -66,7 +67,7 @@ internal static class FraudRequestParser
             }
         }
 
-        input.UnknownMerchant = !MerchantIsKnown(merchantId, known0, known1, known2, known3, knownExtra);
+        input.UnknownMerchant = !MerchantIsKnown(merchantHash, merchantLength, hasMerchant, knownHashes, knownLengths, knownCount, knownExtra);
         return input;
     }
 
@@ -114,20 +115,18 @@ internal static class FraudRequestParser
     /// </summary>
     /// <param name="reader">JSON reader positioned on the customer object start token.</param>
     /// <param name="input">Mutable scoring input receiving aggregate customer fields.</param>
-    /// <param name="known0">First known merchant slot, avoiding list allocation for small arrays.</param>
-    /// <param name="known1">Second known merchant slot, avoiding list allocation for small arrays.</param>
-    /// <param name="known2">Third known merchant slot, avoiding list allocation for small arrays.</param>
-    /// <param name="known3">Fourth known merchant slot, avoiding list allocation for small arrays.</param>
-    /// <param name="knownExtra">Spill list allocated only when more than four known merchants are present.</param>
+    /// <param name="knownHashes">Fixed stack storage for known merchant hashes.</param>
+    /// <param name="knownLengths">Fixed stack storage for known merchant lengths.</param>
+    /// <param name="knownCount">Number of known merchants stored in the fixed spans.</param>
+    /// <param name="knownExtra">Spill list allocated only when fixed storage is exceeded.</param>
     /// <exception cref="JsonException">Thrown when the object or known-merchants array shape is invalid.</exception>
     private static void ReadCustomer(
         ref Utf8JsonReader reader,
         ref FraudInput input,
-        ref string? known0,
-        ref string? known1,
-        ref string? known2,
-        ref string? known3,
-        ref List<string>? knownExtra)
+        scoped Span<ulong> knownHashes,
+        scoped Span<int> knownLengths,
+        ref int knownCount,
+        ref List<(ulong Hash, int Length)>? knownExtra)
     {
         if (reader.TokenType != JsonTokenType.StartObject)
             throw new JsonException();
@@ -150,7 +149,7 @@ internal static class FraudRequestParser
             else if (reader.ValueTextEquals("known_merchants"u8))
             {
                 RequireRead(ref reader);
-                ReadKnownMerchants(ref reader, ref known0, ref known1, ref known2, ref known3, ref knownExtra);
+                ReadKnownMerchants(ref reader, knownHashes, knownLengths, ref knownCount, ref knownExtra);
             }
             else
             {
@@ -165,10 +164,16 @@ internal static class FraudRequestParser
     /// </summary>
     /// <param name="reader">JSON reader positioned on the merchant object start token.</param>
     /// <param name="input">Mutable scoring input receiving MCC and average amount fields.</param>
-    /// <param name="merchantId">Merchant id used after parsing to compute <see cref="FraudInput.UnknownMerchant"/>.</param>
+    /// <param name="merchantHash">Merchant id hash used after parsing to compute <see cref="FraudInput.UnknownMerchant"/>.</param>
+    /// <param name="merchantLength">Merchant id byte length used with the hash.</param>
+    /// <param name="hasMerchant">Whether merchant id was present.</param>
     /// <exception cref="JsonException">Thrown when the object shape is invalid.</exception>
-    private static void ReadMerchant(ref Utf8JsonReader reader, ref FraudInput input, ref string? merchantId)
+    private static void ReadMerchant(ref Utf8JsonReader reader, ref FraudInput input, out ulong merchantHash, out int merchantLength, out bool hasMerchant)
     {
+        merchantHash = 0;
+        merchantLength = 0;
+        hasMerchant = false;
+
         if (reader.TokenType != JsonTokenType.StartObject)
             throw new JsonException();
 
@@ -180,7 +185,8 @@ internal static class FraudRequestParser
             if (reader.ValueTextEquals("id"u8))
             {
                 RequireRead(ref reader);
-                merchantId = reader.GetString();
+                ReadStringHash(ref reader, out merchantHash, out merchantLength);
+                hasMerchant = true;
             }
             else if (reader.ValueTextEquals("mcc"u8))
             {
@@ -282,19 +288,17 @@ internal static class FraudRequestParser
     /// Reads known merchant ids into four scalar slots plus an optional spill list.
     /// </summary>
     /// <param name="reader">JSON reader positioned on the known-merchants array start token.</param>
-    /// <param name="known0">First known merchant slot.</param>
-    /// <param name="known1">Second known merchant slot.</param>
-    /// <param name="known2">Third known merchant slot.</param>
-    /// <param name="known3">Fourth known merchant slot.</param>
-    /// <param name="knownExtra">Spill list for merchants after the first four.</param>
+    /// <param name="knownHashes">Fixed stack storage for known merchant hashes.</param>
+    /// <param name="knownLengths">Fixed stack storage for known merchant lengths.</param>
+    /// <param name="knownCount">Number of known merchants stored in the fixed spans.</param>
+    /// <param name="knownExtra">Spill list for merchants after fixed storage fills.</param>
     /// <exception cref="JsonException">Thrown when the token is not an array.</exception>
     private static void ReadKnownMerchants(
         ref Utf8JsonReader reader,
-        ref string? known0,
-        ref string? known1,
-        ref string? known2,
-        ref string? known3,
-        ref List<string>? knownExtra)
+        scoped Span<ulong> knownHashes,
+        scoped Span<int> knownLengths,
+        ref int knownCount,
+        ref List<(ulong Hash, int Length)>? knownExtra)
     {
         if (reader.TokenType != JsonTokenType.StartArray)
             throw new JsonException();
@@ -302,49 +306,98 @@ internal static class FraudRequestParser
         int count = 0;
         while (RequireRead(ref reader) && reader.TokenType != JsonTokenType.EndArray)
         {
-            string merchant = reader.GetString() ?? string.Empty;
-            switch (count++)
+            ReadStringHash(ref reader, out ulong hash, out int length);
+            if (count < knownHashes.Length)
             {
-                case 0: known0 = merchant; break;
-                case 1: known1 = merchant; break;
-                case 2: known2 = merchant; break;
-                case 3: known3 = merchant; break;
-                default:
-                    knownExtra ??= new List<string>(4);
-                    knownExtra.Add(merchant);
-                    break;
+                knownHashes[count] = hash;
+                knownLengths[count] = length;
+                knownCount = count + 1;
             }
+            else
+            {
+                knownExtra ??= new List<(ulong Hash, int Length)>(4);
+                knownExtra.Add((hash, length));
+            }
+
+            count++;
         }
     }
 
     /// <summary>
     /// Checks whether a merchant id matches any known merchant slot.
     /// </summary>
-    /// <param name="merchantId">Merchant id from the request merchant object.</param>
-    /// <param name="known0">First known merchant slot.</param>
-    /// <param name="known1">Second known merchant slot.</param>
-    /// <param name="known2">Third known merchant slot.</param>
-    /// <param name="known3">Fourth known merchant slot.</param>
+    /// <param name="merchantHash">Merchant id hash from the request merchant object.</param>
+    /// <param name="merchantLength">Merchant id byte length.</param>
+    /// <param name="hasMerchant">Whether merchant id was present.</param>
+    /// <param name="knownHashes">Fixed stack storage for known merchant hashes.</param>
+    /// <param name="knownLengths">Fixed stack storage for known merchant lengths.</param>
+    /// <param name="knownCount">Number of known merchants stored in the fixed spans.</param>
     /// <param name="knownExtra">Optional spill list for additional known merchants.</param>
-    /// <returns><see langword="true"/> when <paramref name="merchantId"/> is present in any slot.</returns>
-    private static bool MerchantIsKnown(string? merchantId, string? known0, string? known1, string? known2, string? known3, List<string>? knownExtra)
+    /// <returns><see langword="true"/> when the merchant hash and length are present in any slot.</returns>
+    private static bool MerchantIsKnown(
+        ulong merchantHash,
+        int merchantLength,
+        bool hasMerchant,
+        scoped ReadOnlySpan<ulong> knownHashes,
+        scoped ReadOnlySpan<int> knownLengths,
+        int knownCount,
+        List<(ulong Hash, int Length)>? knownExtra)
     {
-        if (merchantId is null)
+        if (!hasMerchant)
             return false;
 
-        if (merchantId == known0 || merchantId == known1 || merchantId == known2 || merchantId == known3)
-            return true;
+        for (int i = 0; i < knownCount; i++)
+        {
+            if (merchantHash == knownHashes[i] && merchantLength == knownLengths[i])
+                return true;
+        }
 
         if (knownExtra is null)
             return false;
 
         for (int i = 0; i < knownExtra.Count; i++)
         {
-            if (merchantId == knownExtra[i])
+            (ulong hash, int length) = knownExtra[i];
+            if (merchantHash == hash && merchantLength == length)
                 return true;
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Reads a JSON string token as an FNV-1a hash plus byte length, avoiding string allocation on contiguous spans.
+    /// </summary>
+    /// <param name="reader">Reader positioned on a string token.</param>
+    /// <param name="hash">Computed FNV-1a hash.</param>
+    /// <param name="length">UTF-8 byte length.</param>
+    /// <exception cref="JsonException">Thrown when the token is not a string.</exception>
+    private static void ReadStringHash(ref Utf8JsonReader reader, out ulong hash, out int length)
+    {
+        if (reader.TokenType != JsonTokenType.String)
+            throw new JsonException();
+
+        ReadOnlySpan<byte> span = reader.HasValueSequence ? Encoding.UTF8.GetBytes(reader.GetString()!) : reader.ValueSpan;
+        hash = Fnv1A(span);
+        length = span.Length;
+    }
+
+    /// <summary>
+    /// Computes FNV-1a 64-bit hash for merchant identity comparisons.
+    /// </summary>
+    /// <param name="value">UTF-8 string bytes.</param>
+    /// <returns>FNV-1a 64-bit hash.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static ulong Fnv1A(ReadOnlySpan<byte> value)
+    {
+        ulong hash = 14695981039346656037UL;
+        for (int i = 0; i < value.Length; i++)
+        {
+            hash ^= value[i];
+            hash *= 1099511628211UL;
+        }
+
+        return hash;
     }
 
     /// <summary>

@@ -1,0 +1,6 @@
+services:
+  nginx:
+    image: haproxy:3.0-alpine
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - sockets:/sockets

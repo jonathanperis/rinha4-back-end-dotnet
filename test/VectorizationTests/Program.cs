@@ -26,6 +26,36 @@ VectorizationTestRunner.Run("parses string ISO UTC without allocation-heavy Date
         throw new InvalidOperationException($"expected positive minute stamp, got {minuteStamp}");
 });
 
+VectorizationTestRunner.Run("matches known merchant through hash parser", () =>
+{
+    FraudInput input = FraudRequestParser.Parse("""
+        {"customer":{"known_merchants":["merchant-a","merchant-b"]},"merchant":{"id":"merchant-b","mcc":"5411","avg_amount":10}}
+        """u8);
+
+    if (input.UnknownMerchant)
+        throw new InvalidOperationException("expected merchant-b to be known");
+});
+
+VectorizationTestRunner.Run("keeps known merchant spill hashes correct", () =>
+{
+    string known = string.Join(',', Enumerable.Range(0, 34).Select(i => $"\"merchant-{i}\""));
+    byte[] payload = Encoding.UTF8.GetBytes($"{{\"customer\":{{\"known_merchants\":[{known}]}},\"merchant\":{{\"id\":\"merchant-33\",\"mcc\":\"5411\",\"avg_amount\":10}}}}");
+    FraudInput input = FraudRequestParser.Parse(payload);
+
+    if (input.UnknownMerchant)
+        throw new InvalidOperationException("expected spill merchant to be known");
+});
+
+VectorizationTestRunner.Run("marks missing known merchant through hash parser", () =>
+{
+    FraudInput input = FraudRequestParser.Parse("""
+        {"customer":{"known_merchants":["merchant-a"]},"merchant":{"id":"merchant-b","mcc":"5411","avg_amount":10}}
+        """u8);
+
+    if (!input.UnknownMerchant)
+        throw new InvalidOperationException("expected merchant-b to be unknown");
+});
+
 VectorizationTestRunner.Run("loads IVF index and repairs boundary fraud counts", () =>
 {
     string path = Path.Combine(Path.GetTempPath(), $"rinha-ivf-test-{Guid.NewGuid():N}.bin");

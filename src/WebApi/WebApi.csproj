@@ -7,12 +7,15 @@
     <RuntimeIdentifiers>linux-x64;linux-arm64</RuntimeIdentifiers>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NuGetAudit>false</NuGetAudit>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(AOT)' == 'true'">
     <PublishAot>true</PublishAot>
     <OptimizationPreference>Speed</OptimizationPreference>
     <IlcOptimizationPreference>Speed</IlcOptimizationPreference>
+    <IlcInstructionSet Condition="'$(RuntimeIdentifier)' == 'linux-musl-x64' or '$(RuntimeIdentifier)' == 'linux-x64'">avx2</IlcInstructionSet>
+    <IlcMaxVectorTBitWidth Condition="'$(RuntimeIdentifier)' == 'linux-musl-x64' or '$(RuntimeIdentifier)' == 'linux-x64'">256</IlcMaxVectorTBitWidth>
     <StaticExecutable>true</StaticExecutable>
     <StripSymbols>true</StripSymbols>
   </PropertyGroup>
@@ -25,6 +28,8 @@
     <EventSourceSupport>false</EventSourceSupport>
     <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+    <MetricsSupport>false</MetricsSupport>
     <MetadataUpdaterSupport>false</MetadataUpdaterSupport>
     <StackTraceSupport>false</StackTraceSupport>
     <UseSystemResourceKeys>true</UseSystemResourceKeys>
