@@ -10,42 +10,15 @@ internal static class ExactIndexBuilder
     public static void Write(string outputPath, float[] vectors, byte[] labels, int count, int maxRefs)
     {
         int targetCount = maxRefs <= 0 ? count : Math.Min(maxRefs, count);
-        (int targetFrauds, int targetLegits) = TargetLabelCounts(labels, count, targetCount);
+        int targetFrauds = CountLabel(labels, targetCount, 1);
+        int targetLegits = targetCount - targetFrauds;
         Console.WriteLine($"Exact build: refs={targetCount:N0}, fraud={targetFrauds:N0}, legit={targetLegits:N0}, scale={Scale}");
 
         short[] quantized = GC.AllocateUninitializedArray<short>(checked(targetCount * Stride));
         byte[] selectedLabels = GC.AllocateUninitializedArray<byte>(targetCount);
 
-        int fraudWritten = 0;
-        int legitWritten = 0;
-        int fraudSeen = 0;
-        int legitSeen = 0;
-        int outputRow = 0;
-        int fraudTotal = CountLabel(labels, count, 1);
-        int legitTotal = count - fraudTotal;
-
-        for (int row = 0; row < count && outputRow < targetCount; row++)
-        {
-            if (labels[row] != 0)
-            {
-                if (ShouldTake(fraudSeen++, fraudTotal, fraudWritten, targetFrauds))
-                {
-                    WriteRow(vectors, labels, row, quantized, selectedLabels, outputRow++);
-                    fraudWritten++;
-                }
-
-                continue;
-            }
-
-            if (ShouldTake(legitSeen++, legitTotal, legitWritten, targetLegits))
-            {
-                WriteRow(vectors, labels, row, quantized, selectedLabels, outputRow++);
-                legitWritten++;
-            }
-        }
-
-        if (outputRow != targetCount)
-            throw new InvalidOperationException($"Exact index sampled {outputRow} rows, expected {targetCount}.");
+        for (int row = 0; row < targetCount; row++)
+            WriteRow(vectors, labels, row, quantized, selectedLabels, row);
 
         using var stream = File.Create(outputPath);
         using var writer = new BinaryWriter(stream);
@@ -53,30 +26,6 @@ internal static class ExactIndexBuilder
         writer.Flush();
         stream.Write(MemoryMarshal.AsBytes(quantized.AsSpan()));
         stream.Write(selectedLabels);
-    }
-
-    private static (int Fraud, int Legit) TargetLabelCounts(byte[] labels, int count, int targetCount)
-    {
-        int fraudTotal = CountLabel(labels, count, 1);
-        int legitTotal = count - fraudTotal;
-        int targetFraud = (int)MathF.Round(targetCount * (fraudTotal / (float)count));
-        if (fraudTotal > 0)
-            targetFraud = Math.Clamp(targetFraud, 1, fraudTotal);
-
-        int targetLegit = targetCount - targetFraud;
-        if (targetLegit > legitTotal)
-        {
-            targetFraud += targetLegit - legitTotal;
-            targetLegit = legitTotal;
-        }
-
-        if (targetFraud > fraudTotal)
-        {
-            targetLegit += targetFraud - fraudTotal;
-            targetFraud = fraudTotal;
-        }
-
-        return (targetFraud, targetLegit);
     }
 
     private static int CountLabel(byte[] labels, int count, byte label)
@@ -90,10 +39,6 @@ internal static class ExactIndexBuilder
 
         return total;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool ShouldTake(int seen, int total, int written, int target) =>
-        target > 0 && (long)seen * target / total >= written;
 
     private static void WriteRow(float[] vectors, byte[] labels, int sourceRow, short[] output, byte[] outputLabels, int outputRow)
     {
