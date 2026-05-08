@@ -30,6 +30,9 @@ preview behavior. A one-core cpuset probe against the same image produced p99
 `21.03ms`, score `4677.25`, and `0%` failures on image
 `ci-780d16603df535d54a0c58d1a8f5b4701d16b7b6`, so optimization now targets
 remaining scan CPU under constrained contention.
+The latest cleanup run under the same one-core overlay produced p99 `20.82ms`,
+score `4681.44`, and `0%` failures. That mode is retained as a manual stress
+probe; candidate tracking keeps the submission compose cpuset layout.
 
 `test/AccuracyProbe profile` showed high-confidence first-cluster `0/5`
 approvals and `5/5` denials can skip bbox repair under tuned distance bounds.

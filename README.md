@@ -282,7 +282,7 @@ CI official-like benchmark:
 - Trigger: manual `workflow_dispatch`
 - Test source: clones `zanfranceschi/rinha-de-backend-2026` and runs official `test/test.js`
 - Stack start: `docker compose --compatibility` so Compose maps `deploy.resources.limits` into local container limits
-- Optional contention probe: set `benchmark_stack_cpuset=0` to pin nginx and both WebApi containers to one host CPU. The main-branch auto benchmark now uses this mode so CI p99 is less optimistic than unconstrained GitHub-hosted runs.
+- Optional contention probe: set `benchmark_stack_cpuset=0` to pin nginx and both WebApi containers to one host CPU. This is manual-only because it is stricter than the submission compose layout and produced p99 around `20ms` with `0%` failures.
 - Optional full-host probe: set `benchmark_k6_cpuset=0` too when k6 should contend on the same CPU. This is stricter than official-like service limits and is for diagnosis only.
 - Artifacts: `benchmark-results/results.json`, `benchmark-results/k6-report.html`, `benchmark-results/docker-compose.log`, and `benchmark-results/docker-state-*.txt`
 - Main build workflow also runs the same benchmark automatically after the amd64 image build/push succeeds.
@@ -301,10 +301,9 @@ Current local/CI signal:
 - best zero-failure CI candidate so far uses `IVF_CLUSTERS=2048`, scalar bbox repair,
   and first-cluster `5/5` fraud fast accept below an int16 distance bound:
   p99 `1.46ms`, score `5836.34`, image `ci-23ce4472f631deaf88a530c33ed91d18b9c1c2bb`
-- one-core cpuset CI probe against that same image produced p99 `22.52ms`, score
-  `4647.51`, `0%` failures; after adding the first-cluster `0/5` approval
-  shortcut, the constrained CI candidate improved to p99 `21.03ms`, score
-  `4677.25`, `0%` failures on image `ci-780d16603df535d54a0c58d1a8f5b4701d16b7b6`
+- one-core cpuset CI probes produced p99 around `20ms` with `0%` failures; the
+  latest pushed cleanup run was p99 `20.82ms`, score `4681.44`, `0%` failures
+  on image `ci-a2cf864cf74ecd8afdf5d0d1cf3ebce366e0e955`
 - `test/AccuracyProbe profile` showed high-confidence `0/5` approvals and `5/5`
   denials can skip bbox repair; public replay stays at `0` FP/FN and local replay
   time dropped from `20.76s` to `11.71s`
@@ -313,9 +312,10 @@ Current local/CI signal:
 
 Local replay numbers are correctness checks against the public payload. CI
 benchmark numbers are regression signals, not official Rinha hardware results.
-Older CI runs before the cpuset probe could report unrealistically low p99 on
-GitHub-hosted runners because k6 and Docker had more host CPU headroom than the
-official `1 CPU / 350 MB` envelope exposes.
+CI runs without the one-core overlay track the submission compose more closely:
+resource limits stay active and the compose cpuset layout remains intact. The
+manual one-core overlay is a stress probe for official-mismatch diagnosis, not
+the candidate score signal.
 
 Run from GitHub Actions:
 

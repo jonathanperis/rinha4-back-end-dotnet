@@ -14,10 +14,9 @@ Main build flow:
 The automatic main-branch benchmark runs against the immutable image tag built in the same workflow, not a locally rebuilt image.
 The submission compose pins nginx to cpuset `0`, `webapi1` to `1,2`, and
 `webapi2` to `2,3`, while keeping Docker resource limits active. The automatic
-main-branch benchmark overrides that layout and pins all service containers to
-host cpuset `0`; this harsher probe makes GitHub-hosted runs less optimistic and
-closer to the official `1 CPU / 350 MB` contention profile, but still not
-identical to official Rinha hardware.
+main-branch benchmark keeps that compose layout. Manual runs can add a one-core
+overlay when diagnosing official mismatch, but that stress mode is stricter than
+the candidate tracking run.
 
 Manual **Official-like Benchmark** runs can archive experiment reports too.
 For IVF, dispatch with `report_kind=experiment`, `IVF_FAST_NPROBE=1`,
@@ -43,7 +42,7 @@ Manual contention knobs:
 
 Uploaded workflow artifacts also include `docker-state-*.txt` with Docker
 limits, cpuset, memory, and cgroup counters captured before and after k6. Use
-those files to confirm whether CI reproduced expected one-core contention.
+those files to confirm which cpuset mode the run used.
 
 The report archive commit is docs-only. The build workflow ignores `docs/**`, so report commits do not trigger a new benchmark loop.
 

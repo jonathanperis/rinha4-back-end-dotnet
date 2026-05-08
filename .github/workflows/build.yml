@@ -188,7 +188,7 @@ jobs:
           IVF_BBOX_REPAIR: "true"
           IVF_REPAIR_MIN_FRAUDS: "0"
           IVF_REPAIR_MAX_FRAUDS: "5"
-          BENCHMARK_STACK_CPUSET: "0"
+          BENCHMARK_STACK_CPUSET: ""
         run: bash scripts/ci-official-benchmark.sh
 
       - name: Archive benchmark report
@@ -214,7 +214,7 @@ jobs:
           IVF_BBOX_REPAIR: "true"
           IVF_REPAIR_MIN_FRAUDS: "0"
           IVF_REPAIR_MAX_FRAUDS: "5"
-          BENCHMARK_STACK_CPUSET: "0"
+          BENCHMARK_STACK_CPUSET: ""
         run: |
           git pull --rebase origin main
           bash scripts/archive-benchmark-result.sh
