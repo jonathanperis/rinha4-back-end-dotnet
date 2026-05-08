@@ -72,7 +72,7 @@ internal static class DataConverterOptions
     public static int ExactMaxRefs()
     {
         string? value = Environment.GetEnvironmentVariable("EXACT_MAX_REFS");
-        return int.TryParse(value, CultureInfo.InvariantCulture, out int parsed) ? parsed : 0;
+        return int.TryParse(value, CultureInfo.InvariantCulture, out int parsed) ? parsed : 100_000;
     }
 
 }

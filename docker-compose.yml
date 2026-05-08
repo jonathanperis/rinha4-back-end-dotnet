@@ -10,7 +10,7 @@ services:
         AOT: true
         EXTRA_OPTIMIZE: true
         BUILD_CONFIGURATION: Release
-        EXACT_MAX_REFS: ${EXACT_MAX_REFS:-0}
+        EXACT_MAX_REFS: ${EXACT_MAX_REFS:-100000}
     container_name: webapi-1
     user: root
     restart: always
@@ -22,6 +22,7 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "1"
+      SCORER_MODE: exact
       SOCKET_PATH: /sockets/api1.sock
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
@@ -56,6 +57,7 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "1"
+      SCORER_MODE: exact
       SOCKET_PATH: /sockets/api2.sock
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
