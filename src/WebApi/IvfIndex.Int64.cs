@@ -55,88 +55,8 @@ internal sealed partial class IvfIndex
         ReadOnlySpan<short> query,
         scoped ReadOnlySpan<Vector256<int>> queryVectors)
     {
-        if (Avx2.IsSupported)
-        {
-            RepairByBoundingBoxAvx2Long(candidateDistances, candidateIds, candidateLabels, probedClusters, query, queryVectors);
-            return;
-        }
-
         long worstDistance = candidateDistances[^1];
         for (int cluster = 0; cluster < clusters; cluster++)
-        {
-            if (offsets[cluster] == offsets[cluster + 1] ||
-                IsProbed(cluster, probedClusters))
-                continue;
-
-            if (BoundingBoxCanImproveLong(cluster, query, worstDistance))
-            {
-                ScanBlocksLong(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], query, queryVectors);
-                worstDistance = candidateDistances[^1];
-            }
-        }
-    }
-
-    /// <summary>
-    /// Scans IVF2 bbox lower bounds eight clusters at a time with AVX2.
-    /// </summary>
-    /// <param name="candidateDistances">Mutable candidate int64 squared distances.</param>
-    /// <param name="candidateIds">Mutable candidate original ids.</param>
-    /// <param name="candidateLabels">Mutable candidate labels.</param>
-    /// <param name="probedClusters">Clusters already scanned by centroid distance.</param>
-    /// <param name="query">Int16 query vector.</param>
-    /// <param name="queryVectors">Pre-broadcast AVX2 query vectors.</param>
-    private void RepairByBoundingBoxAvx2Long(
-        Span<long> candidateDistances,
-        Span<int> candidateIds,
-        Span<byte> candidateLabels,
-        scoped ReadOnlySpan<int> probedClusters,
-        ReadOnlySpan<short> query,
-        scoped ReadOnlySpan<Vector256<int>> queryVectors)
-    {
-        Span<long> laneDistances = stackalloc long[8];
-        long worstDistance = candidateDistances[^1];
-        int cluster = 0;
-        int simdLimit = clusters & ~7;
-        for (; cluster < simdLimit; cluster += 8)
-        {
-            Vector256<long> accLo = Vector256<long>.Zero;
-            Vector256<long> accHi = Vector256<long>.Zero;
-            for (int dim = 0; dim < Dims; dim++)
-            {
-                int offset = dim * clusters + cluster;
-                ref short minRef = ref bboxMin[offset];
-                ref short maxRef = ref bboxMax[offset];
-                Vector256<int> min = Avx2.ConvertToVector256Int32(Unsafe.ReadUnaligned<Vector128<short>>(ref Unsafe.As<short, byte>(ref minRef)));
-                Vector256<int> max = Avx2.ConvertToVector256Int32(Unsafe.ReadUnaligned<Vector128<short>>(ref Unsafe.As<short, byte>(ref maxRef)));
-                Vector256<int> q = queryVectors[dim];
-                Vector256<int> below = Avx2.CompareGreaterThan(min, q);
-                Vector256<int> above = Avx2.CompareGreaterThan(q, max);
-                Vector256<int> belowDiff = Avx2.And(below, Avx2.Subtract(min, q));
-                Vector256<int> aboveDiff = Avx2.And(above, Avx2.Subtract(q, max));
-                Vector256<int> diff = Avx2.Or(belowDiff, aboveDiff);
-                Vector256<int> squared = Avx2.MultiplyLow(diff, diff);
-
-                accLo = Avx2.Add(accLo, Avx2.ConvertToVector256Int64(squared.GetLower()));
-                accHi = Avx2.Add(accHi, Avx2.ConvertToVector256Int64(squared.GetUpper()));
-            }
-
-            accLo.CopyTo(laneDistances);
-            accHi.CopyTo(laneDistances[4..]);
-
-            for (int lane = 0; lane < 8; lane++)
-            {
-                int laneCluster = cluster + lane;
-                if (laneDistances[lane] > worstDistance ||
-                    offsets[laneCluster] == offsets[laneCluster + 1] ||
-                    IsProbed(laneCluster, probedClusters))
-                    continue;
-
-                ScanBlocksLong(candidateDistances, candidateIds, candidateLabels, offsets[laneCluster], offsets[laneCluster + 1], query, queryVectors);
-                worstDistance = candidateDistances[^1];
-            }
-        }
-
-        for (; cluster < clusters; cluster++)
         {
             if (offsets[cluster] == offsets[cluster + 1] ||
                 IsProbed(cluster, probedClusters))
