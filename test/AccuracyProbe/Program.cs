@@ -11,10 +11,10 @@ string repairMax = args.Length > 3 ? args[3] : "5";
 
 Environment.SetEnvironmentVariable("DATA_DIR", dataDirectory);
 Environment.SetEnvironmentVariable("IVF_PATH", Path.Combine(dataDirectory, "references.ivf.bin"));
-Environment.SetEnvironmentVariable("IVF_FAST_NPROBE", "1");
-Environment.SetEnvironmentVariable("IVF_FULL_NPROBE", "1");
-Environment.SetEnvironmentVariable("IVF_BOUNDARY_FULL", "false");
-Environment.SetEnvironmentVariable("IVF_BBOX_REPAIR", "true");
+Environment.SetEnvironmentVariable("IVF_FAST_NPROBE", Environment.GetEnvironmentVariable("IVF_FAST_NPROBE") ?? "1");
+Environment.SetEnvironmentVariable("IVF_FULL_NPROBE", Environment.GetEnvironmentVariable("IVF_FULL_NPROBE") ?? "1");
+Environment.SetEnvironmentVariable("IVF_BOUNDARY_FULL", Environment.GetEnvironmentVariable("IVF_BOUNDARY_FULL") ?? "false");
+Environment.SetEnvironmentVariable("IVF_BBOX_REPAIR", Environment.GetEnvironmentVariable("IVF_BBOX_REPAIR") ?? "true");
 Environment.SetEnvironmentVariable("IVF_REPAIR_MIN_FRAUDS", repairMin);
 Environment.SetEnvironmentVariable("IVF_REPAIR_MAX_FRAUDS", repairMax);
 
