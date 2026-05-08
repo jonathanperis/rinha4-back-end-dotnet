@@ -72,7 +72,7 @@ services:
       resources:
         limits:
           cpus: "0.20"
-          memory: "20MB"
+          memory: "50MB"
     ulimits:
       nofile:
         soft: 65535
