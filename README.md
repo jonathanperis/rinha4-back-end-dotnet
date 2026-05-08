@@ -62,8 +62,8 @@ Default path:
 5. A manual `Utf8JsonReader` parser extracts only fields needed by vectorization.
 6. Request fields become a normalized 14-dimensional vector.
 7. Vector is quantized to `int16` with `scale=10000`.
-8. Fine-bucket key is computed.
-9. Precomputed bucket majority result maps directly to one of six prebuilt HTTP/JSON byte responses.
+8. IVF scans candidate clusters and repairs with bounding-box lower bounds.
+9. Rounded int16 top-five labels map directly to one of six prebuilt HTTP/JSON byte responses.
 
 The raw HTTP server intentionally implements only the subset required by this workload:
 
@@ -87,8 +87,8 @@ Docker Compose waits for both API Unix socket files before starting nginx. This 
 
 API memory is dominated by:
 
-- `references.bin` loaded as one byte array
-- one-byte response-index table for all fine buckets
+- `references.ivf.bin` loaded as managed centroid, bbox, label, id, and block arrays
+- `references.bin` fallback response-index table
 - normalization and MCC lookup tables
 - NativeAOT runtime overhead
 
@@ -97,9 +97,8 @@ API memory is dominated by:
 Input data lives in `data/references.json.gz`.
 
 `src/DataConverter` converts it to `data/references.bin` at image build time.
-When `--ivf` or `BUILD_IVF=true` is enabled, the same converter also writes the
-experimental `data/references.ivf.bin` index and `data/references.exact.bin`
-float32 vectors for optional exact rerank.
+With the current Docker defaults, `BUILD_IVF=true` also writes
+`data/references.ivf.bin`, the production scorer index.
 
 The binary file is embedded in the Docker image. The runtime container does not need to download or transform data before serving.
 
@@ -121,7 +120,7 @@ Why this format:
 - one byte per fine bucket keeps lookup O(1) with a compact `4.0 MB` table.
 - runtime can start serving immediately after reading the compact table.
 
-Experimental IVF format:
+IVF format:
 
 ```text
 int32 magic = "IVF1"
@@ -140,18 +139,10 @@ int32 ids[padded_rows]
 int16 blocks[total_blocks * dims * block_lanes]
 ```
 
-Exact rerank format:
-
-```text
-int32 magic = "EXF1"
-int32 count
-int32 dims
-float32 vectors[count * dims]
-```
-
-The IVF file is opt-in and separate from `references.bin`. It lets CI AB-test
-nearest-cluster search, `nprobe=1`, and bounding-box repair without changing the
-known-good bucket artifact.
+The IVF file is separate from `references.bin`. The runtime uses rounded int16
+coordinates because the public labels match rounded quantized KNN behavior; the
+previous float32 rerank path was removed after it reintroduced one benchmark
+edge mismatch.
 
 ## Fraud Vector
 
@@ -197,7 +188,7 @@ Total:
 16 * 32 * 32 * 16 * 16 = 4,194,304 fine buckets
 ```
 
-At startup the default API mode loads:
+Fallback bucket mode loads:
 
 ```text
 groupResponseIndexes[group] -> response index 0..5
@@ -211,22 +202,22 @@ request -> vector -> fine group -> response index -> JSON bytes
 
 This is intentionally O(1) after parsing.
 
-Experimental classifier:
+Production classifier:
 
-- enabled only with `SCORER_MODE=ivf`
+- enabled by default with `SCORER_MODE=ivf`
 - loads `references.ivf.bin` from `IVF_PATH` or beside `references.bin`
 - scans nearest IVF centroid clusters with `IVF_FAST_NPROBE`
 - reruns boundary fraud counts with `IVF_FULL_NPROBE` when enabled
 - uses bounding-box lower bounds to repair missed clusters when enabled
-- reranks retained int16 candidates with exact float32 vectors when `IVF_EXACT_RERANK=true`
+- ranks candidates only with rounded int16 squared L2 distance
 - falls back to the bucket classifier if the IVF file is absent or invalid
 
 Tradeoff:
 
 - This prioritizes ranking performance under load.
-- It is not guaranteed to match nearest-neighbor reference scoring for every request.
-- The bucket implementation remains the production fallback until CI proves IVF
-  has lower p99, `0%` failures, and a better score.
+- Full repair (`IVF_REPAIR_MIN_FRAUDS=0`, `IVF_REPAIR_MAX_FRAUDS=5`) matched the
+  public benchmark payload locally with `0` false positives and `0` false negatives.
+- The bucket implementation remains only as fallback and comparison baseline.
 
 ## Hot Path Optimizations
 
@@ -251,8 +242,8 @@ Implemented:
 - no per-request response serialization
 - no hot-path logging
 - grouped binary dataset
-- O(1) default classifier
-- experimental IVF scorer behind `SCORER_MODE=ivf`
+- rounded int16 IVF classifier
+- O(1) bucket fallback
 
 ## Reverse Proxy
 
@@ -285,7 +276,7 @@ Generate binary data:
 dotnet run --project src/DataConverter/DataConverter.csproj -- data/
 ```
 
-Generate bucket data plus experimental IVF data:
+Generate bucket data plus IVF data:
 
 ```bash
 BUILD_IVF=true IVF_CLUSTERS=2048 IVF_TRAIN_SAMPLE=65536 IVF_ITERATIONS=6 \
@@ -326,15 +317,14 @@ docker compose up --build
 curl -i http://localhost:9999/ready
 ```
 
-Run full Docker stack with IVF experiment enabled:
+Run full Docker stack:
 
 ```bash
-BUILD_IVF=true SCORER_MODE=ivf docker compose up --build
+docker compose up --build
 ```
 
 Docker IVF build parameters are also tunable with `IVF_CLUSTERS`,
-`IVF_TRAIN_SAMPLE`, `IVF_ITERATIONS`, `IVF_EXACT_RERANK`, and
-`IVF_RERANK_CANDIDATES`.
+`IVF_TRAIN_SAMPLE`, and `IVF_ITERATIONS`.
 
 ## Benchmarks
 
@@ -355,12 +345,10 @@ CI official-like benchmark:
   - `rinha-benchmark-YYYYMMDDHHMMSS-SHA.json` immutable run result
   - `rinha-benchmark-YYYYMMDDHHMMSS-SHA.html` k6 HTML report when generated
 
-Current CI signal:
+Current local/CI signal:
 
-- latest candidate p99: `1.35ms`
-- latest candidate HTTP errors: `0`
-- latest candidate failure rate: `2.35%`
-- latest candidate score: `3204.75`
+- rounded IVF local replay over public `test-data.json`: `0` FP, `0` FN
+- latest published candidate is still the older bucket baseline until the next main benchmark archives a new IVF run
 
 Those numbers are official-like GitHub Actions results, not official Rinha hardware results.
 
@@ -425,7 +413,7 @@ Build details:
 
 - SDK image builds converter and API.
 - converter creates `references.bin`.
-- `BUILD_IVF=true` makes the converter create `references.ivf.bin` and `references.exact.bin`; default is empty placeholders.
+- `BUILD_IVF=true` makes the converter create `references.ivf.bin`; current compose defaults to IVF on.
 - IVF image builds accept `IVF_CLUSTERS`, `IVF_TRAIN_SAMPLE`, and `IVF_ITERATIONS` build args.
 - API is published with NativeAOT.
 - runtime image contains only API binary plus data files.
@@ -448,16 +436,16 @@ Preview issues are opened in the official Rinha repository after `main` image bu
 
 Main blocker for top-10 target:
 
-- reduce classifier failures from the current `2.35%` toward `0%`
+- keep rounded IVF at `0%` failures in CI and official preview
+- reduce full-repair p99 below the #9 .NET reference (`1.73ms`)
 - preserve `0` HTTP errors after the nginx/socket readiness hardening
-- keep p99 near the `1ms` scoring floor while improving accuracy
 
 Likely next moves:
 
-1. Build the full IVF image in CI with `BUILD_IVF=true`.
-2. Run official-like benchmark with `SCORER_MODE=ivf`, `IVF_FAST_NPROBE=1`, `IVF_FULL_NPROBE=1`, `IVF_BBOX_REPAIR=true`, `IVF_EXACT_RERANK=true`, `IVF_RERANK_CANDIDATES=6`, and fraud repair range `1..4`.
-3. Compare IVF p99, failure rate, and score against the current bucket candidate.
-4. Promote IVF to submission only if it preserves `0` HTTP errors and improves p99/failure/score.
+1. Run CI benchmark with rounded IVF, full bbox repair, and fraud repair range `0..5`.
+2. Optimize repair p99 with lower bbox overhead and/or better cluster layout.
+3. Re-test 4096 clusters only after rounded quantized ranking is in the image.
+4. Promote IVF submission when CI shows `0` failures and p99 below #9.
 5. Track official issue `#2088` for the next preview result from the updated submission branch.
 
 ## License

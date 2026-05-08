@@ -1,5 +1,5 @@
 /// <summary>
-/// Runtime experimental inverted-file vector index.
+/// Runtime inverted-file vector index.
 /// </summary>
 /// <remarks>
 /// The index is loaded only when <c>SCORER_MODE=ivf</c>. It scans the nearest
@@ -22,7 +22,6 @@ internal sealed class IvfIndex
     private readonly byte[] labels;
     private readonly int[] ids;
     private readonly short[] blocks;
-    private readonly IvfExactVectors? exactVectors;
 
     /// <summary>
     /// Creates an IVF index from already validated binary arrays.
@@ -49,8 +48,7 @@ internal sealed class IvfIndex
         int[] offsets,
         byte[] labels,
         int[] ids,
-        short[] blocks,
-        IvfExactVectors? exactVectors)
+        short[] blocks)
     {
         this.count = count;
         this.clusters = clusters;
@@ -63,7 +61,6 @@ internal sealed class IvfIndex
         this.labels = labels;
         this.ids = ids;
         this.blocks = blocks;
-        this.exactVectors = exactVectors;
     }
 
     /// <summary>
@@ -79,17 +76,6 @@ internal sealed class IvfIndex
     /// <param name="error">Human-readable load failure when the method fails.</param>
     /// <returns><see langword="true"/> when the file exists and validates.</returns>
     public static bool TryLoad(string path, out IvfIndex? index, out string error)
-        => TryLoad(path, null, out index, out error);
-
-    /// <summary>
-    /// Attempts to load an IVF binary file and optional exact-rerank vectors.
-    /// </summary>
-    /// <param name="path">Path to <c>references.ivf.bin</c>.</param>
-    /// <param name="exactPath">Optional path to <c>references.exact.bin</c>.</param>
-    /// <param name="index">Loaded index when the method succeeds.</param>
-    /// <param name="error">Human-readable load failure when the method fails.</param>
-    /// <returns><see langword="true"/> when the IVF file exists and validates.</returns>
-    public static bool TryLoad(string path, string? exactPath, out IvfIndex? index, out string error)
     {
         index = null;
         error = string.Empty;
@@ -146,18 +132,7 @@ internal sealed class IvfIndex
                 return false;
             }
 
-            IvfExactVectors? exactVectors = null;
-            if (!string.IsNullOrEmpty(exactPath) &&
-                !IvfExactVectors.TryLoad(exactPath, count, out exactVectors, out string exactError))
-            {
-                Console.WriteLine($"Exact IVF rerank unavailable. Continuing with int16 ranking. {exactError}");
-            }
-            else if (exactVectors is not null)
-            {
-                Console.WriteLine($"Exact IVF rerank enabled: {exactPath}");
-            }
-
-            index = new IvfIndex(count, clusters, blockLanes, totalBlocks, centroids, bboxMin, bboxMax, offsets, labels, ids, blocks, exactVectors);
+            index = new IvfIndex(count, clusters, blockLanes, totalBlocks, centroids, bboxMin, bboxMax, offsets, labels, ids, blocks);
             return true;
         }
         catch (Exception ex) when (ex is IOException or EndOfStreamException or ArgumentException or OverflowException)
@@ -178,14 +153,14 @@ internal sealed class IvfIndex
     {
         int fastNProbe = Math.Clamp(options.FastNProbe, 1, clusters);
         bool fastRepair = options.BboxRepair && !options.BoundaryFull;
-        byte frauds = FraudCountOnce(query, quantizedQuery, options, fastNProbe, fastRepair);
+        byte frauds = FraudCountOnce(query, quantizedQuery, fastNProbe, fastRepair);
 
         if (options.BoundaryFull &&
             frauds >= options.RepairMinFrauds &&
             frauds <= options.RepairMaxFrauds)
         {
             int fullNProbe = Math.Clamp(Math.Max(options.FullNProbe, fastNProbe), 1, clusters);
-            frauds = FraudCountOnce(query, quantizedQuery, options, fullNProbe, options.BboxRepair);
+            frauds = FraudCountOnce(query, quantizedQuery, fullNProbe, options.BboxRepair);
         }
 
         return frauds;
@@ -196,21 +171,17 @@ internal sealed class IvfIndex
     /// </summary>
     /// <param name="query">Normalized float query vector.</param>
     /// <param name="quantizedQuery">Int16 query vector.</param>
-    /// <param name="options">Search and rerank controls.</param>
     /// <param name="nProbe">Number of nearest centroid clusters to scan.</param>
     /// <param name="repair">Whether bbox repair may scan additional clusters.</param>
     /// <returns>Fraud count from retained nearest candidates.</returns>
-    private byte FraudCountOnce(ReadOnlySpan<float> query, ReadOnlySpan<short> quantizedQuery, IvfSearchOptions options, int nProbe, bool repair)
+    private byte FraudCountOnce(ReadOnlySpan<float> query, ReadOnlySpan<short> quantizedQuery, int nProbe, bool repair)
     {
-        bool exactRerank = exactVectors is not null && options.ExactRerank;
-        int candidateCount = exactRerank ? Math.Clamp(options.RerankCandidates, 5, 128) : 5;
-
         Span<int> bestClusters = stackalloc int[nProbe];
         Span<float> bestDistances = stackalloc float[nProbe];
         bestDistances.Fill(float.PositiveInfinity);
-        Span<long> candidateDistances = stackalloc long[candidateCount];
-        Span<int> candidateIds = stackalloc int[candidateCount];
-        Span<byte> candidateLabels = stackalloc byte[candidateCount];
+        Span<long> candidateDistances = stackalloc long[5];
+        Span<int> candidateIds = stackalloc int[5];
+        Span<byte> candidateLabels = stackalloc byte[5];
         candidateDistances.Fill(long.MaxValue);
         candidateIds.Fill(int.MaxValue);
 
@@ -235,9 +206,7 @@ internal sealed class IvfIndex
         if (repair)
             RepairByBoundingBox(candidateDistances, candidateIds, candidateLabels, bestClusters, quantizedQuery);
 
-        return exactRerank
-            ? ExactFraudCount(query, candidateIds, candidateLabels)
-            : FraudCount(candidateLabels);
+        return FraudCount(candidateLabels);
     }
 
     /// <summary>
@@ -401,34 +370,6 @@ internal sealed class IvfIndex
     }
 
     /// <summary>
-    /// Reranks int16 candidates with exact float32 distances and returns fraud count.
-    /// </summary>
-    /// <param name="query">Normalized float query vector.</param>
-    /// <param name="candidateIds">Original ids selected by int16 IVF scan.</param>
-    /// <param name="candidateLabels">Labels aligned with <paramref name="candidateIds"/>.</param>
-    /// <returns>Fraud count from exact top five.</returns>
-    private byte ExactFraudCount(ReadOnlySpan<float> query, ReadOnlySpan<int> candidateIds, ReadOnlySpan<byte> candidateLabels)
-    {
-        Span<float> exactDistances = stackalloc float[5];
-        Span<int> exactIds = stackalloc int[5];
-        Span<byte> exactLabels = stackalloc byte[5];
-        exactDistances.Fill(float.PositiveInfinity);
-        exactIds.Fill(int.MaxValue);
-
-        for (int i = 0; i < candidateIds.Length; i++)
-        {
-            int id = candidateIds[i];
-            if (id == int.MaxValue)
-                break;
-
-            float distance = exactVectors!.Distance(query, id);
-            InsertExactCandidate(exactDistances, exactIds, exactLabels, distance, candidateLabels[i], id);
-        }
-
-        return FraudCount(exactLabels);
-    }
-
-    /// <summary>
     /// Counts fraud labels in the first five retained candidates.
     /// </summary>
     /// <param name="candidateLabels">Candidate labels ordered nearest-first.</param>
@@ -457,36 +398,6 @@ internal sealed class IvfIndex
     /// <param name="id">Candidate original id.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void InsertCandidate(Span<long> distances, Span<int> ids, Span<byte> labels, long distance, byte label, int id)
-    {
-        int last = distances.Length - 1;
-        if (distance > distances[last] || (distance == distances[last] && id >= ids[last]))
-            return;
-
-        int pos = last;
-        while (pos > 0 && (distance < distances[pos - 1] || (distance == distances[pos - 1] && id < ids[pos - 1])))
-        {
-            distances[pos] = distances[pos - 1];
-            ids[pos] = ids[pos - 1];
-            labels[pos] = labels[pos - 1];
-            pos--;
-        }
-
-        distances[pos] = distance;
-        ids[pos] = id;
-        labels[pos] = label;
-    }
-
-    /// <summary>
-    /// Inserts a float32 reranked candidate into sorted top-five spans.
-    /// </summary>
-    /// <param name="distances">Sorted exact distances.</param>
-    /// <param name="ids">Sorted exact candidate ids.</param>
-    /// <param name="labels">Sorted exact candidate labels.</param>
-    /// <param name="distance">Candidate float32 squared distance.</param>
-    /// <param name="label">Candidate label.</param>
-    /// <param name="id">Candidate original id.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void InsertExactCandidate(Span<float> distances, Span<int> ids, Span<byte> labels, float distance, byte label, int id)
     {
         int last = distances.Length - 1;
         if (distance > distances[last] || (distance == distances[last] && id >= ids[last]))

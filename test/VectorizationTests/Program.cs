@@ -74,35 +74,6 @@ VectorizationTestRunner.Run("reads zero as valid IVF repair boundary", () =>
     VectorizationTestRunner.AssertEqualInt(5, options.RepairMaxFrauds);
 });
 
-VectorizationTestRunner.Run("reranks IVF candidates with exact vectors", () =>
-{
-    string ivfPath = Path.Combine(Path.GetTempPath(), $"rinha-ivf-test-{Guid.NewGuid():N}.bin");
-    string exactPath = Path.Combine(Path.GetTempPath(), $"rinha-exact-test-{Guid.NewGuid():N}.bin");
-    try
-    {
-        IvfTestIndex.Write(ivfPath, 0, 0);
-        IvfTestIndex.WriteExact(exactPath);
-        if (!IvfIndex.TryLoad(ivfPath, exactPath, out IvfIndex? index, out string error) || index is null)
-            throw new InvalidOperationException(error);
-
-        Span<float> query = stackalloc float[14];
-        Span<short> quantized = stackalloc short[16];
-
-        byte int16Only = index.FraudCount(query, quantized, new IvfSearchOptions(1, 1, false, false, false, 5, 1, 4));
-        byte exact = index.FraudCount(query, quantized, new IvfSearchOptions(1, 1, false, false, true, 6, 1, 4));
-
-        VectorizationTestRunner.AssertEqualInt(0, int16Only);
-        VectorizationTestRunner.AssertEqualInt(1, exact);
-    }
-    finally
-    {
-        if (File.Exists(ivfPath))
-            File.Delete(ivfPath);
-        if (File.Exists(exactPath))
-            File.Delete(exactPath);
-    }
-});
-
 /// <summary>
 /// Minimal test runner and assertion helpers for vectorization behavior.
 /// </summary>
@@ -169,7 +140,7 @@ internal static class VectorizationTestRunner
 }
 
 /// <summary>
-/// Assertions for the experimental IVF boundary-repair policy.
+/// Assertions for the IVF boundary-repair policy.
 /// </summary>
 internal static class IvfRepairAssertions
 {
@@ -190,8 +161,8 @@ internal static class IvfRepairAssertions
         Span<float> query = stackalloc float[14];
         Span<short> quantized = stackalloc short[16];
 
-        byte fastOnly = index.FraudCount(query, quantized, new IvfSearchOptions(1, 1, false, false, false, 5, 1, 4));
-        byte repaired = index.FraudCount(query, quantized, new IvfSearchOptions(1, 1, true, true, false, 5, 1, 4));
+        byte fastOnly = index.FraudCount(query, quantized, new IvfSearchOptions(1, 1, false, false, 1, 4));
+        byte repaired = index.FraudCount(query, quantized, new IvfSearchOptions(1, 1, true, true, 1, 4));
 
         VectorizationTestRunner.AssertEqualInt(expectedFastOnly, fastOnly);
         VectorizationTestRunner.AssertEqualInt(expectedRepaired, repaired);
@@ -244,7 +215,6 @@ internal sealed class ScopedEnvironment : IDisposable
 internal static class IvfTestIndex
 {
     private const int Magic = 0x31465649;
-    private const int ExactMagic = 0x31465845;
     private const int Count = 11;
     private const int Clusters = 2;
     private const int Dims = 14;
@@ -277,27 +247,6 @@ internal static class IvfTestIndex
         WriteLabels(writer, firstPassFrauds, repairFrauds);
         WriteIds(writer);
         WriteBlocks(writer);
-    }
-
-    /// <summary>
-    /// Writes exact vectors where the sixth first-cluster candidate becomes nearest.
-    /// </summary>
-    /// <param name="path">Destination exact-rerank binary path.</param>
-    public static void WriteExact(string path)
-    {
-        using var stream = File.Create(path);
-        using var writer = new BinaryWriter(stream);
-
-        writer.Write(ExactMagic);
-        writer.Write(Count);
-        writer.Write(Dims);
-
-        for (int id = 0; id < Count; id++)
-        {
-            float value = id == 5 ? 0.0f : 0.5f;
-            for (int dim = 0; dim < Dims; dim++)
-                writer.Write(value);
-        }
     }
 
     /// <summary>

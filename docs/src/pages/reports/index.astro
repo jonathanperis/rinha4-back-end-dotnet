@@ -117,7 +117,6 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
                     <code>{row.compose_file}</code>
                     {row.scorer_mode && <code>{row.scorer_mode}</code>}
                     {row.ivf_fast_nprobe && <code>n{row.ivf_fast_nprobe}/{row.ivf_full_nprobe}</code>}
-                    {row.ivf_exact_rerank === 'true' && <code>x{row.ivf_rerank_candidates}</code>}
                   </td>
                   <td class="num">{row.p99}</td>
                   <td class="num danger-text">{row.failure_rate}</td>

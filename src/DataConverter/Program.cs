@@ -2,7 +2,6 @@ string inputDir = DataConverterOptions.InputDirectory(args);
 string inputPath = Path.Combine(inputDir, "references.json.gz");
 string outputPath = Path.Combine(inputDir, "references.bin");
 string ivfOutputPath = Path.Combine(inputDir, "references.ivf.bin");
-string exactOutputPath = Path.Combine(inputDir, "references.exact.bin");
 bool buildIvf = DataConverterOptions.BuildIvf(args);
 IvfBuildOptions ivfOptions = DataConverterOptions.IvfOptions();
 
@@ -92,19 +91,16 @@ Console.WriteLine($"Format: {count} vectors, {Dims} dims (padded to {PaddedDims}
 if (buildIvf)
 {
     IvfIndexBuilder.Write(ivfOutputPath, ivfVectors!, ivfLabels!, count, ivfOptions);
-    IvfIndexBuilder.WriteExact(exactOutputPath, ivfVectors!, count);
     long ivfSize = new FileInfo(ivfOutputPath).Length;
-    long exactSize = new FileInfo(exactOutputPath).Length;
     Console.WriteLine($"IVF output: {ivfSize / (1024.0 * 1024.0):F1} MB ({ivfSize:N0} bytes)");
-    Console.WriteLine($"Exact rerank output: {exactSize / (1024.0 * 1024.0):F1} MB ({exactSize:N0} bytes)");
 }
 
 /// <summary>
 /// Reads converter command-line and environment options.
 /// </summary>
 /// <remarks>
-/// The default converter output stays the compact bucket table. The IVF file is
-/// opt-in so the production image can keep the small, known-good data path.
+/// The converter always writes the compact bucket fallback. The IVF file is
+/// opt-in for local converter runs and enabled by the production Docker build.
 /// </remarks>
 internal static class DataConverterOptions
 {
@@ -125,7 +121,7 @@ internal static class DataConverterOptions
     }
 
     /// <summary>
-    /// Determines whether the converter should write the experimental IVF index.
+    /// Determines whether the converter should write the IVF index.
     /// </summary>
     /// <param name="args">Command-line arguments passed to the converter.</param>
     /// <returns><see langword="true"/> when <c>--ivf</c> or <c>BUILD_IVF=true</c> is set.</returns>

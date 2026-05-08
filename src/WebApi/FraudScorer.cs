@@ -2,10 +2,9 @@
 /// Converts parsed Rinha fraud-score requests into competition responses.
 /// </summary>
 /// <remarks>
-/// The scorer uses the production <c>O(1)</c> fine-bucket majority lookup built
-/// from <c>references.bin</c> by default. An experimental IVF index can be
-/// loaded with <c>SCORER_MODE=ivf</c>; when unavailable, the scorer falls back
-/// to the bucket table.
+/// The scorer uses the rounded int16 IVF index when <c>SCORER_MODE=ivf</c>.
+/// When unavailable, it falls back to the compact fine-bucket majority table
+/// loaded from <c>references.bin</c>.
 /// </remarks>
 internal sealed class FraudScorer
 {
@@ -31,7 +30,7 @@ internal sealed class FraudScorer
     /// <param name="dataset">Loaded dataset layout and precomputed group response indexes.</param>
     /// <param name="normalization">Normalization denominators loaded from <c>normalization.json</c>.</param>
     /// <param name="mcc">MCC risk arrays loaded from <c>mcc_risk.json</c>.</param>
-    /// <param name="ivfIndex">Optional experimental IVF index.</param>
+    /// <param name="ivfIndex">Optional IVF index used by the production scorer.</param>
     /// <param name="ivfOptions">Runtime IVF search controls.</param>
     private FraudScorer(
         ReferenceDataset dataset,
@@ -85,7 +84,7 @@ internal sealed class FraudScorer
     /// </returns>
     /// <remarks>
     /// The method keeps per-request vectors on the stack, quantizes with the same
-    /// scale used by <c>DataConverter</c>, and indexes directly into the bucket table.
+    /// scale used by <c>DataConverter</c>, and returns one prebuilt response.
     /// </remarks>
     public ReadOnlyMemory<byte> ScoreFraudRequest(ReadOnlySpan<byte> body)
     {
@@ -131,7 +130,7 @@ internal sealed class FraudScorer
 
         Span<short> qv = stackalloc short[paddedDims];
         for (int i = 0; i < dims; i++)
-            qv[i] = (short)(fv[i] * scale);
+            qv[i] = QuantizeRounded(fv[i], scale);
         qv[dims] = 0;
         qv[dims + 1] = 0;
 
@@ -141,12 +140,20 @@ internal sealed class FraudScorer
             return HttpResponses.FraudScores[frauds];
         }
 
-        int queryGroup = FraudVectorizer.FineVectorGroup(qv[5], qv[6], qv[0], qv[7], qv[9], qv[10], qv[11], scale);
+        int queryGroup = FraudVectorizer.FineVectorGroup(
+            QuantizeTruncated(fv[5], scale),
+            QuantizeTruncated(fv[6], scale),
+            QuantizeTruncated(fv[0], scale),
+            QuantizeTruncated(fv[7], scale),
+            QuantizeTruncated(fv[9], scale),
+            QuantizeTruncated(fv[10], scale),
+            QuantizeTruncated(fv[11], scale),
+            scale);
         return HttpResponses.FraudScores[groupResponseIndexes[queryGroup]];
     }
 
     /// <summary>
-    /// Loads the experimental IVF index only when explicitly requested.
+    /// Loads the IVF index when explicitly requested.
     /// </summary>
     /// <param name="dataDirectory">Directory containing runtime data files.</param>
     /// <returns>The loaded IVF index, or <see langword="null"/> for bucket fallback.</returns>
@@ -157,8 +164,7 @@ internal sealed class FraudScorer
             return null;
 
         string path = Environment.GetEnvironmentVariable("IVF_PATH") ?? Path.Combine(dataDirectory, "references.ivf.bin");
-        string exactPath = Environment.GetEnvironmentVariable("IVF_EXACT_PATH") ?? Path.Combine(dataDirectory, "references.exact.bin");
-        if (IvfIndex.TryLoad(path, exactPath, out IvfIndex? index, out string error))
+        if (IvfIndex.TryLoad(path, out IvfIndex? index, out string error))
         {
             Console.WriteLine($"IVF scorer enabled: {path}");
             return index;
@@ -174,4 +180,20 @@ internal sealed class FraudScorer
     /// <param name="value">Feature value after division by the normalization denominator.</param>
     /// <returns><paramref name="value"/> capped to the interval accepted by the quantizer.</returns>
     private static float Clamp(float value) => value < 0f ? 0f : (value > 1f ? 1f : value);
+
+    /// <summary>
+    /// Quantizes a normalized feature for IVF search using rounded int16 coordinates.
+    /// </summary>
+    /// <param name="value">Normalized feature value, including the <c>-1</c> sentinel.</param>
+    /// <param name="scale">Dataset quantization scale.</param>
+    /// <returns>Rounded int16 coordinate used by the IVF scorer.</returns>
+    private static short QuantizeRounded(float value, int scale) => (short)MathF.Round(value * scale);
+
+    /// <summary>
+    /// Quantizes a feature with truncation for compatibility with the bucket table.
+    /// </summary>
+    /// <param name="value">Normalized feature value.</param>
+    /// <param name="scale">Dataset quantization scale.</param>
+    /// <returns>Truncated int coordinate used by <see cref="FraudVectorizer.FineVectorGroup"/>.</returns>
+    private static int QuantizeTruncated(float value, int scale) => (short)(value * scale);
 }

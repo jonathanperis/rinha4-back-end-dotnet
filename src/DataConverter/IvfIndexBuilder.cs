@@ -1,5 +1,5 @@
 /// <summary>
-/// Build-time configuration for the experimental IVF reference index.
+/// Build-time configuration for the IVF reference index.
 /// </summary>
 /// <param name="Clusters">Number of inverted-file clusters to train.</param>
 /// <param name="TrainSample">Number of evenly spaced references used by k-means.</param>
@@ -7,18 +7,17 @@
 internal readonly record struct IvfBuildOptions(int Clusters, int TrainSample, int Iterations);
 
 /// <summary>
-/// Builds the experimental <c>references.ivf.bin</c> file used by the WebApi IVF scorer mode.
+/// Builds the <c>references.ivf.bin</c> file used by the WebApi IVF scorer mode.
 /// </summary>
 /// <remarks>
 /// The layout mirrors the high-ranking C++ IVF idea: compact int16 vector blocks,
 /// one-byte labels, centroids, and per-cluster bounding boxes. It is intentionally
-/// separate from <c>references.bin</c> so the default bucket path keeps its small
-/// memory and image footprint unless an IVF experiment is explicitly requested.
+/// separate from <c>references.bin</c> so the bucket fallback keeps its small
+/// memory and image footprint.
 /// </remarks>
 internal static class IvfIndexBuilder
 {
     private const int Magic = 0x31465649; // IVF1
-    private const int ExactMagic = 0x31465845; // EXF1
     private const int Dims = 14;
     private const int BlockLanes = 8;
     private const short Scale = 10000;
@@ -119,29 +118,6 @@ internal static class IvfIndexBuilder
         writer.Write(labelsOut);
         WriteInts(writer, idsOut);
         WriteShorts(writer, blocks);
-        writer.Flush();
-    }
-
-    /// <summary>
-    /// Writes exact float32 vectors for optional IVF reranking.
-    /// </summary>
-    /// <param name="outputPath">Destination <c>references.exact.bin</c> path.</param>
-    /// <param name="vectors">Row-major normalized vectors, with <c>14</c> floats per row.</param>
-    /// <param name="count">Number of reference rows.</param>
-    /// <remarks>
-    /// This file is memory-mapped by the API instead of copied into managed
-    /// arrays. It gives IVF a tiny exact rerank stage without changing the
-    /// default bucket artifact or loading the full reference corpus into GC memory.
-    /// </remarks>
-    public static void WriteExact(string outputPath, float[] vectors, int count)
-    {
-        using var stream = File.Create(outputPath);
-        using var writer = new BinaryWriter(stream);
-
-        writer.Write(ExactMagic);
-        writer.Write(count);
-        writer.Write(Dims);
-        WriteFloats(writer, vectors);
         writer.Flush();
     }
 
@@ -262,7 +238,7 @@ internal static class IvfIndexBuilder
     {
         if (value < -1.0f) value = -1.0f;
         if (value > 1.0f) value = 1.0f;
-        return (short)(value * Scale);
+        return (short)MathF.Round(value * Scale);
     }
 
     /// <summary>

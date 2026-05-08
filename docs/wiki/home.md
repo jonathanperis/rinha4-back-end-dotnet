@@ -9,8 +9,8 @@ The current build is optimized for latency first:
 - socket-file healthchecks before nginx starts
 - manual JSON request parsing
 - prebuilt HTTP responses
-- fine-bucket fraud classifier
-- opt-in IVF scorer experiment
+- rounded int16 IVF fraud classifier
+- fine-bucket fallback
 - archived official-like k6 results after each main build
 
 The project target is explicit: top-10 ranking, p99 close to 1ms, and 0% failures.
@@ -19,7 +19,7 @@ The project target is explicit: top-10 ranking, p99 close to 1ms, and 0% failure
 
 Latest CI benchmark history lives at `/reports/`.
 
-Latest candidate signal from GitHub Actions:
+Recent bucket candidate signal from GitHub Actions:
 
 - p99: `1.35ms`
 - HTTP errors: `0`
@@ -30,16 +30,16 @@ Those results are useful for regression tracking. They are not official Rinha ha
 
 ## Active lane
 
-Transport is currently stable in CI. The main ranking gap is classifier accuracy.
-The active experiment is an IVF approximate-nearest-neighbor index built from
-the allowed reference dataset and loaded only with `SCORER_MODE=ivf`.
+Transport is currently stable in CI. The active lane is the IVF
+approximate-nearest-neighbor index built from the allowed reference dataset and
+loaded by default with `SCORER_MODE=ivf`.
 
 ## Repository map
 
 | Path | Purpose |
 | --- | --- |
 | `src/WebApi` | NativeAOT fraud-score server |
-| `src/DataConverter` | Converts official reference data into `references.bin` and optional `references.ivf.bin` |
+| `src/DataConverter` | Converts official reference data into `references.bin` and `references.ivf.bin` |
 | `data` | Allowed challenge datasets and normalization files |
 | `test` | Focused validation tests |
 | `scripts` | Benchmark and report archive automation |

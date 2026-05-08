@@ -27,8 +27,7 @@ nginx stream :9999
 `src/DataConverter` converts `data/references.json.gz` into `data/references.bin` during image build.
 
 When `BUILD_IVF=true` or `--ivf` is enabled, the converter also writes
-`data/references.ivf.bin` for the experimental search path and
-`data/references.exact.bin` for optional exact float32 rerank.
+`data/references.ivf.bin`, the production search index.
 
 The binary format stores:
 
@@ -40,24 +39,22 @@ The runtime loads this compact table once and avoids startup scans or per-reques
 
 `references.bin` is currently about `4.0 MB` because it stores bucket response indexes instead of full reference vectors.
 
-The optional `references.ivf.bin` stores:
+The `references.ivf.bin` file stores:
 
 - `IVF1` magic
 - trained centroids
 - per-cluster bounding boxes
 - packed int16 vector blocks
 - labels and original ids for deterministic top-five tie-breaking
-- optional exact float32 rows for reranking retained candidates
 
 ## Classifier
 
-Default mode uses fine-bucket majority lookup. It remains the production fallback.
+Default mode uses IVF. Fine-bucket majority lookup remains only as fallback.
 
-`SCORER_MODE=ivf` loads the optional IVF index and runs nearest-cluster search.
-Current experiment settings target `nprobe=1`, bbox repair, and second-pass
-repair on fraud counts `1..4`. When `references.exact.bin` exists, the retained
-int16 candidates are reranked in float32. If the IVF file is missing or invalid,
-startup falls back to bucket scoring.
+`SCORER_MODE=ivf` loads the IVF index and runs nearest-cluster search. Current
+settings target `nprobe=1`, full bbox repair, and rounded int16 squared L2
+ranking. If the IVF file is missing or invalid, startup falls back to bucket
+scoring.
 
 ## Startup readiness
 

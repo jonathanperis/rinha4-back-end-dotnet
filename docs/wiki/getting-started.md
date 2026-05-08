@@ -13,15 +13,16 @@ docker compose up --build
 curl -i http://localhost:9999/ready
 ```
 
-Run local stack with the experimental IVF scorer:
+Run local stack with the production IVF scorer:
 
 ```bash
-BUILD_IVF=true SCORER_MODE=ivf docker compose up --build
+docker compose up --build
 ```
 
 Tune IVF image-build parameters with `IVF_CLUSTERS`, `IVF_TRAIN_SAMPLE`, and
-`IVF_ITERATIONS` when testing alternatives. Runtime rerank controls are
-`IVF_EXACT_RERANK` and `IVF_RERANK_CANDIDATES`.
+`IVF_ITERATIONS` when testing alternatives. Runtime repair controls are
+`IVF_FAST_NPROBE`, `IVF_FULL_NPROBE`, `IVF_BBOX_REPAIR`,
+`IVF_REPAIR_MIN_FRAUDS`, and `IVF_REPAIR_MAX_FRAUDS`.
 
 Generate IVF data without Docker:
 
