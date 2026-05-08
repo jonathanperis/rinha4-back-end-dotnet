@@ -1,5 +1,28 @@
 [
   {
+    "file": "rinha-benchmark-20260508134946-838962df4edb.json",
+    "timestamp": "2026-05-08T13:49:46Z",
+    "sha": "838962df4edb6d1b32009184035b6b3022d7105d",
+    "short_sha": "838962df4edb",
+    "run_id": "25559128968",
+    "run_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25559128968",
+    "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-25c722081be3742f3521fbcf47643e20d7bac7ec",
+    "compose_file": "docker-compose.haproxy.yml",
+    "report_kind": "experiment",
+    "benchmark_stack_cpuset": "",
+    "benchmark_k6_cpuset": "",
+    "ivf_scale": "10000",
+    "ivf_fast_nprobe": "1",
+    "ivf_full_nprobe": "1",
+    "html_report": "rinha-benchmark-20260508134946-838962df4edb.html",
+    "p99": "1.72ms",
+    "failure_rate": "0%",
+    "final_score": 5765.71,
+    "http_errors": 0,
+    "false_positive_detections": 0,
+    "false_negative_detections": 0
+  },
+  {
     "file": "rinha-benchmark-20260508134632-37220b893846.json",
     "timestamp": "2026-05-08T13:46:32Z",
     "sha": "37220b893846aaf3f62224043b6f4ac36cfece06",
