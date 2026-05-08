@@ -301,6 +301,8 @@ Current local/CI signal:
 - best zero-failure CI candidate so far uses `IVF_CLUSTERS=2048`, scalar bbox repair,
   and first-cluster `5/5` fraud fast accept below an int16 distance bound:
   p99 `1.46ms`, score `5836.34`, image `ci-23ce4472f631deaf88a530c33ed91d18b9c1c2bb`
+- latest no-overlay candidate after cleanup: p99 `1.84ms`, score `5735.44`,
+  `0%` failures, image `ci-845cb262ce03f12b41b6ab4375b4c289effb3498`
 - one-core cpuset CI probes produced p99 around `20ms` with `0%` failures; the
   latest pushed cleanup run was p99 `20.82ms`, score `4681.44`, `0%` failures
   on image `ci-a2cf864cf74ecd8afdf5d0d1cf3ebce366e0e955`
