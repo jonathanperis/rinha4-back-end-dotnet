@@ -40,7 +40,7 @@ internal sealed partial class IvfIndex
 
         if (repair)
         {
-            byte initialFrauds = FraudCount(candidateLabels);
+            byte initialFrauds = CountFrauds(candidateLabels);
             if (initialFrauds == 0 && candidateDistances[^1] < InitialZeroFastApproveWorstDistance)
                 return 0;
             if (initialFrauds == 5 && candidateDistances[^1] < InitialFiveFastDenyWorstDistance)
@@ -50,7 +50,7 @@ internal sealed partial class IvfIndex
         if (repair)
             RepairByBoundingBoxLong(candidateDistances, candidateIds, candidateLabels, bestClusters, quantizedQuery, queryVectors);
 
-        return FraudCount(candidateLabels);
+        return CountFrauds(candidateLabels);
     }
 
     /// <summary>
@@ -381,6 +381,42 @@ internal sealed partial class IvfIndex
 
         distances[pos] = distance;
         clusters[pos] = cluster;
+    }
+
+    /// <summary>
+    /// Counts fraud labels in the first five retained candidates.
+    /// </summary>
+    /// <param name="candidateLabels">Candidate labels ordered nearest-first.</param>
+    /// <returns>Fraud count from <c>0</c> through <c>5</c>.</returns>
+    private static byte CountFrauds(ReadOnlySpan<byte> candidateLabels)
+    {
+        byte count = 0;
+        int limit = Math.Min(5, candidateLabels.Length);
+        for (int i = 0; i < limit; i++)
+        {
+            if (candidateLabels[i] != 0)
+                count++;
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// Checks whether a cluster was already scanned by centroid probing.
+    /// </summary>
+    /// <param name="cluster">Cluster id.</param>
+    /// <param name="probedClusters">Small nprobe cluster list.</param>
+    /// <returns><see langword="true"/> when <paramref name="cluster"/> appears in <paramref name="probedClusters"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsProbed(int cluster, ReadOnlySpan<int> probedClusters)
+    {
+        foreach (int probed in probedClusters)
+        {
+            if (cluster == probed)
+                return true;
+        }
+
+        return false;
     }
 
 }

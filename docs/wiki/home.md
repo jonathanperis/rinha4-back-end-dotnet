@@ -9,7 +9,7 @@ The current build is optimized for latency first:
 - socket-file healthchecks before nginx starts
 - manual JSON request parsing
 - prebuilt HTTP responses
-- rounded int16 IVF fraud classifier with an experimental IVF3 int32 scan path
+- rounded int16 IVF2 fraud classifier
 - archived official-like k6 results after each main build
 - one-core CI contention probe for candidate benchmarks
 

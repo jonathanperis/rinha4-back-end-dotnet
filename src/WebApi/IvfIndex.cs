@@ -9,14 +9,10 @@
 internal sealed partial class IvfIndex
 {
     private const int MagicV2 = 0x32465649; // IVF2
-    private const int MagicV3 = 0x33465649; // IVF3
     private const int Dims = 14;
-    private const int MaxInt32Scale = 4096;
 
-    private readonly int count;
     private readonly int clusters;
     private readonly int scale;
-    private readonly bool useInt32Distances;
     private readonly int blockLanes;
     private readonly short[] centroids;
     private readonly short[] bboxMin;
@@ -29,8 +25,8 @@ internal sealed partial class IvfIndex
     /// <summary>
     /// Creates an IVF index from already validated binary arrays.
     /// </summary>
-    /// <param name="count">Reference row count.</param>
     /// <param name="clusters">Number of trained centroids.</param>
+    /// <param name="scale">Quantization scale stored in the IVF header.</param>
     /// <param name="blockLanes">Rows packed into each SIMD-friendly block.</param>
     /// <param name="centroids">Dimension-major int16 centroid array.</param>
     /// <param name="bboxMin">Per-cluster int16 minimum bounds.</param>
@@ -40,10 +36,8 @@ internal sealed partial class IvfIndex
     /// <param name="ids">Padded original reference ids.</param>
     /// <param name="blocks">Dimension-major packed int16 vector blocks.</param>
     private IvfIndex(
-        int count,
         int clusters,
         int scale,
-        bool useInt32Distances,
         int blockLanes,
         short[] centroids,
         short[] bboxMin,
@@ -53,10 +47,8 @@ internal sealed partial class IvfIndex
         int[] ids,
         short[] blocks)
     {
-        this.count = count;
         this.clusters = clusters;
         this.scale = scale;
-        this.useInt32Distances = useInt32Distances;
         this.blockLanes = blockLanes;
         this.centroids = centroids;
         this.bboxMin = bboxMin;
@@ -66,11 +58,6 @@ internal sealed partial class IvfIndex
         this.ids = ids;
         this.blocks = blocks;
     }
-
-    /// <summary>
-    /// Gets the number of reference rows represented by this index.
-    /// </summary>
-    public int Count => count;
 
     /// <summary>
     /// Gets the quantization scale stored in the IVF file header.
@@ -100,7 +87,7 @@ internal sealed partial class IvfIndex
             using var stream = File.OpenRead(path);
             using var reader = new BinaryReader(stream);
             int magic = reader.ReadInt32();
-            if (magic != MagicV2 && magic != MagicV3)
+            if (magic != MagicV2)
             {
                 error = "Invalid IVF index magic.";
                 return false;
@@ -112,13 +99,11 @@ internal sealed partial class IvfIndex
             int scale = reader.ReadInt32();
             int blockLanes = reader.ReadInt32();
             int totalBlocks = reader.ReadInt32();
-            bool useInt32Distances = magic == MagicV3;
             if (count <= 0 ||
                 clusters <= 0 ||
                 dims != Dims ||
                 scale <= 0 ||
                 scale > short.MaxValue ||
-                (useInt32Distances && scale > MaxInt32Scale) ||
                 blockLanes <= 0 ||
                 totalBlocks <= 0)
             {
@@ -149,7 +134,7 @@ internal sealed partial class IvfIndex
                 return false;
             }
 
-            index = new IvfIndex(count, clusters, scale, useInt32Distances, blockLanes, centroids, bboxMin, bboxMax, offsets, labels, ids, blocks);
+            index = new IvfIndex(clusters, scale, blockLanes, centroids, bboxMin, bboxMax, offsets, labels, ids, blocks);
             return true;
         }
         catch (Exception ex) when (ex is IOException or EndOfStreamException or ArgumentException or OverflowException)
@@ -170,7 +155,7 @@ internal sealed partial class IvfIndex
         int fastNProbe = Math.Clamp(options.FastNProbe, 1, clusters);
         bool repairsAllCounts = options.BoundaryFull && options.RepairMinFrauds == 0 && options.RepairMaxFrauds == 5;
         bool fastRepair = options.BboxRepair && (!options.BoundaryFull || repairsAllCounts);
-        byte frauds = FraudCountOnce(quantizedQuery, fastNProbe, fastRepair);
+        byte frauds = FraudCountOnceLong(quantizedQuery, fastNProbe, fastRepair);
 
         if (options.BoundaryFull &&
             !repairsAllCounts &&
@@ -178,7 +163,7 @@ internal sealed partial class IvfIndex
             frauds <= options.RepairMaxFrauds)
         {
             int fullNProbe = Math.Clamp(Math.Max(options.FullNProbe, fastNProbe), 1, clusters);
-            frauds = FraudCountOnce(quantizedQuery, fullNProbe, options.BboxRepair);
+            frauds = FraudCountOnceLong(quantizedQuery, fullNProbe, options.BboxRepair);
         }
 
         return frauds;

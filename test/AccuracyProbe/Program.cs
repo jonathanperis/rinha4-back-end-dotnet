@@ -443,7 +443,6 @@ internal sealed class ProfileBucket
 internal sealed class ProfileIvfIndex
 {
     private const int MagicV2 = 0x32465649;
-    private const int MagicV3 = 0x33465649;
     private const int Dims = 14;
 
     private readonly int blockLanes;
@@ -492,8 +491,8 @@ internal sealed class ProfileIvfIndex
         using var stream = File.OpenRead(path);
         using var reader = new BinaryReader(stream);
         int magic = reader.ReadInt32();
-        if (magic != MagicV2 && magic != MagicV3)
-            throw new InvalidOperationException("Only IVF2/IVF3 profile is supported.");
+        if (magic != MagicV2)
+            throw new InvalidOperationException("Only IVF2 profile is supported.");
 
         _ = reader.ReadInt32();
         int clusters = reader.ReadInt32();

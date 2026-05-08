@@ -18,11 +18,9 @@ internal readonly record struct IvfBuildOptions(int Clusters, int TrainSample, i
 internal static class IvfIndexBuilder
 {
     private const int MagicV2 = 0x32465649; // IVF2
-    private const int MagicV3 = 0x33465649; // IVF3
     private const int Dims = 14;
     private const int BlockLanes = 8;
     public const int DefaultScale = 10000;
-    public const int MaxInt32Scale = 4096;
 
     /// <summary>
     /// Trains, packs, and writes an IVF binary index.
@@ -36,7 +34,6 @@ internal static class IvfIndexBuilder
     {
         int clusters = Math.Min(Math.Min(options.Clusters, count), ushort.MaxValue);
         int scale = Math.Clamp(options.Scale, 1, short.MaxValue);
-        int magic = scale <= MaxInt32Scale ? MagicV3 : MagicV2;
         Console.WriteLine("Training IVF centroids...");
         float[] centroids = TrainCentroids(vectors, count, clusters, options.TrainSample, options.Iterations);
 
@@ -105,7 +102,7 @@ internal static class IvfIndexBuilder
         using var stream = File.Create(outputPath);
         using var writer = new BinaryWriter(stream);
 
-        writer.Write(magic);
+        writer.Write(MagicV2);
         writer.Write(count);
         writer.Write(clusters);
         writer.Write(Dims);

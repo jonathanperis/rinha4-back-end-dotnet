@@ -1,9 +1,0 @@
-services:
-  nginx:
-    image: rinha-yarp-lb:local
-    build:
-      context: .
-      dockerfile: ./src/YarpProxy/Dockerfile
-      args:
-        AOT: true
-        BUILD_CONFIGURATION: Release

@@ -198,11 +198,11 @@ internal sealed class ScopedEnvironment : IDisposable
 /// </remarks>
 internal static class IvfTestIndex
 {
-    private const int Magic = 0x33465649;
+    private const int Magic = 0x32465649;
     private const int Count = 11;
     private const int Clusters = 2;
     private const int Dims = 14;
-    private const int Scale = 1000;
+    private const int Scale = 10000;
     private const int BlockLanes = 8;
     private const int TotalBlocks = 2;
 

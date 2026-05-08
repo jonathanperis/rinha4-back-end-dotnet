@@ -107,7 +107,7 @@ The binary file is embedded in the Docker image. The runtime container does not 
 IVF format:
 
 ```text
-int32 magic = "IVF2" | "IVF3"
+int32 magic = "IVF2"
 int32 count
 int32 clusters
 int32 dims
@@ -124,17 +124,15 @@ int16 blocks[total_blocks * dims * block_lanes]
 ```
 
 The runtime uses rounded int16 coordinates because the public labels match
-rounded quantized KNN behavior. Default `IVF_SCALE=10000` writes IVF2 and uses
-int64 accumulation to preserve accuracy. Experimental `IVF_SCALE<=4096` writes
-IVF3 and uses int32 AVX2 centroid, bbox, and block scan accumulation for A/B.
-The previous bucket fallback and float32 rerank paths were removed after IVF
-became the production classifier.
+rounded quantized KNN behavior. The candidate path writes IVF2 and uses int64
+accumulation to preserve accuracy. Previous bucket, float32 rerank, and
+failed experiment paths were removed after IVF2 remained the only candidate-safe
+classifier.
 
 Runtime IVF code is split by role:
 
 - `IvfIndex.cs` loads and validates the binary file, stores immutable arrays, and dispatches search.
 - `IvfIndex.Int64.cs` keeps the IVF2 candidate path with int64 accumulation for `IVF_SCALE=10000`.
-- `IvfIndex.Int32.cs` keeps the experimental IVF3 lower-scale path with int32 AVX2 accumulation.
 
 ## Fraud Vector
 
@@ -201,7 +199,7 @@ Implemented:
 - `stackalloc` for request vectors
 - no per-request response serialization
 - no hot-path logging
-- rounded int16 IVF classifier, with experimental IVF3 int32 scan path behind `IVF_SCALE<=4096`
+- rounded int16 IVF2 classifier with int64 accumulation
 - guarded first-cluster decision shortcuts for safe approval/denial cases found by `test/AccuracyProbe profile`
 
 ## Reverse Proxy
@@ -310,9 +308,7 @@ Current local/CI signal:
 - `test/AccuracyProbe profile` showed high-confidence `0/5` approvals and `5/5`
   denials can skip bbox repair; public replay stays at `0` FP/FN and local replay
   time dropped from `20.76s` to `11.71s`
-- rejected A/Bs: AVX2 bbox repair regressed to p99 `5.37ms`, cluster-major bbox copy regressed to p99 `6.89ms`, `4096` clusters was p99 `16.69ms`, and `1024` clusters was p99 `19.78ms`
-- IVF3 lower-scale local replay was tested as A/B and is not candidate-safe yet:
-  `IVF_SCALE=1000` produced `10` FP and `11` FN; `IVF_SCALE=4096` produced `1` FP and `3` FN
+- rejected A/Bs: AVX2 bbox repair regressed to p99 `5.37ms`, cluster-major bbox copy regressed to p99 `6.89ms`, `4096` clusters was p99 `16.69ms`, `1024` clusters was p99 `19.78ms`; removed experiments either missed labels or lost to nginx
 - latest published candidate is updated by the main benchmark after each successful image build
 
 Local replay numbers are correctness checks against the public payload. CI
@@ -413,10 +409,10 @@ Main blocker for top-10 target:
 Likely next moves:
 
 1. Keep IVF2 scale 10000 as candidate default because public replay stays at `0` FP/FN.
-2. Profile repair p99 and compare lower-scale IVF3 A/B against previous IVF2 results.
+2. Profile repair p99 and reduce bbox scan cost without changing rounded IVF2 accuracy.
 3. Compare new CI p99 against #9 .NET reference (`1.73ms`) while preserving `0%` failures.
-4. Promote IVF submission when CI shows `0` failures and p99 below #9.
-5. Track official issue `#2088` for the next preview result from the updated submission branch.
+4. Promote submission when CI shows `0` failures and p99 below #9.
+5. Track official preview results from the updated submission branch.
 
 ## License
 

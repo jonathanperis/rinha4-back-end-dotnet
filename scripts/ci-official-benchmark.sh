@@ -88,10 +88,6 @@ if [[ "$BENCHMARK_PULL_IMAGE" == "true" ]]; then
     docker compose "${compose_args[@]}" pull webapi1 webapi2
 fi
 
-if [[ "$BENCHMARK_NO_BUILD" == "true" && "$COMPOSE_FILE" == "docker-compose.yarp.yml" ]]; then
-    docker compose "${compose_args[@]}" build nginx
-fi
-
 up_args=(up -d)
 if [[ "$BENCHMARK_NO_BUILD" != "true" ]]; then
     up_args+=(--build)

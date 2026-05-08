@@ -38,15 +38,12 @@ guarded shortcuts, and local replay time dropped from `20.76s` to `11.71s`.
 
 AVX2 bbox repair raised p99 to `5.37ms`; a cluster-major bbox copy raised p99
 to `6.89ms`; `4096` clusters raised p99 to `16.69ms`; `1024` clusters raised
-p99 to `19.78ms`.
-Lower-scale IVF3 int32 A/B reduced accumulation cost structurally but was not
-candidate-safe on public replay: scale `1000` missed `21` labels, and scale
-`4096` missed `4` labels.
+p99 to `19.78ms`; removed experiments either missed labels or lost to nginx.
 
 ## Accuracy experiments
 
-Earlier bucket and float-rerank paths were removed from production. Rounded IVF
-is the only runtime classifier now.
+Earlier non-candidate classifier paths were removed from production. Rounded
+IVF2 is the only runtime classifier now.
 
 The current production lane is IVF approximate nearest-neighbor search:
 
