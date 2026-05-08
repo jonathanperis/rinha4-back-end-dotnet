@@ -12,10 +12,12 @@ Main build flow:
 8. GitHub Pages deploys the docs site.
 
 The automatic main-branch benchmark runs against the immutable image tag built in the same workflow, not a locally rebuilt image.
-It pins nginx and both WebApi containers to host cpuset `0` while keeping Docker
-resource limits active. This makes GitHub-hosted runs less optimistic and closer
-to the official `1 CPU / 350 MB` contention profile, but still not identical to
-official Rinha hardware.
+The submission compose pins nginx to cpuset `0`, `webapi1` to `1,2`, and
+`webapi2` to `2,3`, while keeping Docker resource limits active. The automatic
+main-branch benchmark overrides that layout and pins all service containers to
+host cpuset `0`; this harsher probe makes GitHub-hosted runs less optimistic and
+closer to the official `1 CPU / 350 MB` contention profile, but still not
+identical to official Rinha hardware.
 
 Manual **Official-like Benchmark** runs can archive experiment reports too.
 For IVF, dispatch with `report_kind=experiment`, `IVF_FAST_NPROBE=1`,

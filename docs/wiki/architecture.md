@@ -15,6 +15,9 @@ nginx stream :9999
 
 1. nginx accepts TCP on port `9999`.
 2. nginx stream forwards bytes to API instances over Unix Domain Sockets.
+   The compose file pins nginx to cpuset `0`, `webapi1` to `1,2`, and
+   `webapi2` to `2,3`. CPU quotas still total `1.00`; cpuset reduces scheduler
+   contention under the official host.
 3. `RawHttpServer` accepts the socket connection.
 4. `HttpWire` parses method, path, headers, and `Content-Length`.
 5. `FraudRequestParser` reads only required JSON fields.

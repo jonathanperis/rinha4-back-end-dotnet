@@ -7,7 +7,7 @@ internal sealed partial class IvfIndex
     private const long InitialZeroFastApproveWorstDistance = 5_000_000;
 
     // Public replay shows no denial changes below this first-cluster top-five bound.
-    private const long InitialFiveFastAcceptWorstDistance = 4_500_000;
+    private const long InitialFiveFastDenyWorstDistance = 4_500_000;
 
     /// <summary>
     /// Runs one IVF2-compatible pass with int64 accumulation.
@@ -43,7 +43,7 @@ internal sealed partial class IvfIndex
             byte initialFrauds = FraudCount(candidateLabels);
             if (initialFrauds == 0 && candidateDistances[^1] < InitialZeroFastApproveWorstDistance)
                 return 0;
-            if (initialFrauds == 5 && candidateDistances[^1] < InitialFiveFastAcceptWorstDistance)
+            if (initialFrauds == 5 && candidateDistances[^1] < InitialFiveFastDenyWorstDistance)
                 return 5;
         }
 

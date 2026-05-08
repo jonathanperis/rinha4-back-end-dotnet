@@ -78,12 +78,17 @@ Docker Compose waits for both API Unix socket files before starting nginx. This 
 
 ## Services And Limits
 
-| Service | CPU | Memory | Notes |
-| --- | ---: | ---: | --- |
-| `nginx` | `0.20` | `20 MB` | default stream TCP proxy |
-| `webapi1` | `0.40` | `165 MB` | .NET 10 NativeAOT |
-| `webapi2` | `0.40` | `165 MB` | .NET 10 NativeAOT |
-| **Total** | **1.00** | **350 MB** | competition limit |
+| Service | CPU | Memory | cpuset | Notes |
+| --- | ---: | ---: | --- | --- |
+| `nginx` | `0.20` | `20 MB` | `0` | stream TCP proxy |
+| `webapi1` | `0.40` | `165 MB` | `1,2` | .NET 10 NativeAOT |
+| `webapi2` | `0.40` | `165 MB` | `2,3` | .NET 10 NativeAOT |
+| **Total** | **1.00** | **350 MB** | - | competition limit |
+
+The cpuset layout follows the same official-accepted pattern used by the #12
+.NET competitor: keep the proxy on one host core and let each API quota run on
+separate scheduler sets. CPU quotas still sum to `1.00`; cpuset only reduces
+CFS contention and wakeup jitter.
 
 API memory is dominated by:
 
@@ -299,7 +304,9 @@ Current local/CI signal:
   and first-cluster `5/5` fraud fast accept below an int16 distance bound:
   p99 `1.46ms`, score `5836.34`, image `ci-23ce4472f631deaf88a530c33ed91d18b9c1c2bb`
 - one-core cpuset CI probe against that same image produced p99 `22.52ms`, score
-  `4647.51`, `0%` failures; that is the current latency signal for ranking work
+  `4647.51`, `0%` failures; after adding the first-cluster `0/5` approval
+  shortcut, the constrained CI candidate improved to p99 `21.03ms`, score
+  `4677.25`, `0%` failures on image `ci-780d16603df535d54a0c58d1a8f5b4701d16b7b6`
 - `test/AccuracyProbe profile` showed high-confidence `0/5` approvals and `5/5`
   denials can skip bbox repair; public replay stays at `0` FP/FN and local replay
   time dropped from `20.76s` to `11.71s`

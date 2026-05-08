@@ -24,9 +24,12 @@ negatives, but the full-repair path still needs CI latency improvement.
 The best unconstrained zero-failure CI lane used `2048` IVF clusters, scalar
 bbox repair, and first-cluster `5/5` fraud fast accept under a tuned int16
 distance bound: p99 `1.46ms`, score `5836.34`. That did not match official
-preview behavior. The newer one-core cpuset probe against the same image
-produced p99 `22.52ms`, score `4647.51`, and `0%` failures, so optimization now
-targets scan CPU under constrained contention.
+preview behavior. A one-core cpuset probe against the same image produced p99
+`22.52ms`, score `4647.51`, and `0%` failures. After adding the first-cluster
+`0/5` approval shortcut, the constrained CI candidate improved to p99
+`21.03ms`, score `4677.25`, and `0%` failures on image
+`ci-780d16603df535d54a0c58d1a8f5b4701d16b7b6`, so optimization now targets
+remaining scan CPU under constrained contention.
 
 `test/AccuracyProbe profile` showed high-confidence first-cluster `0/5`
 approvals and `5/5` denials can skip bbox repair under tuned distance bounds.
@@ -63,3 +66,6 @@ CI benchmarking as the submission default.
 The retained load balancer path is nginx stream. It keeps the proxy byte-oriented on port `9999` and forwards to the API containers over Unix Domain Sockets.
 
 The benchmark workflow runs the default nginx stream compose file used by the submission.
+The submission compose pins the proxy to cpuset `0` and the API containers to
+`1,2` and `2,3`, matching the official-accepted pattern observed in the #12
+.NET implementation while keeping the same `1.00 CPU / 350 MB` quota.
