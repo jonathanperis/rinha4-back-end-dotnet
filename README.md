@@ -258,6 +258,9 @@ curl -i http://localhost:9999/ready
 
 Docker IVF build parameters are also tunable with `IVF_CLUSTERS`,
 `IVF_TRAIN_SAMPLE`, `IVF_ITERATIONS`, and `IVF_SCALE`.
+The current default is `IVF_CLUSTERS=2048`, `IVF_SCALE=10000`,
+`IVF_FAST_NPROBE=1`, `IVF_FULL_NPROBE=1`, and full bbox repair over fraud
+counts `0..5`.
 
 ## Benchmarks
 
@@ -281,6 +284,8 @@ CI official-like benchmark:
 Current local/CI signal:
 
 - rounded IVF local replay over public `test-data.json`: `0` FP, `0` FN
+- best zero-failure CI experiment so far uses `IVF_CLUSTERS=2048`: p99 `11.72ms`, score `4931.04`
+- rejected cluster-count A/Bs: `4096` was p99 `16.69ms`, `1024` was p99 `19.78ms`, and `1536` replayed accurately but was materially slower locally
 - IVF3 lower-scale local replay was tested as A/B and is not candidate-safe yet:
   `IVF_SCALE=1000` produced `10` FP and `11` FN; `IVF_SCALE=4096` produced `1` FP and `3` FN
 - latest published candidate is updated by the main benchmark after each successful image build
@@ -295,7 +300,7 @@ Run from GitHub Actions:
 2. Select **Official-like Benchmark**.
 3. Choose compose file:
    - `docker-compose.yml` for nginx stream baseline
-4. For IVF experiment, set `report_kind=experiment`, tune `IVF_SCALE`, and keep `IVF_FAST_NPROBE=1`, `IVF_FULL_NPROBE=1`, `IVF_BBOX_REPAIR=true`, `IVF_BOUNDARY_FULL=false`, and repair frauds `0..5`.
+4. For IVF experiment, set `report_kind=experiment`, tune `IVF_CLUSTERS` or `IVF_SCALE`, and keep `IVF_FAST_NPROBE=1`, `IVF_FULL_NPROBE=1`, `IVF_BBOX_REPAIR=true`, `IVF_BOUNDARY_FULL=false`, and repair frauds `0..5`.
 5. Run workflow.
 
 Manual runs can also benchmark a pushed image by filling `webapi_image`; when set,

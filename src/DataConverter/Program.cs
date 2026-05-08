@@ -72,7 +72,7 @@ internal static class DataConverterOptions
     /// </summary>
     /// <returns>Configured IVF build options with conservative defaults.</returns>
     public static IvfBuildOptions IvfOptions() => new(
-        EnvInt("IVF_CLUSTERS", 4096),
+        EnvInt("IVF_CLUSTERS", 2048),
         EnvInt("IVF_TRAIN_SAMPLE", 65_536),
         EnvInt("IVF_ITERATIONS", 6),
         Math.Min(EnvInt("IVF_SCALE", IvfIndexBuilder.DefaultScale), short.MaxValue));

@@ -21,6 +21,10 @@ HTTP errors; p99 work is now inside IVF repair and vector scan cost.
 The active bottleneck is balancing full-repair accuracy with p99. Rounded IVF
 matched the public benchmark locally with `0` false positives and `0` false
 negatives, but the full-repair path still needs CI latency improvement.
+The current best zero-failure CI lane uses `2048` IVF clusters: p99 `11.72ms`,
+score `4931.04`. `4096` clusters raised p99 to `16.69ms`; `1024` clusters
+raised p99 to `19.78ms`; `1536` clusters replayed at `0` failures locally but
+was slower than the 2048 local replay, so it was not promoted.
 Lower-scale IVF3 int32 A/B reduced accumulation cost structurally but was not
 candidate-safe on public replay: scale `1000` missed `21` labels, and scale
 `4096` missed `4` labels.
