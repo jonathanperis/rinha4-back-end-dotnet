@@ -2,7 +2,7 @@ name: 'rinha-2026-dotnet'
 
 services:
   webapi1: &webapi
-    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-2546b8a3bfbcbedc318e4326b0824c94f18c744a
+    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-3772cbb6ae928615c958fadfc98c78d03787896e
     pull_policy: always
     container_name: webapi-1
     user: root
@@ -15,8 +15,15 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "1"
+      IVF_FAST_NPROBE: "1"
+      IVF_FULL_NPROBE: "1"
+      IVF_BOUNDARY_FULL: "false"
+      IVF_BBOX_REPAIR: "true"
+      IVF_REPAIR_MIN_FRAUDS: "0"
+      IVF_REPAIR_MAX_FRAUDS: "5"
       SOCKET_PATH: /sockets/api1.sock
-      DATA_PATH: /data/references.bin
+      DATA_DIR: /data
+      IVF_PATH: /data/references.ivf.bin
     tmpfs:
       - /tmp
     volumes:
@@ -47,8 +54,15 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "1"
+      IVF_FAST_NPROBE: "1"
+      IVF_FULL_NPROBE: "1"
+      IVF_BOUNDARY_FULL: "false"
+      IVF_BBOX_REPAIR: "true"
+      IVF_REPAIR_MIN_FRAUDS: "0"
+      IVF_REPAIR_MAX_FRAUDS: "5"
       SOCKET_PATH: /sockets/api2.sock
-      DATA_PATH: /data/references.bin
+      DATA_DIR: /data
+      IVF_PATH: /data/references.ivf.bin
 
   nginx:
     image: nginx:latest
