@@ -3,9 +3,6 @@
 /// </summary>
 internal sealed partial class IvfIndex
 {
-    // Keeps (2 * scale)^2 inside signed int32 before AVX2 bbox widening.
-    private const int MaxAvx2BboxScale = 23170;
-
     /// <summary>
     /// Runs one IVF2-compatible pass with int64 accumulation.
     /// </summary>
@@ -58,12 +55,6 @@ internal sealed partial class IvfIndex
         ReadOnlySpan<short> query,
         scoped ReadOnlySpan<Vector256<int>> queryVectors)
     {
-        if (Avx2.IsSupported && scale <= MaxAvx2BboxScale)
-        {
-            RepairByBoundingBoxAvx2Long(candidateDistances, candidateIds, candidateLabels, probedClusters, query, queryVectors);
-            return;
-        }
-
         long worstDistance = candidateDistances[^1];
         for (int cluster = 0; cluster < clusters; cluster++)
         {
@@ -77,95 +68,6 @@ internal sealed partial class IvfIndex
                 worstDistance = candidateDistances[^1];
             }
         }
-    }
-
-    /// <summary>
-    /// Scans repair clusters after evaluating eight bounding boxes at a time with AVX2.
-    /// </summary>
-    /// <param name="candidateDistances">Mutable candidate int64 squared distances.</param>
-    /// <param name="candidateIds">Mutable candidate original ids.</param>
-    /// <param name="candidateLabels">Mutable candidate labels.</param>
-    /// <param name="probedClusters">Clusters already scanned by centroid distance.</param>
-    /// <param name="query">Int16 query vector used for scalar tail clusters.</param>
-    /// <param name="queryVectors">Pre-broadcast AVX2 query vectors.</param>
-    private void RepairByBoundingBoxAvx2Long(
-        Span<long> candidateDistances,
-        Span<int> candidateIds,
-        Span<byte> candidateLabels,
-        scoped ReadOnlySpan<int> probedClusters,
-        ReadOnlySpan<short> query,
-        scoped ReadOnlySpan<Vector256<int>> queryVectors)
-    {
-        Span<long> bboxDistances = stackalloc long[8];
-        long worstDistance = candidateDistances[^1];
-        int cluster = 0;
-        int vectorizedClusters = clusters - (clusters % 8);
-
-        for (; cluster < vectorizedClusters; cluster += 8)
-        {
-            ComputeBoundingBoxDistancesAvx2Long(cluster, queryVectors, bboxDistances);
-            for (int lane = 0; lane < 8; lane++)
-            {
-                int candidateCluster = cluster + lane;
-                if (bboxDistances[lane] > worstDistance ||
-                    offsets[candidateCluster] == offsets[candidateCluster + 1] ||
-                    IsProbed(candidateCluster, probedClusters))
-                    continue;
-
-                ScanBlocksLong(candidateDistances, candidateIds, candidateLabels, offsets[candidateCluster], offsets[candidateCluster + 1], query, queryVectors);
-                worstDistance = candidateDistances[^1];
-            }
-        }
-
-        for (; cluster < clusters; cluster++)
-        {
-            if (offsets[cluster] == offsets[cluster + 1] ||
-                IsProbed(cluster, probedClusters))
-                continue;
-
-            if (BoundingBoxCanImproveLong(cluster, query, worstDistance))
-            {
-                ScanBlocksLong(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], query, queryVectors);
-                worstDistance = candidateDistances[^1];
-            }
-        }
-    }
-
-    /// <summary>
-    /// Computes squared lower-bound distances from the query to eight cluster bounding boxes.
-    /// </summary>
-    /// <param name="cluster">First cluster in the contiguous eight-cluster batch.</param>
-    /// <param name="queryVectors">Pre-broadcast AVX2 query vectors.</param>
-    /// <param name="distances">Destination lower-bound distances for the eight lanes.</param>
-    private void ComputeBoundingBoxDistancesAvx2Long(
-        int cluster,
-        scoped ReadOnlySpan<Vector256<int>> queryVectors,
-        Span<long> distances)
-    {
-        Vector256<long> accLo = Vector256<long>.Zero;
-        Vector256<long> accHi = Vector256<long>.Zero;
-
-        for (int dim = 0; dim < Dims; dim++)
-        {
-            int bboxIndex = dim * clusters + cluster;
-            ref short minRef = ref bboxMin[bboxIndex];
-            ref short maxRef = ref bboxMax[bboxIndex];
-            Vector128<short> packedMin = Unsafe.ReadUnaligned<Vector128<short>>(ref Unsafe.As<short, byte>(ref minRef));
-            Vector128<short> packedMax = Unsafe.ReadUnaligned<Vector128<short>>(ref Unsafe.As<short, byte>(ref maxRef));
-            Vector256<int> min = Avx2.ConvertToVector256Int32(packedMin);
-            Vector256<int> max = Avx2.ConvertToVector256Int32(packedMax);
-            Vector256<int> query = queryVectors[dim];
-            Vector256<int> belowMin = Avx2.And(Avx2.Subtract(min, query), Avx2.CompareGreaterThan(min, query));
-            Vector256<int> aboveMax = Avx2.And(Avx2.Subtract(query, max), Avx2.CompareGreaterThan(query, max));
-            Vector256<int> diff = Avx2.Or(belowMin, aboveMax);
-            Vector256<int> squared = Avx2.MultiplyLow(diff, diff);
-
-            accLo = Avx2.Add(accLo, Avx2.ConvertToVector256Int64(squared.GetLower()));
-            accHi = Avx2.Add(accHi, Avx2.ConvertToVector256Int64(squared.GetUpper()));
-        }
-
-        accLo.CopyTo(distances);
-        accHi.CopyTo(distances[4..]);
     }
 
     /// <summary>

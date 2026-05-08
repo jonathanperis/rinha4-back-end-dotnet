@@ -128,7 +128,7 @@ became the production classifier.
 Runtime IVF code is split by role:
 
 - `IvfIndex.cs` loads and validates the binary file, stores immutable arrays, and dispatches search.
-- `IvfIndex.Int64.cs` keeps the IVF2 candidate path with int64 accumulation for `IVF_SCALE=10000`, including AVX2 batched bbox lower-bound checks when available.
+- `IvfIndex.Int64.cs` keeps the IVF2 candidate path with int64 accumulation for `IVF_SCALE=10000`.
 - `IvfIndex.Int32.cs` keeps the experimental IVF3 lower-scale path with int32 AVX2 accumulation.
 
 ## Fraud Vector
@@ -284,10 +284,9 @@ CI official-like benchmark:
 Current local/CI signal:
 
 - rounded IVF local replay over public `test-data.json`: `0` FP, `0` FN
-- best zero-failure CI candidate so far uses `IVF_CLUSTERS=2048` with bbox repair:
+- best zero-failure CI candidate so far uses `IVF_CLUSTERS=2048` with scalar bbox repair:
   p99 `2.76ms`, score `5559.57`, image `ci-ab39517336c46a807c16559f70fad9270cb2ff4f`
-- active A/B: IVF2 now batches bbox lower-bound checks over 8 clusters with AVX2 while keeping int64 candidate distances
-- rejected A/Bs: earlier AVX2 full-repair variant regressed to p99 `5.37ms`, cluster-major bbox copy regressed to p99 `6.89ms`, `4096` clusters was p99 `16.69ms`, and `1024` clusters was p99 `19.78ms`
+- rejected A/Bs: AVX2 bbox repair regressed to p99 `5.37ms`, cluster-major bbox copy regressed to p99 `6.89ms`, `4096` clusters was p99 `16.69ms`, and `1024` clusters was p99 `19.78ms`
 - IVF3 lower-scale local replay was tested as A/B and is not candidate-safe yet:
   `IVF_SCALE=1000` produced `10` FP and `11` FN; `IVF_SCALE=4096` produced `1` FP and `3` FN
 - latest published candidate is updated by the main benchmark after each successful image build

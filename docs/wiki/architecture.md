@@ -40,9 +40,9 @@ Default and only runtime mode uses IVF.
 
 Startup loads the IVF index and runs nearest-cluster search. Current settings
 target `nprobe=1`, one-pass full bbox repair, and rounded int16 squared L2
-ranking. IVF2 uses int64 accumulation for accuracy and batches bbox lower-bound
-checks with AVX2 when the runner supports it; IVF3 is available for lower-scale
-int32 scan experiments. If the IVF file is missing or invalid, startup fails.
+ranking. IVF2 uses int64 accumulation for accuracy; IVF3 is available for
+lower-scale int32 scan experiments. If the IVF file is missing or invalid,
+startup fails.
 
 Runtime implementation is split into focused partial files:
 
