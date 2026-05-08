@@ -40,6 +40,10 @@ on:
           - candidate
           - comparison
           - official-calibrated
+      exact_max_refs:
+        description: Exact scorer reference cap; <=0 uses all references
+        required: true
+        default: "100000"
       ivf_clusters:
         description: IVF build cluster count
         required: true
@@ -234,6 +238,7 @@ jobs:
           BENCHMARK_API_MEMORY: ${{ inputs.benchmark_api_memory }}
           BENCHMARK_PROXY_MEMORY: ${{ inputs.benchmark_proxy_memory }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
+          EXACT_MAX_REFS: ${{ inputs.exact_max_refs }}
         run: bash scripts/ci-official-benchmark.sh
 
       - name: Write benchmark metadata
@@ -313,6 +318,7 @@ jobs:
           BENCHMARK_API_MEMORY: ${{ inputs.benchmark_api_memory }}
           BENCHMARK_PROXY_MEMORY: ${{ inputs.benchmark_proxy_memory }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
+          EXACT_MAX_REFS: ${{ inputs.exact_max_refs }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

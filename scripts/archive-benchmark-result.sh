@@ -109,6 +109,7 @@ jq -n \
     --arg ivf_bbox_repair "$IVF_BBOX_REPAIR" \
     --arg ivf_repair_min_frauds "$IVF_REPAIR_MIN_FRAUDS" \
     --arg ivf_repair_max_frauds "$IVF_REPAIR_MAX_FRAUDS" \
+    --arg exact_max_refs "${EXACT_MAX_REFS:-}" \
     --arg benchmark_stack_cpuset "$BENCHMARK_STACK_CPUSET" \
     --arg benchmark_k6_cpuset "$BENCHMARK_K6_CPUSET" \
     --arg benchmark_api_cpuset "$BENCHMARK_API_CPUSET" \
@@ -161,7 +162,8 @@ jq -n \
                 ivf_boundary_full: $ivf_boundary_full,
                 ivf_bbox_repair: $ivf_bbox_repair,
                 ivf_repair_min_frauds: $ivf_repair_min_frauds,
-                ivf_repair_max_frauds: $ivf_repair_max_frauds
+                ivf_repair_max_frauds: $ivf_repair_max_frauds,
+                exact_max_refs: $exact_max_refs
             },
             repetition_summary: (if ($repetition_summary | type) == "array" then ($repetition_summary[0] // null) else $repetition_summary end)
         },
