@@ -28,9 +28,9 @@ nginx stream :9999
 
 The `references.ivf.bin` file stores:
 
-- `IVF1` magic
-- trained centroids
-- per-cluster bounding boxes
+- `IVF2` magic
+- trained int16 centroids in dimension-major layout
+- per-cluster int16 bounding boxes in dimension-major layout
 - packed int16 vector blocks
 - labels and original ids for deterministic top-five tie-breaking
 

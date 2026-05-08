@@ -16,7 +16,7 @@ internal readonly record struct IvfBuildOptions(int Clusters, int TrainSample, i
 /// </remarks>
 internal static class IvfIndexBuilder
 {
-    private const int Magic = 0x31465649; // IVF1
+    private const int Magic = 0x32465649; // IVF2
     private const int Dims = 14;
     private const int BlockLanes = 8;
     private const short Scale = 10000;
@@ -31,19 +31,14 @@ internal static class IvfIndexBuilder
     /// <param name="options">K-means and cluster-count options.</param>
     public static void Write(string outputPath, float[] vectors, byte[] labels, int count, IvfBuildOptions options)
     {
-        int clusters = Math.Min(options.Clusters, count);
+        int clusters = Math.Min(Math.Min(options.Clusters, count), ushort.MaxValue);
         Console.WriteLine("Training IVF centroids...");
         float[] centroids = TrainCentroids(vectors, count, clusters, options.TrainSample, options.Iterations);
 
         Console.WriteLine("Assigning IVF clusters...");
         var assignments = GC.AllocateUninitializedArray<ushort>(count);
         var rowCounts = new int[clusters];
-        for (int row = 0; row < count; row++)
-        {
-            int cluster = NearestCentroid(vectors, row * Dims, centroids, clusters);
-            assignments[row] = (ushort)cluster;
-            rowCounts[cluster]++;
-        }
+        AssignClusters(vectors, count, centroids, clusters, assignments, rowCounts);
 
         var offsets = new int[clusters + 1];
         for (int cluster = 0; cluster < clusters; cluster++)
@@ -99,7 +94,9 @@ internal static class IvfIndexBuilder
             }
         }
 
-        float[] transposedCentroids = TransposeCentroids(centroids, clusters);
+        short[] transposedCentroids = QuantizeTransposeCentroids(centroids, clusters);
+        short[] transposedBboxMin = TransposeBounds(bboxMin, clusters);
+        short[] transposedBboxMax = TransposeBounds(bboxMax, clusters);
         using var stream = File.Create(outputPath);
         using var writer = new BinaryWriter(stream);
 
@@ -110,9 +107,9 @@ internal static class IvfIndexBuilder
         writer.Write((int)Scale);
         writer.Write(BlockLanes);
         writer.Write(totalBlocks);
-        WriteFloats(writer, transposedCentroids);
-        WriteShorts(writer, bboxMin);
-        WriteShorts(writer, bboxMax);
+        WriteShorts(writer, transposedCentroids);
+        WriteShorts(writer, transposedBboxMin);
+        WriteShorts(writer, transposedBboxMax);
         WriteInts(writer, offsets);
         writer.Write(labelsOut);
         WriteInts(writer, idsOut);
@@ -209,19 +206,86 @@ internal static class IvfIndexBuilder
     }
 
     /// <summary>
-    /// Converts row-major centroids to dimension-major layout for query-time scanning.
+    /// Assigns every reference row to the nearest centroid and accumulates per-cluster row counts.
+    /// </summary>
+    /// <param name="vectors">Row-major normalized reference vectors.</param>
+    /// <param name="count">Reference row count.</param>
+    /// <param name="centroids">Row-major centroid array.</param>
+    /// <param name="clusters">Number of trained centroids.</param>
+    /// <param name="assignments">Destination row-to-cluster mapping.</param>
+    /// <param name="rowCounts">Destination cluster sizes.</param>
+    /// <remarks>
+    /// This is build-time work, but 4096 clusters make the scalar single-threaded pass expensive.
+    /// Fixed worker ranges keep writes deterministic while using available build CPUs.
+    /// </remarks>
+    private static void AssignClusters(
+        float[] vectors,
+        int count,
+        float[] centroids,
+        int clusters,
+        ushort[] assignments,
+        int[] rowCounts)
+    {
+        int workers = Math.Max(1, Environment.ProcessorCount);
+        var partialCounts = new int[workers][];
+
+        Parallel.For(0, workers, worker =>
+        {
+            int start = (int)((long)worker * count / workers);
+            int end = (int)((long)(worker + 1) * count / workers);
+            int[] localCounts = new int[clusters];
+
+            for (int row = start; row < end; row++)
+            {
+                int cluster = NearestCentroid(vectors, row * Dims, centroids, clusters);
+                assignments[row] = (ushort)cluster;
+                localCounts[cluster]++;
+            }
+
+            partialCounts[worker] = localCounts;
+        });
+
+        for (int worker = 0; worker < workers; worker++)
+        {
+            int[] localCounts = partialCounts[worker];
+            for (int cluster = 0; cluster < clusters; cluster++)
+                rowCounts[cluster] += localCounts[cluster];
+        }
+    }
+
+    /// <summary>
+    /// Quantizes row-major centroids into dimension-major layout for query-time scanning.
     /// </summary>
     /// <param name="centroids">Row-major centroid array.</param>
     /// <param name="clusters">Number of centroids.</param>
-    /// <returns>Dimension-major centroid array.</returns>
-    private static float[] TransposeCentroids(float[] centroids, int clusters)
+    /// <returns>Dimension-major quantized centroid array.</returns>
+    private static short[] QuantizeTransposeCentroids(float[] centroids, int clusters)
     {
-        var transposed = new float[centroids.Length];
+        var transposed = new short[centroids.Length];
         for (int cluster = 0; cluster < clusters; cluster++)
         {
             int centroidBase = cluster * Dims;
             for (int dim = 0; dim < Dims; dim++)
-                transposed[dim * clusters + cluster] = centroids[centroidBase + dim];
+                transposed[dim * clusters + cluster] = Quantize(centroids[centroidBase + dim]);
+        }
+
+        return transposed;
+    }
+
+    /// <summary>
+    /// Converts cluster-major bounding boxes into dimension-major layout.
+    /// </summary>
+    /// <param name="bounds">Cluster-major int16 bounds.</param>
+    /// <param name="clusters">Number of clusters.</param>
+    /// <returns>Dimension-major int16 bounds.</returns>
+    private static short[] TransposeBounds(short[] bounds, int clusters)
+    {
+        var transposed = new short[bounds.Length];
+        for (int cluster = 0; cluster < clusters; cluster++)
+        {
+            int clusterBase = cluster * Dims;
+            for (int dim = 0; dim < Dims; dim++)
+                transposed[dim * clusters + cluster] = bounds[clusterBase + dim];
         }
 
         return transposed;
@@ -238,17 +302,6 @@ internal static class IvfIndexBuilder
         if (value < -1.0f) value = -1.0f;
         if (value > 1.0f) value = 1.0f;
         return (short)MathF.Round(value * Scale);
-    }
-
-    /// <summary>
-    /// Writes float values without per-element boxing.
-    /// </summary>
-    /// <param name="writer">Binary writer positioned at the destination range.</param>
-    /// <param name="values">Values to write.</param>
-    private static void WriteFloats(BinaryWriter writer, float[] values)
-    {
-        foreach (float value in values)
-            writer.Write(value);
     }
 
     /// <summary>

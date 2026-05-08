@@ -102,16 +102,16 @@ The binary file is embedded in the Docker image. The runtime container does not 
 IVF format:
 
 ```text
-int32 magic = "IVF1"
+int32 magic = "IVF2"
 int32 count
 int32 clusters
 int32 dims
 int32 scale
 int32 block_lanes
 int32 total_blocks
-float32 centroids[dims * clusters]
-int16 bbox_min[clusters * dims]
-int16 bbox_max[clusters * dims]
+int16 centroids[dims * clusters]    // dimension-major
+int16 bbox_min[dims * clusters]     // dimension-major
+int16 bbox_max[dims * clusters]     // dimension-major
 int32 offsets[clusters + 1]
 byte labels[padded_rows]
 int32 ids[padded_rows]
@@ -371,9 +371,9 @@ Main blocker for top-10 target:
 
 Likely next moves:
 
-1. Run CI benchmark with rounded IVF and one-pass full bbox repair.
+1. Run CI benchmark with IVF2: 4096 clusters, int16 centroids, dimension-major bbox SIMD.
 2. Optimize repair p99 with lower bbox overhead and/or better cluster layout.
-3. Re-test 4096 clusters only after rounded quantized ranking is in the image.
+3. Compare new CI p99 against #9 .NET reference (`1.73ms`) while preserving `0%` failures.
 4. Promote IVF submission when CI shows `0` failures and p99 below #9.
 5. Track official issue `#2088` for the next preview result from the updated submission branch.
 

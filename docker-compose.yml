@@ -10,7 +10,7 @@ services:
         AOT: true
         EXTRA_OPTIMIZE: true
         BUILD_CONFIGURATION: Release
-        IVF_CLUSTERS: ${IVF_CLUSTERS:-2048}
+        IVF_CLUSTERS: ${IVF_CLUSTERS:-4096}
         IVF_TRAIN_SAMPLE: ${IVF_TRAIN_SAMPLE:-65536}
         IVF_ITERATIONS: ${IVF_ITERATIONS:-6}
     container_name: webapi-1

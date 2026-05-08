@@ -198,7 +198,7 @@ internal sealed class ScopedEnvironment : IDisposable
 /// </remarks>
 internal static class IvfTestIndex
 {
-    private const int Magic = 0x31465649;
+    private const int Magic = 0x32465649;
     private const int Count = 11;
     private const int Clusters = 2;
     private const int Dims = 14;
@@ -241,8 +241,8 @@ internal static class IvfTestIndex
     {
         for (int dim = 0; dim < Dims; dim++)
         {
-            writer.Write(0.0f);
-            writer.Write(1.0f);
+            writer.Write((short)0);
+            writer.Write((short)Scale);
         }
     }
 

@@ -33,7 +33,7 @@ on:
       ivf_clusters:
         description: IVF build cluster count
         required: true
-        default: "2048"
+        default: "4096"
       ivf_train_sample:
         description: IVF build training sample size
         required: true

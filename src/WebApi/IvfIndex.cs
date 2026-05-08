@@ -8,14 +8,14 @@
 /// </remarks>
 internal sealed class IvfIndex
 {
-    private const int Magic = 0x31465649; // IVF1
+    private const int Magic = 0x32465649; // IVF2
     private const int Dims = 14;
 
     private readonly int count;
     private readonly int clusters;
     private readonly int blockLanes;
     private readonly int totalBlocks;
-    private readonly float[] centroids;
+    private readonly short[] centroids;
     private readonly short[] bboxMin;
     private readonly short[] bboxMax;
     private readonly int[] offsets;
@@ -30,7 +30,7 @@ internal sealed class IvfIndex
     /// <param name="clusters">Number of trained centroids.</param>
     /// <param name="blockLanes">Rows packed into each SIMD-friendly block.</param>
     /// <param name="totalBlocks">Total packed blocks.</param>
-    /// <param name="centroids">Dimension-major centroid array.</param>
+    /// <param name="centroids">Dimension-major int16 centroid array.</param>
     /// <param name="bboxMin">Per-cluster int16 minimum bounds.</param>
     /// <param name="bboxMax">Per-cluster int16 maximum bounds.</param>
     /// <param name="offsets">Cluster block offsets.</param>
@@ -42,7 +42,7 @@ internal sealed class IvfIndex
         int clusters,
         int blockLanes,
         int totalBlocks,
-        float[] centroids,
+        short[] centroids,
         short[] bboxMin,
         short[] bboxMax,
         int[] offsets,
@@ -110,7 +110,7 @@ internal sealed class IvfIndex
             }
 
             int paddedRows = checked(totalBlocks * blockLanes);
-            float[] centroids = new float[checked(clusters * Dims)];
+            short[] centroids = new short[checked(clusters * Dims)];
             short[] bboxMin = new short[checked(clusters * Dims)];
             short[] bboxMax = new short[checked(clusters * Dims)];
             int[] offsets = new int[clusters + 1];
@@ -154,7 +154,7 @@ internal sealed class IvfIndex
         int fastNProbe = Math.Clamp(options.FastNProbe, 1, clusters);
         bool repairsAllCounts = options.BoundaryFull && options.RepairMinFrauds == 0 && options.RepairMaxFrauds == 5;
         bool fastRepair = options.BboxRepair && (!options.BoundaryFull || repairsAllCounts);
-        byte frauds = FraudCountOnce(query, quantizedQuery, fastNProbe, fastRepair);
+        byte frauds = FraudCountOnce(quantizedQuery, fastNProbe, fastRepair);
 
         if (options.BoundaryFull &&
             !repairsAllCounts &&
@@ -162,7 +162,7 @@ internal sealed class IvfIndex
             frauds <= options.RepairMaxFrauds)
         {
             int fullNProbe = Math.Clamp(Math.Max(options.FullNProbe, fastNProbe), 1, clusters);
-            frauds = FraudCountOnce(query, quantizedQuery, fullNProbe, options.BboxRepair);
+            frauds = FraudCountOnce(quantizedQuery, fullNProbe, options.BboxRepair);
         }
 
         return frauds;
@@ -171,33 +171,22 @@ internal sealed class IvfIndex
     /// <summary>
     /// Runs one IVF pass with optional bounding-box repair.
     /// </summary>
-    /// <param name="query">Normalized float query vector.</param>
     /// <param name="quantizedQuery">Int16 query vector.</param>
     /// <param name="nProbe">Number of nearest centroid clusters to scan.</param>
     /// <param name="repair">Whether bbox repair may scan additional clusters.</param>
     /// <returns>Fraud count from retained nearest candidates.</returns>
-    private byte FraudCountOnce(ReadOnlySpan<float> query, ReadOnlySpan<short> quantizedQuery, int nProbe, bool repair)
+    private byte FraudCountOnce(ReadOnlySpan<short> quantizedQuery, int nProbe, bool repair)
     {
         Span<int> bestClusters = stackalloc int[nProbe];
-        Span<float> bestDistances = stackalloc float[nProbe];
-        bestDistances.Fill(float.PositiveInfinity);
+        Span<long> bestDistances = stackalloc long[nProbe];
+        bestDistances.Fill(long.MaxValue);
         Span<long> candidateDistances = stackalloc long[5];
         Span<int> candidateIds = stackalloc int[5];
         Span<byte> candidateLabels = stackalloc byte[5];
         candidateDistances.Fill(long.MaxValue);
         candidateIds.Fill(int.MaxValue);
 
-        for (int cluster = 0; cluster < clusters; cluster++)
-        {
-            float distance = 0.0f;
-            for (int dim = 0; dim < Dims; dim++)
-            {
-                float diff = query[dim] - centroids[dim * clusters + cluster];
-                distance += diff * diff;
-            }
-
-            InsertProbe(bestClusters, bestDistances, cluster, distance);
-        }
+        FindNearestCentroids(quantizedQuery, bestClusters, bestDistances);
 
         for (int i = 0; i < nProbe; i++)
         {
@@ -226,8 +215,90 @@ internal sealed class IvfIndex
         scoped ReadOnlySpan<int> probedClusters,
         ReadOnlySpan<short> query)
     {
+        if (Avx2.IsSupported)
+        {
+            RepairByBoundingBoxAvx2(candidateDistances, candidateIds, candidateLabels, probedClusters, query);
+            return;
+        }
+
         long worstDistance = candidateDistances[^1];
         for (int cluster = 0; cluster < clusters; cluster++)
+        {
+            if (offsets[cluster] == offsets[cluster + 1] ||
+                IsProbed(cluster, probedClusters))
+                continue;
+
+            if (BoundingBoxCanImprove(cluster, query, worstDistance))
+            {
+                ScanBlocks(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], query);
+                worstDistance = candidateDistances[^1];
+            }
+        }
+    }
+
+    /// <summary>
+    /// Scans bbox lower bounds eight clusters at a time with AVX2.
+    /// </summary>
+    /// <param name="candidateDistances">Mutable candidate int16 distances.</param>
+    /// <param name="candidateIds">Mutable candidate original ids.</param>
+    /// <param name="candidateLabels">Mutable candidate labels.</param>
+    /// <param name="probedClusters">Clusters already scanned by centroid distance.</param>
+    /// <param name="query">Int16 query vector.</param>
+    private void RepairByBoundingBoxAvx2(
+        Span<long> candidateDistances,
+        Span<int> candidateIds,
+        Span<byte> candidateLabels,
+        scoped ReadOnlySpan<int> probedClusters,
+        ReadOnlySpan<short> query)
+    {
+        Span<Vector256<int>> queryVectors = stackalloc Vector256<int>[Dims];
+        for (int dim = 0; dim < Dims; dim++)
+            queryVectors[dim] = Vector256.Create((int)query[dim]);
+
+        Span<long> laneDistances = stackalloc long[8];
+        long worstDistance = candidateDistances[^1];
+        int cluster = 0;
+        int simdLimit = clusters & ~7;
+        for (; cluster < simdLimit; cluster += 8)
+        {
+            Vector256<long> accLo = Vector256<long>.Zero;
+            Vector256<long> accHi = Vector256<long>.Zero;
+            for (int dim = 0; dim < Dims; dim++)
+            {
+                int offset = dim * clusters + cluster;
+                ref short minRef = ref bboxMin[offset];
+                ref short maxRef = ref bboxMax[offset];
+                Vector256<int> min = Avx2.ConvertToVector256Int32(Unsafe.ReadUnaligned<Vector128<short>>(ref Unsafe.As<short, byte>(ref minRef)));
+                Vector256<int> max = Avx2.ConvertToVector256Int32(Unsafe.ReadUnaligned<Vector128<short>>(ref Unsafe.As<short, byte>(ref maxRef)));
+                Vector256<int> q = queryVectors[dim];
+                Vector256<int> below = Avx2.CompareGreaterThan(min, q);
+                Vector256<int> above = Avx2.CompareGreaterThan(q, max);
+                Vector256<int> belowDiff = Avx2.And(below, Avx2.Subtract(min, q));
+                Vector256<int> aboveDiff = Avx2.And(above, Avx2.Subtract(q, max));
+                Vector256<int> diff = Avx2.Or(belowDiff, aboveDiff);
+                Vector256<int> squared = Avx2.MultiplyLow(diff, diff);
+
+                accLo = Avx2.Add(accLo, Avx2.ConvertToVector256Int64(squared.GetLower()));
+                accHi = Avx2.Add(accHi, Avx2.ConvertToVector256Int64(squared.GetUpper()));
+            }
+
+            accLo.CopyTo(laneDistances);
+            accHi.CopyTo(laneDistances[4..]);
+
+            for (int lane = 0; lane < 8; lane++)
+            {
+                int laneCluster = cluster + lane;
+                if (laneDistances[lane] > worstDistance ||
+                    offsets[laneCluster] == offsets[laneCluster + 1] ||
+                    IsProbed(laneCluster, probedClusters))
+                    continue;
+
+                ScanBlocks(candidateDistances, candidateIds, candidateLabels, offsets[laneCluster], offsets[laneCluster + 1], query);
+                worstDistance = candidateDistances[^1];
+            }
+        }
+
+        for (; cluster < clusters; cluster++)
         {
             if (offsets[cluster] == offsets[cluster + 1] ||
                 IsProbed(cluster, probedClusters))
@@ -427,13 +498,12 @@ internal sealed class IvfIndex
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool BoundingBoxCanImprove(int cluster, ReadOnlySpan<short> query, long worstDistance)
     {
-        int bboxBase = cluster * Dims;
         long distance = 0;
         for (int dim = 0; dim < Dims; dim++)
         {
             short value = query[dim];
-            short min = bboxMin[bboxBase + dim];
-            short max = bboxMax[bboxBase + dim];
+            short min = bboxMin[dim * clusters + cluster];
+            short max = bboxMax[dim * clusters + cluster];
             if (value < min)
             {
                 int diff = value - min;
@@ -472,13 +542,89 @@ internal sealed class IvfIndex
     }
 
     /// <summary>
+    /// Finds nearest quantized centroids for the query.
+    /// </summary>
+    /// <param name="query">Int16 query vector.</param>
+    /// <param name="bestClusters">Mutable best cluster ids.</param>
+    /// <param name="bestDistances">Mutable best centroid distances.</param>
+    private void FindNearestCentroids(ReadOnlySpan<short> query, Span<int> bestClusters, Span<long> bestDistances)
+    {
+        if (Avx2.IsSupported)
+        {
+            FindNearestCentroidsAvx2(query, bestClusters, bestDistances);
+            return;
+        }
+
+        for (int cluster = 0; cluster < clusters; cluster++)
+            InsertProbe(bestClusters, bestDistances, cluster, CentroidDistance(cluster, query));
+    }
+
+    /// <summary>
+    /// Finds nearest centroids eight clusters at a time with AVX2.
+    /// </summary>
+    /// <param name="query">Int16 query vector.</param>
+    /// <param name="bestClusters">Mutable best cluster ids.</param>
+    /// <param name="bestDistances">Mutable best centroid distances.</param>
+    private void FindNearestCentroidsAvx2(ReadOnlySpan<short> query, Span<int> bestClusters, Span<long> bestDistances)
+    {
+        Span<Vector256<int>> queryVectors = stackalloc Vector256<int>[Dims];
+        for (int dim = 0; dim < Dims; dim++)
+            queryVectors[dim] = Vector256.Create((int)query[dim]);
+
+        Span<long> laneDistances = stackalloc long[8];
+        int cluster = 0;
+        int simdLimit = clusters & ~7;
+        for (; cluster < simdLimit; cluster += 8)
+        {
+            Vector256<long> accLo = Vector256<long>.Zero;
+            Vector256<long> accHi = Vector256<long>.Zero;
+            for (int dim = 0; dim < Dims; dim++)
+            {
+                ref short centroidRef = ref centroids[dim * clusters + cluster];
+                Vector256<int> centroid = Avx2.ConvertToVector256Int32(Unsafe.ReadUnaligned<Vector128<short>>(ref Unsafe.As<short, byte>(ref centroidRef)));
+                Vector256<int> diff = Avx2.Subtract(queryVectors[dim], centroid);
+                Vector256<int> squared = Avx2.MultiplyLow(diff, diff);
+
+                accLo = Avx2.Add(accLo, Avx2.ConvertToVector256Int64(squared.GetLower()));
+                accHi = Avx2.Add(accHi, Avx2.ConvertToVector256Int64(squared.GetUpper()));
+            }
+
+            accLo.CopyTo(laneDistances);
+            accHi.CopyTo(laneDistances[4..]);
+            for (int lane = 0; lane < 8; lane++)
+                InsertProbe(bestClusters, bestDistances, cluster + lane, laneDistances[lane]);
+        }
+
+        for (; cluster < clusters; cluster++)
+            InsertProbe(bestClusters, bestDistances, cluster, CentroidDistance(cluster, query));
+    }
+
+    /// <summary>
+    /// Computes quantized centroid distance for one cluster.
+    /// </summary>
+    /// <param name="cluster">Cluster id.</param>
+    /// <param name="query">Int16 query vector.</param>
+    /// <returns>Squared int16 distance to the centroid.</returns>
+    private long CentroidDistance(int cluster, ReadOnlySpan<short> query)
+    {
+        long distance = 0;
+        for (int dim = 0; dim < Dims; dim++)
+        {
+            int diff = query[dim] - centroids[dim * clusters + cluster];
+            distance += (long)diff * diff;
+        }
+
+        return distance;
+    }
+
+    /// <summary>
     /// Inserts a centroid into the sorted nprobe list.
     /// </summary>
     /// <param name="clusters">Mutable best cluster ids.</param>
     /// <param name="distances">Mutable best centroid distances.</param>
     /// <param name="cluster">Candidate cluster id.</param>
     /// <param name="distance">Candidate centroid distance.</param>
-    private static void InsertProbe(Span<int> clusters, Span<float> distances, int cluster, float distance)
+    private static void InsertProbe(Span<int> clusters, Span<long> distances, int cluster, long distance)
     {
         int last = distances.Length - 1;
         if (distance >= distances[last])
