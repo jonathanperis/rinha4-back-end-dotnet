@@ -1,0 +1,7 @@
+services:
+  nginx:
+    image: envoyproxy/envoy:v1.34-latest
+    command: ["envoy", "-c", "/etc/envoy/envoy.yaml", "--log-level", "critical"]
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
+      - sockets:/sockets
