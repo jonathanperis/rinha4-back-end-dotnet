@@ -21,15 +21,15 @@ internal readonly record struct IvfSearchOptions(
     /// <returns>Search options matching the current experiment defaults.</returns>
     public static IvfSearchOptions FromEnvironment()
     {
-        byte repairMin = (byte)Math.Clamp(EnvNonNegativeInt("IVF_REPAIR_MIN_FRAUDS", 1), 0, 5);
-        byte repairMax = (byte)Math.Clamp(EnvNonNegativeInt("IVF_REPAIR_MAX_FRAUDS", 4), 0, 5);
+        byte repairMin = (byte)Math.Clamp(EnvNonNegativeInt("IVF_REPAIR_MIN_FRAUDS", 0), 0, 5);
+        byte repairMax = (byte)Math.Clamp(EnvNonNegativeInt("IVF_REPAIR_MAX_FRAUDS", 5), 0, 5);
         if (repairMin > repairMax)
             (repairMin, repairMax) = (repairMax, repairMin);
 
         return new IvfSearchOptions(
             EnvPositiveInt("IVF_FAST_NPROBE", 1),
             EnvPositiveInt("IVF_FULL_NPROBE", 1),
-            EnvBool("IVF_BOUNDARY_FULL", true),
+            EnvBool("IVF_BOUNDARY_FULL", false),
             EnvBool("IVF_BBOX_REPAIR", true),
             repairMin,
             repairMax);

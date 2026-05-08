@@ -2,9 +2,9 @@
 /// Runtime inverted-file vector index.
 /// </summary>
 /// <remarks>
-/// The index is loaded only when <c>SCORER_MODE=ivf</c>. It scans the nearest
-/// centroid cluster, optionally repairs boundary decisions with cluster bounding
-/// boxes, and returns a fraud count compatible with the six prebuilt responses.
+/// The index is loaded at startup. It scans the nearest centroid cluster,
+/// optionally repairs boundary decisions with cluster bounding boxes, and
+/// returns a fraud count compatible with the six prebuilt responses.
 /// </remarks>
 internal sealed class IvfIndex
 {
@@ -152,10 +152,12 @@ internal sealed class IvfIndex
     public byte FraudCount(ReadOnlySpan<float> query, ReadOnlySpan<short> quantizedQuery, IvfSearchOptions options)
     {
         int fastNProbe = Math.Clamp(options.FastNProbe, 1, clusters);
-        bool fastRepair = options.BboxRepair && !options.BoundaryFull;
+        bool repairsAllCounts = options.BoundaryFull && options.RepairMinFrauds == 0 && options.RepairMaxFrauds == 5;
+        bool fastRepair = options.BboxRepair && (!options.BoundaryFull || repairsAllCounts);
         byte frauds = FraudCountOnce(query, quantizedQuery, fastNProbe, fastRepair);
 
         if (options.BoundaryFull &&
+            !repairsAllCounts &&
             frauds >= options.RepairMinFrauds &&
             frauds <= options.RepairMaxFrauds)
         {
@@ -224,19 +226,14 @@ internal sealed class IvfIndex
         scoped ReadOnlySpan<int> probedClusters,
         ReadOnlySpan<short> query)
     {
-        int bitsetWords = (clusters + 63) >> 6;
-        Span<ulong> scannedClusters = stackalloc ulong[bitsetWords];
-        foreach (int cluster in probedClusters)
-            scannedClusters[cluster >> 6] |= 1UL << (cluster & 63);
-
         long worstDistance = candidateDistances[^1];
         for (int cluster = 0; cluster < clusters; cluster++)
         {
             if (offsets[cluster] == offsets[cluster + 1] ||
-                (scannedClusters[cluster >> 6] & (1UL << (cluster & 63))) != 0)
+                IsProbed(cluster, probedClusters))
                 continue;
 
-            if (BoundingBoxLowerBound(cluster, query) <= worstDistance)
+            if (BoundingBoxCanImprove(cluster, query, worstDistance))
             {
                 ScanBlocks(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], query);
                 worstDistance = candidateDistances[^1];
@@ -287,6 +284,10 @@ internal sealed class IvfIndex
         int endBlock,
         ReadOnlySpan<short> query)
     {
+        Span<Vector256<int>> queryVectors = stackalloc Vector256<int>[Dims];
+        for (int dim = 0; dim < Dims; dim++)
+            queryVectors[dim] = Vector256.Create((int)query[dim]);
+
         Span<long> laneDistances = stackalloc long[8];
         for (int block = startBlock; block < endBlock; block++)
         {
@@ -300,8 +301,7 @@ internal sealed class IvfIndex
                 ref short blockRef = ref blocks[blockBase + dim * blockLanes];
                 Vector128<short> packedValues = Unsafe.ReadUnaligned<Vector128<short>>(ref Unsafe.As<short, byte>(ref blockRef));
                 Vector256<int> values = Avx2.ConvertToVector256Int32(packedValues);
-                Vector256<int> queryValues = Vector256.Create((int)query[dim]);
-                Vector256<int> diff = Avx2.Subtract(queryValues, values);
+                Vector256<int> diff = Avx2.Subtract(queryVectors[dim], values);
                 Vector256<int> squared = Avx2.MultiplyLow(diff, diff);
 
                 accLo = Avx2.Add(accLo, Avx2.ConvertToVector256Int64(squared.GetLower()));
@@ -418,31 +418,57 @@ internal sealed class IvfIndex
     }
 
     /// <summary>
-    /// Computes the lower-bound distance from query to a cluster bounding box.
+    /// Checks whether a cluster bounding box can still beat the current top-five bound.
     /// </summary>
     /// <param name="cluster">Cluster id.</param>
     /// <param name="query">Int16 query vector.</param>
-    /// <returns>Squared distance lower bound.</returns>
-    private long BoundingBoxLowerBound(int cluster, ReadOnlySpan<short> query)
+    /// <param name="worstDistance">Current worst retained top-five distance.</param>
+    /// <returns><see langword="true"/> when the bounding-box lower bound does not exceed <paramref name="worstDistance"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool BoundingBoxCanImprove(int cluster, ReadOnlySpan<short> query, long worstDistance)
     {
         int bboxBase = cluster * Dims;
         long distance = 0;
         for (int dim = 0; dim < Dims; dim++)
         {
             short value = query[dim];
-            if (value < bboxMin[bboxBase + dim])
+            short min = bboxMin[bboxBase + dim];
+            short max = bboxMax[bboxBase + dim];
+            if (value < min)
             {
-                int diff = value - bboxMin[bboxBase + dim];
+                int diff = value - min;
                 distance += (long)diff * diff;
+                if (distance > worstDistance)
+                    return false;
             }
-            else if (value > bboxMax[bboxBase + dim])
+            else if (value > max)
             {
-                int diff = value - bboxMax[bboxBase + dim];
+                int diff = value - max;
                 distance += (long)diff * diff;
+                if (distance > worstDistance)
+                    return false;
             }
         }
 
-        return distance;
+        return true;
+    }
+
+    /// <summary>
+    /// Checks whether a cluster was already scanned by centroid probing.
+    /// </summary>
+    /// <param name="cluster">Cluster id.</param>
+    /// <param name="probedClusters">Small nprobe cluster list.</param>
+    /// <returns><see langword="true"/> when <paramref name="cluster"/> appears in <paramref name="probedClusters"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsProbed(int cluster, ReadOnlySpan<int> probedClusters)
+    {
+        foreach (int probed in probedClusters)
+        {
+            if (cluster == probed)
+                return true;
+        }
+
+        return false;
     }
 
     /// <summary>

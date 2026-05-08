@@ -88,7 +88,6 @@ Docker Compose waits for both API Unix socket files before starting nginx. This 
 API memory is dominated by:
 
 - `references.ivf.bin` loaded as managed centroid, bbox, label, id, and block arrays
-- `references.bin` fallback response-index table
 - normalization and MCC lookup tables
 - NativeAOT runtime overhead
 
@@ -96,29 +95,9 @@ API memory is dominated by:
 
 Input data lives in `data/references.json.gz`.
 
-`src/DataConverter` converts it to `data/references.bin` at image build time.
-With the current Docker defaults, `BUILD_IVF=true` also writes
-`data/references.ivf.bin`, the production scorer index.
+`src/DataConverter` converts it to `data/references.ivf.bin` at image build time.
 
 The binary file is embedded in the Docker image. The runtime container does not need to download or transform data before serving.
-
-Binary format:
-
-```text
-int32 magic = "RHD7"
-int32 count
-int32 dims
-int32 padded_dims
-int32 scale
-byte response_indexes[FineGroupCount]
-```
-
-Why this format:
-
-- precomputed response indexes reduce image size and startup work.
-- `padded_dims = 16` keeps the API request-vector stride stable.
-- one byte per fine bucket keeps lookup O(1) with a compact `4.0 MB` table.
-- runtime can start serving immediately after reading the compact table.
 
 IVF format:
 
@@ -139,10 +118,9 @@ int32 ids[padded_rows]
 int16 blocks[total_blocks * dims * block_lanes]
 ```
 
-The IVF file is separate from `references.bin`. The runtime uses rounded int16
-coordinates because the public labels match rounded quantized KNN behavior; the
-previous float32 rerank path was removed after it reintroduced one benchmark
-edge mismatch.
+The runtime uses rounded int16 coordinates because the public labels match
+rounded quantized KNN behavior. The previous bucket fallback and float32 rerank
+paths were removed after IVF became the production classifier.
 
 ## Fraud Vector
 
@@ -170,54 +148,21 @@ MCC risk values are loaded into a flat `float[10000]` plus known-value bitmap fr
 
 ## Classifier
 
-Default classifier:
+The production classifier:
 
-- 16 coarse groups from:
-  - last transaction present
-  - online flag
-  - card present flag
-  - unknown merchant flag
-- 32 bins for minutes since last transaction
-- 32 bins for km from last transaction
-- 16 bins for amount
-- 16 bins for km from home
-
-Total:
-
-```text
-16 * 32 * 32 * 16 * 16 = 4,194,304 fine buckets
-```
-
-Fallback bucket mode loads:
-
-```text
-groupResponseIndexes[group] -> response index 0..5
-```
-
-Each request does:
-
-```text
-request -> vector -> fine group -> response index -> JSON bytes
-```
-
-This is intentionally O(1) after parsing.
-
-Production classifier:
-
-- enabled by default with `SCORER_MODE=ivf`
-- loads `references.ivf.bin` from `IVF_PATH` or beside `references.bin`
+- loads `references.ivf.bin` from `IVF_PATH` or `DATA_DIR`
 - scans nearest IVF centroid clusters with `IVF_FAST_NPROBE`
-- reruns boundary fraud counts with `IVF_FULL_NPROBE` when enabled
+- can rerun only boundary fraud counts with `IVF_FULL_NPROBE` when `IVF_BOUNDARY_FULL=true`
+- current default uses one repaired pass: `IVF_BOUNDARY_FULL=false`, bbox repair on, fraud range `0..5`
 - uses bounding-box lower bounds to repair missed clusters when enabled
 - ranks candidates only with rounded int16 squared L2 distance
-- falls back to the bucket classifier if the IVF file is absent or invalid
+- fails startup if the IVF file is absent or invalid
 
 Tradeoff:
 
 - This prioritizes ranking performance under load.
 - Full repair (`IVF_REPAIR_MIN_FRAUDS=0`, `IVF_REPAIR_MAX_FRAUDS=5`) matched the
   public benchmark payload locally with `0` false positives and `0` false negatives.
-- The bucket implementation remains only as fallback and comparison baseline.
 
 ## Hot Path Optimizations
 
@@ -241,9 +186,7 @@ Implemented:
 - `stackalloc` for request vectors
 - no per-request response serialization
 - no hot-path logging
-- grouped binary dataset
 - rounded int16 IVF classifier
-- O(1) bucket fallback
 
 ## Reverse Proxy
 
@@ -270,29 +213,16 @@ Local benchmark caveats:
 
 ## Local Development
 
-Generate binary data:
+Generate IVF data:
 
 ```bash
 dotnet run --project src/DataConverter/DataConverter.csproj -- data/
 ```
 
-Generate bucket data plus IVF data:
-
-```bash
-BUILD_IVF=true IVF_CLUSTERS=2048 IVF_TRAIN_SAMPLE=65536 IVF_ITERATIONS=6 \
-  dotnet run --project src/DataConverter/DataConverter.csproj -- data/ --ivf
-```
-
 Run one API locally over TCP:
 
 ```bash
-DATA_PATH=data/references.bin dotnet run --project src/WebApi/WebApi.csproj
-```
-
-Run one API locally with IVF scoring:
-
-```bash
-SCORER_MODE=ivf IVF_PATH=data/references.ivf.bin DATA_PATH=data/references.bin \
+DATA_DIR=data IVF_PATH=data/references.ivf.bin \
   dotnet run --project src/WebApi/WebApi.csproj
 ```
 
@@ -348,7 +278,7 @@ CI official-like benchmark:
 Current local/CI signal:
 
 - rounded IVF local replay over public `test-data.json`: `0` FP, `0` FN
-- latest published candidate is still the older bucket baseline until the next main benchmark archives a new IVF run
+- latest published candidate is updated by the main benchmark after each successful image build
 
 Those numbers are official-like GitHub Actions results, not official Rinha hardware results.
 
@@ -358,7 +288,7 @@ Run from GitHub Actions:
 2. Select **Official-like Benchmark**.
 3. Choose compose file:
    - `docker-compose.yml` for nginx stream baseline
-4. For IVF experiment, set `report_kind=experiment`, `BUILD_IVF=true`, `SCORER_MODE=ivf`, `IVF_FAST_NPROBE=1`, `IVF_FULL_NPROBE=1`, `IVF_BBOX_REPAIR=true`, and repair frauds `1..4`.
+4. For IVF experiment, set `report_kind=experiment`, `IVF_FAST_NPROBE=1`, `IVF_FULL_NPROBE=1`, `IVF_BBOX_REPAIR=true`, `IVF_BOUNDARY_FULL=false`, and repair frauds `0..5`.
 5. Run workflow.
 
 Manual runs can also benchmark a pushed image by filling `webapi_image`; when set,
@@ -391,8 +321,8 @@ Unit-style vectorization tests live under `test/`:
 dotnet run --project test/VectorizationTests/VectorizationTests.csproj --no-restore
 ```
 
-Current focused tests cover vector grouping, request parsing, fraud-count
-response mapping, and a synthetic IVF boundary/bounding-box repair case.
+Current focused tests cover timestamp parsing, request parsing, fraud-count
+response mapping, IVF defaults, and a synthetic IVF boundary/bounding-box repair case.
 
 Build checks:
 
@@ -412,9 +342,8 @@ ghcr.io/jonathanperis/rinha4-back-end-dotnet:latest
 Build details:
 
 - SDK image builds converter and API.
-- converter creates `references.bin`.
-- `BUILD_IVF=true` makes the converter create `references.ivf.bin`; current compose defaults to IVF on.
-- IVF image builds accept `IVF_CLUSTERS`, `IVF_TRAIN_SAMPLE`, and `IVF_ITERATIONS` build args.
+- converter creates `references.ivf.bin`.
+- image builds accept `IVF_CLUSTERS`, `IVF_TRAIN_SAMPLE`, and `IVF_ITERATIONS` build args.
 - API is published with NativeAOT.
 - runtime image contains only API binary plus data files.
 
@@ -442,7 +371,7 @@ Main blocker for top-10 target:
 
 Likely next moves:
 
-1. Run CI benchmark with rounded IVF, full bbox repair, and fraud repair range `0..5`.
+1. Run CI benchmark with rounded IVF and one-pass full bbox repair.
 2. Optimize repair p99 with lower bbox overhead and/or better cluster layout.
 3. Re-test 4096 clusters only after rounded quantized ranking is in the image.
 4. Promote IVF submission when CI shows `0` failures and p99 below #9.

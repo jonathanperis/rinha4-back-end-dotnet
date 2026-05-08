@@ -16,8 +16,6 @@ COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 OFFICIAL_REF="${OFFICIAL_REF:-main}"
 K6_IMAGE="${K6_IMAGE:-grafana/k6:latest}"
 REPORT_KIND="${BENCHMARK_REPORT_KIND:-}"
-BUILD_IVF="${BUILD_IVF:-true}"
-SCORER_MODE="${SCORER_MODE:-ivf}"
 IVF_CLUSTERS="${IVF_CLUSTERS:-}"
 IVF_TRAIN_SAMPLE="${IVF_TRAIN_SAMPLE:-}"
 IVF_ITERATIONS="${IVF_ITERATIONS:-}"
@@ -70,8 +68,6 @@ jq -n \
     --arg k6_image "$K6_IMAGE" \
     --arg report_kind "$REPORT_KIND" \
     --arg html_report "$html_report_file" \
-    --arg build_ivf "$BUILD_IVF" \
-    --arg scorer_mode "$SCORER_MODE" \
     --arg ivf_clusters "$IVF_CLUSTERS" \
     --arg ivf_train_sample "$IVF_TRAIN_SAMPLE" \
     --arg ivf_iterations "$IVF_ITERATIONS" \
@@ -99,8 +95,6 @@ jq -n \
             source: $source,
             environment: "GitHub Actions ubuntu-latest; official-like only, not official Rinha hardware",
             benchmark_config: {
-                build_ivf: $build_ivf,
-                scorer_mode: $scorer_mode,
                 ivf_clusters: $ivf_clusters,
                 ivf_train_sample: $ivf_train_sample,
                 ivf_iterations: $ivf_iterations,
@@ -129,8 +123,6 @@ for report in "$REPORTS_DIR"/${REPORT_PREFIX}-*.json; do
         image: .metadata.image,
         compose_file: .metadata.compose_file,
         report_kind: (.metadata.report_kind // (if .metadata.compose_file == "docker-compose.yml" then "candidate" else "experiment" end)),
-        scorer_mode: (.metadata.benchmark_config.scorer_mode // "ivf"),
-        build_ivf: (.metadata.benchmark_config.build_ivf // "true"),
         ivf_fast_nprobe: (.metadata.benchmark_config.ivf_fast_nprobe // ""),
         ivf_full_nprobe: (.metadata.benchmark_config.ivf_full_nprobe // ""),
         html_report: .metadata.html_report,

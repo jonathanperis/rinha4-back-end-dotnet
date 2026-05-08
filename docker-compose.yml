@@ -10,7 +10,6 @@ services:
         AOT: true
         EXTRA_OPTIMIZE: true
         BUILD_CONFIGURATION: Release
-        BUILD_IVF: ${BUILD_IVF:-true}
         IVF_CLUSTERS: ${IVF_CLUSTERS:-2048}
         IVF_TRAIN_SAMPLE: ${IVF_TRAIN_SAMPLE:-65536}
         IVF_ITERATIONS: ${IVF_ITERATIONS:-6}
@@ -25,15 +24,15 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "1"
-      SCORER_MODE: ${SCORER_MODE:-ivf}
       IVF_FAST_NPROBE: ${IVF_FAST_NPROBE:-1}
       IVF_FULL_NPROBE: ${IVF_FULL_NPROBE:-1}
-      IVF_BOUNDARY_FULL: ${IVF_BOUNDARY_FULL:-true}
+      IVF_BOUNDARY_FULL: ${IVF_BOUNDARY_FULL:-false}
       IVF_BBOX_REPAIR: ${IVF_BBOX_REPAIR:-true}
       IVF_REPAIR_MIN_FRAUDS: ${IVF_REPAIR_MIN_FRAUDS:-0}
       IVF_REPAIR_MAX_FRAUDS: ${IVF_REPAIR_MAX_FRAUDS:-5}
       SOCKET_PATH: /sockets/api1.sock
-      DATA_PATH: /data/references.bin
+      DATA_DIR: /data
+      IVF_PATH: /data/references.ivf.bin
     tmpfs:
       - /tmp
     volumes:
@@ -64,15 +63,15 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "1"
-      SCORER_MODE: ${SCORER_MODE:-ivf}
       IVF_FAST_NPROBE: ${IVF_FAST_NPROBE:-1}
       IVF_FULL_NPROBE: ${IVF_FULL_NPROBE:-1}
-      IVF_BOUNDARY_FULL: ${IVF_BOUNDARY_FULL:-true}
+      IVF_BOUNDARY_FULL: ${IVF_BOUNDARY_FULL:-false}
       IVF_BBOX_REPAIR: ${IVF_BBOX_REPAIR:-true}
       IVF_REPAIR_MIN_FRAUDS: ${IVF_REPAIR_MIN_FRAUDS:-0}
       IVF_REPAIR_MAX_FRAUDS: ${IVF_REPAIR_MAX_FRAUDS:-5}
       SOCKET_PATH: /sockets/api2.sock
-      DATA_PATH: /data/references.bin
+      DATA_DIR: /data
+      IVF_PATH: /data/references.ivf.bin
     tmpfs:
       - /tmp
     volumes:

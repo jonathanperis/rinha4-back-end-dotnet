@@ -16,7 +16,7 @@ VectorizationTestRunner.Run("computes UTF-8 ISO UTC minute gaps across dates", (
     VectorizationTestRunner.AssertEqualInt(5, current - previous);
 });
 
-VectorizationTestRunner.Run("parses fallback string ISO UTC without allocation-heavy DateTime", () =>
+VectorizationTestRunner.Run("parses string ISO UTC without allocation-heavy DateTime", () =>
 {
     FraudVectorizer.ParseIsoUtc("2026-03-15T07:01:00Z", out int hour, out int dayOfWeek, out int minuteStamp);
 
@@ -24,24 +24,6 @@ VectorizationTestRunner.Run("parses fallback string ISO UTC without allocation-h
     VectorizationTestRunner.AssertEqualInt(6, dayOfWeek);
     if (minuteStamp <= 0)
         throw new InvalidOperationException($"expected positive minute stamp, got {minuteStamp}");
-});
-
-VectorizationTestRunner.Run("builds stable fine groups for bucket lookup", () =>
-{
-    int group = FraudVectorizer.FineVectorGroup(1_000, 2_000, 3_000, 4_000, 0, 10_000, 0, 10_000);
-    int repeat = FraudVectorizer.FineVectorGroup(1_000, 2_000, 3_000, 4_000, 0, 10_000, 0, 10_000);
-
-    VectorizationTestRunner.AssertEqualInt(group, repeat);
-});
-
-VectorizationTestRunner.Run("separates fine groups by continuous bins and flags", () =>
-{
-    int query = FraudVectorizer.FineVectorGroup(1_000, 2_000, 3_000, 4_000, 0, 10_000, 0, 10_000);
-    int farBins = FraudVectorizer.FineVectorGroup(8_000, 8_000, 3_000, 4_000, 0, 10_000, 0, 10_000);
-    int farFlag = FraudVectorizer.FineVectorGroup(1_000, 2_000, 3_000, 4_000, 10_000, 10_000, 0, 10_000);
-
-    VectorizationTestRunner.AssertNotEqualInt(query, farBins);
-    VectorizationTestRunner.AssertNotEqualInt(query, farFlag);
 });
 
 VectorizationTestRunner.Run("loads IVF index and repairs boundary fraud counts", () =>
@@ -62,14 +44,16 @@ VectorizationTestRunner.Run("loads IVF index and repairs boundary fraud counts",
     }
 });
 
-VectorizationTestRunner.Run("reads zero as valid IVF repair boundary", () =>
+VectorizationTestRunner.Run("reads one-pass full repair as IVF default", () =>
 {
     using var env = new ScopedEnvironment(
-        ("IVF_REPAIR_MIN_FRAUDS", "0"),
-        ("IVF_REPAIR_MAX_FRAUDS", "5"));
+        ("IVF_BOUNDARY_FULL", null),
+        ("IVF_REPAIR_MIN_FRAUDS", null),
+        ("IVF_REPAIR_MAX_FRAUDS", null));
 
     IvfSearchOptions options = IvfSearchOptions.FromEnvironment();
 
+    VectorizationTestRunner.AssertEqualInt(0, options.BoundaryFull ? 1 : 0);
     VectorizationTestRunner.AssertEqualInt(0, options.RepairMinFrauds);
     VectorizationTestRunner.AssertEqualInt(5, options.RepairMaxFrauds);
 });
@@ -184,7 +168,7 @@ internal sealed class ScopedEnvironment : IDisposable
     /// Sets environment variables until <see cref="Dispose"/> is called.
     /// </summary>
     /// <param name="values">Variable names and temporary values.</param>
-    public ScopedEnvironment(params (string Name, string Value)[] values)
+    public ScopedEnvironment(params (string Name, string? Value)[] values)
     {
         previousValues = new (string Name, string? Value)[values.Length];
         for (int i = 0; i < values.Length; i++)

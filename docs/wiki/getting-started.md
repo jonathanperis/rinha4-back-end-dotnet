@@ -27,7 +27,7 @@ Tune IVF image-build parameters with `IVF_CLUSTERS`, `IVF_TRAIN_SAMPLE`, and
 Generate IVF data without Docker:
 
 ```bash
-BUILD_IVF=true dotnet run --project src/DataConverter/DataConverter.csproj -- data/ --ivf
+dotnet run --project src/DataConverter/DataConverter.csproj -- data/
 ```
 
 Run focused tests:

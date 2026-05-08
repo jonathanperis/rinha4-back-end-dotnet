@@ -12,8 +12,7 @@ internal readonly record struct IvfBuildOptions(int Clusters, int TrainSample, i
 /// <remarks>
 /// The layout mirrors the high-ranking C++ IVF idea: compact int16 vector blocks,
 /// one-byte labels, centroids, and per-cluster bounding boxes. It is intentionally
-/// separate from <c>references.bin</c> so the bucket fallback keeps its small
-/// memory and image footprint.
+/// used directly by the runtime scorer.
 /// </remarks>
 internal static class IvfIndexBuilder
 {

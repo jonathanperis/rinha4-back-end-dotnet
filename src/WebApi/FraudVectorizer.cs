@@ -1,31 +1,12 @@
 /// <summary>
-/// Shared feature-vector grouping and ISO timestamp parsing used by converter,
-/// API, and tests.
+/// Shared ISO timestamp parsing used by the API and tests.
 /// </summary>
 /// <remarks>
-/// This class is the contract between <c>DataConverter</c> and <c>WebApi</c>.
-/// Any grouping change must remain deterministic across both processes because
-/// <c>references.bin</c> stores labels grouped by the exact id returned here.
+/// Manual parsing avoids <see cref="DateTime"/>, culture, timezone, and
+/// allocation overhead on the fraud-score request path.
 /// </remarks>
 public static class FraudVectorizer
 {
-    // Fine bucket layout: coarse risk flags, last-transaction bins, amount bin,
-    // and home-distance bin. This gives an O(1) lookup key for default scoring.
-    /// <summary>
-    /// Number of bins used for last-transaction continuous dimensions.
-    /// </summary>
-    public const int FineBins = 32;
-
-    /// <summary>
-    /// Number of bins used for additional amount and home-distance dimensions.
-    /// </summary>
-    public const int ExtraBins = 16;
-
-    /// <summary>
-    /// Total fine-bucket count used by <c>references.bin</c> group offsets and response indexes.
-    /// </summary>
-    public const int FineGroupCount = 16 * FineBins * FineBins * ExtraBins * ExtraBins;
-
     /// <summary>
     /// Parses a fixed ISO UTC string into hour, weekday, and absolute minute stamp.
     /// </summary>
@@ -68,48 +49,6 @@ public static class FraudVectorizer
         int days = DaysFromCivil(year, month, day);
         dayOfWeek = Mod7(days + 3);
         minuteStamp = days * 1440 + hour * 60 + minute;
-    }
-
-    /// <summary>
-    /// Packs the coarse last-transaction and binary fraud dimensions into a group id.
-    /// </summary>
-    /// <param name="minutesSinceLast">Quantized minutes since last transaction; negative means no last transaction.</param>
-    /// <param name="isOnline">Quantized online flag where positive means true.</param>
-    /// <param name="cardPresent">Quantized card-present flag where positive means true.</param>
-    /// <param name="unknownMerchant">Quantized unknown-merchant flag where positive means true.</param>
-    /// <returns>A four-bit group id from <c>0</c> through <c>15</c>.</returns>
-    private static int VectorGroup(int minutesSinceLast, int isOnline, int cardPresent, int unknownMerchant)
-    {
-        // Coarse group packs four binary dimensions into one nibble.
-        int group = minutesSinceLast >= 0 ? 1 : 0;
-        if (isOnline > 0) group |= 2;
-        if (cardPresent > 0) group |= 4;
-        if (unknownMerchant > 0) group |= 8;
-        return group;
-    }
-
-    /// <summary>
-    /// Packs coarse flags plus continuous bins into the production fine-bucket id.
-    /// </summary>
-    /// <param name="minutesSinceLast">Quantized minutes since last transaction.</param>
-    /// <param name="kmFromLast">Quantized distance from the last transaction.</param>
-    /// <param name="amount">Quantized transaction amount.</param>
-    /// <param name="kmFromHome">Quantized distance from customer home.</param>
-    /// <param name="isOnline">Quantized online flag where positive means true.</param>
-    /// <param name="cardPresent">Quantized card-present flag where positive means true.</param>
-    /// <param name="unknownMerchant">Quantized unknown-merchant flag where positive means true.</param>
-    /// <param name="scale">Quantization scale used by both converter and API.</param>
-    /// <returns>A stable fine-bucket id used to index grouped labels and response majorities.</returns>
-    public static int FineVectorGroup(int minutesSinceLast, int kmFromLast, int amount, int kmFromHome, int isOnline, int cardPresent, int unknownMerchant, int scale)
-    {
-        // Continuous dimensions are binned after coarse flags. The resulting
-        // integer is stable across converter, API, and tests.
-        int coarse = VectorGroup(minutesSinceLast, isOnline, cardPresent, unknownMerchant);
-        int minuteBin = (coarse & 1) != 0 ? ContinuousBin(minutesSinceLast, scale) : 0;
-        int kmBin = (coarse & 1) != 0 ? ContinuousBin(kmFromLast, scale) : 0;
-        int amountBin = ExtraBin(amount, scale);
-        int homeBin = ExtraBin(kmFromHome, scale);
-        return (((coarse * FineBins + minuteBin) * FineBins + kmBin) * ExtraBins + amountBin) * ExtraBins + homeBin;
     }
 
     /// <summary>
@@ -157,32 +96,6 @@ public static class FraudVectorizer
     {
         int result = value % 7;
         return result < 0 ? result + 7 : result;
-    }
-
-    /// <summary>
-    /// Maps a normalized continuous feature into a fine-bucket bin.
-    /// </summary>
-    /// <param name="value">Quantized feature value.</param>
-    /// <param name="scale">Quantization scale representing the maximum normalized value.</param>
-    /// <returns>A bin id from <c>0</c> through <see cref="FineBins"/> minus one.</returns>
-    private static int ContinuousBin(int value, int scale)
-    {
-        if (value <= 0) return 0;
-        if (value >= scale) return FineBins - 1;
-        return value * FineBins / (scale + 1);
-    }
-
-    /// <summary>
-    /// Maps an extra continuous feature into its smaller bucket range.
-    /// </summary>
-    /// <param name="value">Quantized feature value.</param>
-    /// <param name="scale">Quantization scale representing the maximum normalized value.</param>
-    /// <returns>A bin id from <c>0</c> through <see cref="ExtraBins"/> minus one.</returns>
-    private static int ExtraBin(int value, int scale)
-    {
-        if (value <= 0) return 0;
-        if (value >= scale) return ExtraBins - 1;
-        return value * ExtraBins / (scale + 1);
     }
 
     /// <summary>

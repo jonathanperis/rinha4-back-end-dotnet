@@ -2,16 +2,16 @@
 /// Converts parsed Rinha fraud-score requests into competition responses.
 /// </summary>
 /// <remarks>
-/// The scorer uses the rounded int16 IVF index when <c>SCORER_MODE=ivf</c>.
-/// When unavailable, it falls back to the compact fine-bucket majority table
-/// loaded from <c>references.bin</c>.
+/// The scorer requires the rounded int16 IVF index produced by
+/// <c>DataConverter</c>. Missing or invalid IVF data is a startup failure so
+/// benchmark runs cannot silently fall back to a weaker classifier.
 /// </remarks>
 internal sealed class FraudScorer
 {
-    private readonly int dims;
-    private readonly int paddedDims;
-    private readonly int scale;
-    private readonly byte[] groupResponseIndexes;
+    private const int Dims = 14;
+    private const int PaddedDims = 16;
+    private const int Scale = 10000;
+
     private readonly float maxAmount;
     private readonly int maxInstallments;
     private readonly float amountVsAvgRatio;
@@ -21,28 +21,22 @@ internal sealed class FraudScorer
     private readonly int maxMerchantAvgAmount;
     private readonly float[] mccRisk;
     private readonly bool[] mccRiskKnown;
-    private readonly IvfIndex? ivfIndex;
+    private readonly IvfIndex ivfIndex;
     private readonly IvfSearchOptions ivfOptions;
 
     /// <summary>
-    /// Stores immutable dataset, normalization, and MCC state used by all request handlers.
+    /// Stores immutable normalization, MCC, and IVF state used by all request handlers.
     /// </summary>
-    /// <param name="dataset">Loaded dataset layout and precomputed group response indexes.</param>
     /// <param name="normalization">Normalization denominators loaded from <c>normalization.json</c>.</param>
     /// <param name="mcc">MCC risk arrays loaded from <c>mcc_risk.json</c>.</param>
-    /// <param name="ivfIndex">Optional IVF index used by the production scorer.</param>
+    /// <param name="ivfIndex">Loaded production IVF index.</param>
     /// <param name="ivfOptions">Runtime IVF search controls.</param>
     private FraudScorer(
-        ReferenceDataset dataset,
         NormalizationConstants normalization,
         MccRiskTable mcc,
-        IvfIndex? ivfIndex,
+        IvfIndex ivfIndex,
         IvfSearchOptions ivfOptions)
     {
-        dims = dataset.Dims;
-        paddedDims = dataset.PaddedDims;
-        scale = dataset.Scale;
-        groupResponseIndexes = dataset.GroupResponseIndexes;
         maxAmount = normalization.MaxAmount;
         maxInstallments = normalization.MaxInstallments;
         amountVsAvgRatio = normalization.AmountVsAvgRatio;
@@ -57,21 +51,19 @@ internal sealed class FraudScorer
     }
 
     /// <summary>
-    /// Loads <c>references.bin</c>, normalization constants, MCC risk, and bucket-majority responses.
+    /// Loads normalization constants, MCC risk, and the production IVF index.
     /// </summary>
-    /// <param name="dataPath">Path to <c>references.bin</c>; sibling JSON files are read from the same directory.</param>
+    /// <param name="dataDirectory">Directory containing generated runtime data files.</param>
     /// <returns>A fully initialized scorer ready to share across raw HTTP connections.</returns>
-    public static FraudScorer Load(string dataPath)
+    public static FraudScorer Load(string dataDirectory)
     {
-        string dataDirectory = Path.GetDirectoryName(dataPath)!;
-        ReferenceDataset dataset = ReferenceDataset.Load(dataPath);
         NormalizationConstants normalization = NormalizationConstants.Load(Path.Combine(dataDirectory, "normalization.json"));
         MccRiskTable mcc = MccRiskTable.Load(Path.Combine(dataDirectory, "mcc_risk.json"));
-        IvfIndex? ivfIndex = TryLoadIvf(dataDirectory);
+        IvfIndex ivfIndex = LoadIvf(dataDirectory);
         IvfSearchOptions ivfOptions = IvfSearchOptions.FromEnvironment();
 
         Console.WriteLine("Dataset loaded. Ready to serve.");
-        return new FraudScorer(dataset, normalization, mcc, ivfIndex, ivfOptions);
+        return new FraudScorer(normalization, mcc, ivfIndex, ivfOptions);
     }
 
     /// <summary>
@@ -98,7 +90,7 @@ internal sealed class FraudScorer
             return HttpResponses.BadRequest;
         }
 
-        Span<float> fv = stackalloc float[dims];
+        Span<float> fv = stackalloc float[Dims];
 
         fv[0] = Clamp(req.Amount / maxAmount);
         fv[1] = Clamp(req.Installments / (float)maxInstallments);
@@ -128,50 +120,33 @@ internal sealed class FraudScorer
         fv[12] = req.MccCode >= 0 && req.MccCode < mccRisk.Length && mccRiskKnown[req.MccCode] ? mccRisk[req.MccCode] : 0.5f;
         fv[13] = Clamp(req.MerchantAvgAmount / maxMerchantAvgAmount);
 
-        Span<short> qv = stackalloc short[paddedDims];
-        for (int i = 0; i < dims; i++)
-            qv[i] = QuantizeRounded(fv[i], scale);
-        qv[dims] = 0;
-        qv[dims + 1] = 0;
+        Span<short> qv = stackalloc short[PaddedDims];
+        for (int i = 0; i < Dims; i++)
+            qv[i] = QuantizeRounded(fv[i], Scale);
+        qv[Dims] = 0;
+        qv[Dims + 1] = 0;
 
-        if (ivfIndex is not null)
-        {
-            byte frauds = ivfIndex.FraudCount(fv, qv, ivfOptions);
-            return HttpResponses.FraudScores[frauds];
-        }
-
-        int queryGroup = FraudVectorizer.FineVectorGroup(
-            QuantizeTruncated(fv[5], scale),
-            QuantizeTruncated(fv[6], scale),
-            QuantizeTruncated(fv[0], scale),
-            QuantizeTruncated(fv[7], scale),
-            QuantizeTruncated(fv[9], scale),
-            QuantizeTruncated(fv[10], scale),
-            QuantizeTruncated(fv[11], scale),
-            scale);
-        return HttpResponses.FraudScores[groupResponseIndexes[queryGroup]];
+        byte frauds = ivfIndex.FraudCount(fv, qv, ivfOptions);
+        return HttpResponses.FraudScores[frauds];
     }
 
     /// <summary>
-    /// Loads the IVF index when explicitly requested.
+    /// Loads the required IVF index from <c>IVF_PATH</c> or <paramref name="dataDirectory"/>.
     /// </summary>
     /// <param name="dataDirectory">Directory containing runtime data files.</param>
-    /// <returns>The loaded IVF index, or <see langword="null"/> for bucket fallback.</returns>
-    private static IvfIndex? TryLoadIvf(string dataDirectory)
+    /// <returns>The loaded IVF index.</returns>
+    private static IvfIndex LoadIvf(string dataDirectory)
     {
-        string? mode = Environment.GetEnvironmentVariable("SCORER_MODE");
-        if (!string.Equals(mode, "ivf", StringComparison.OrdinalIgnoreCase))
-            return null;
-
         string path = Environment.GetEnvironmentVariable("IVF_PATH") ?? Path.Combine(dataDirectory, "references.ivf.bin");
-        if (IvfIndex.TryLoad(path, out IvfIndex? index, out string error))
+        if (IvfIndex.TryLoad(path, out IvfIndex? index, out string error) && index is not null)
         {
             Console.WriteLine($"IVF scorer enabled: {path}");
             return index;
         }
 
-        Console.WriteLine($"IVF scorer requested but unavailable. Falling back to bucket scorer. {error}");
-        return null;
+        Console.WriteLine($"IVF scorer unavailable. {error}");
+        Environment.Exit(1);
+        throw new InvalidOperationException(error);
     }
 
     /// <summary>
@@ -189,11 +164,4 @@ internal sealed class FraudScorer
     /// <returns>Rounded int16 coordinate used by the IVF scorer.</returns>
     private static short QuantizeRounded(float value, int scale) => (short)MathF.Round(value * scale);
 
-    /// <summary>
-    /// Quantizes a feature with truncation for compatibility with the bucket table.
-    /// </summary>
-    /// <param name="value">Normalized feature value.</param>
-    /// <param name="scale">Dataset quantization scale.</param>
-    /// <returns>Truncated int coordinate used by <see cref="FraudVectorizer.FineVectorGroup"/>.</returns>
-    private static int QuantizeTruncated(float value, int scale) => (short)(value * scale);
 }

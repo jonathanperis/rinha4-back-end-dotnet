@@ -7,7 +7,6 @@ Allowed in this repo:
 - preprocess `normalization.json`
 - use any classifier built from allowed reference data
 - build ANN or IVF indexes from `references.json.gz`
-- switch between IVF and bucket-fallback scoring at runtime when both are built only from allowed reference data
 - run the public official k6 script in CI
 - compare against the public ranking preview
 
@@ -21,5 +20,5 @@ Not allowed:
 The CI benchmark only mounts official test data into the k6 container. API containers do not receive test payload files.
 
 The IVF scorer follows the same boundary: it trains and packs only
-`references.json.gz`, reads no benchmark payload files, and falls back to the
-bucket classifier when the index is unavailable.
+`references.json.gz`, reads no benchmark payload files, and fails startup when
+the index is unavailable.

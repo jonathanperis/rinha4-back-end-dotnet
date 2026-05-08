@@ -30,22 +30,6 @@ on:
         options:
           - experiment
           - candidate
-      build_ivf:
-        description: Build references.ivf.bin during Docker image build
-        required: true
-        default: "true"
-        type: choice
-        options:
-          - "false"
-          - "true"
-      scorer_mode:
-        description: Runtime scorer mode
-        required: true
-        default: ivf
-        type: choice
-        options:
-          - bucket
-          - ivf
       ivf_clusters:
         description: IVF build cluster count
         required: true
@@ -69,7 +53,7 @@ on:
       ivf_boundary_full:
         description: Enable boundary second pass
         required: true
-        default: "true"
+        default: "false"
         type: choice
         options:
           - "true"
@@ -130,8 +114,6 @@ jobs:
           BENCHMARK_PULL_IMAGE: ${{ inputs.webapi_image != '' && 'true' || 'false' }}
           BENCHMARK_NO_BUILD: ${{ inputs.webapi_image != '' && 'true' || 'false' }}
           RESULTS_DIR: benchmark-results
-          BUILD_IVF: ${{ inputs.build_ivf }}
-          SCORER_MODE: ${{ inputs.scorer_mode }}
           IVF_CLUSTERS: ${{ inputs.ivf_clusters }}
           IVF_TRAIN_SAMPLE: ${{ inputs.ivf_train_sample }}
           IVF_ITERATIONS: ${{ inputs.ivf_iterations }}
@@ -157,8 +139,6 @@ jobs:
           COMPOSE_FILE: ${{ inputs.compose_file }}
           OFFICIAL_REF: ${{ inputs.official_ref }}
           K6_IMAGE: ${{ inputs.k6_image }}
-          BUILD_IVF: ${{ inputs.build_ivf }}
-          SCORER_MODE: ${{ inputs.scorer_mode }}
           IVF_CLUSTERS: ${{ inputs.ivf_clusters }}
           IVF_TRAIN_SAMPLE: ${{ inputs.ivf_train_sample }}
           IVF_ITERATIONS: ${{ inputs.ivf_iterations }}
