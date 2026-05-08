@@ -5,4 +5,5 @@ services:
       context: .
       dockerfile: ./src/YarpProxy/Dockerfile
       args:
+        AOT: true
         BUILD_CONFIGURATION: Release

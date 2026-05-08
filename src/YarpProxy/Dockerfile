@@ -1,5 +1,12 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 
+RUN apk add --no-cache \
+    clang \
+    lld \
+    zlib-dev \
+    musl-dev
+
+ARG AOT=true
 ARG BUILD_CONFIGURATION=Release
 ARG TARGETARCH
 
@@ -14,15 +21,17 @@ WORKDIR /src
 COPY ["src/YarpProxy/YarpProxy.csproj", "YarpProxy/"]
 RUN dotnet restore "YarpProxy/YarpProxy.csproj" \
     -p:Configuration=${BUILD_CONFIGURATION} \
+    -p:AOT=${AOT} \
     -r $(cat /tmp/runtime-id)
 
 COPY ["src/YarpProxy/", "YarpProxy/"]
 WORKDIR "/src/YarpProxy"
 RUN dotnet publish "YarpProxy.csproj" \
     -c $BUILD_CONFIGURATION \
+    -p:AOT=${AOT} \
     -r $(cat /tmp/runtime-id) \
     -o /app/publish \
-    --self-contained false
+    --self-contained
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
 
