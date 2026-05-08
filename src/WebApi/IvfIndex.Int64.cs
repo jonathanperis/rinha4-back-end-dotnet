@@ -237,11 +237,12 @@ internal sealed partial class IvfIndex
     private bool BoundingBoxCanImproveLong(int cluster, ReadOnlySpan<short> query, long worstDistance)
     {
         long distance = 0;
+        int bboxBase = cluster * Dims;
         for (int dim = 0; dim < Dims; dim++)
         {
             short value = query[dim];
-            short min = bboxMin[dim * clusters + cluster];
-            short max = bboxMax[dim * clusters + cluster];
+            short min = bboxMinByCluster[bboxBase + dim];
+            short max = bboxMaxByCluster[bboxBase + dim];
             if (value < min)
             {
                 int diff = value - min;
