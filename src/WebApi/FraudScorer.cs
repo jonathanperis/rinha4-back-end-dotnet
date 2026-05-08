@@ -2,9 +2,9 @@
 /// Converts parsed Rinha fraud-score requests into competition responses.
 /// </summary>
 /// <remarks>
-/// The scorer requires the rounded int16 IVF index produced by
-/// <c>DataConverter</c>. Missing or invalid IVF data is a startup failure so
-/// benchmark runs cannot silently fall back to a weaker classifier.
+/// The default scorer uses flat exact KNN storage produced by <c>DataConverter</c>.
+/// Missing reference data is a startup failure so benchmark runs cannot silently
+/// fall back to a weaker classifier.
 /// </remarks>
 internal sealed class FraudScorer
 {
@@ -20,21 +20,18 @@ internal sealed class FraudScorer
     private readonly int maxMerchantAvgAmount;
     private readonly float[] mccRisk;
     private readonly bool[] mccRiskKnown;
-    private readonly IvfIndex ivfIndex;
+    private readonly ExactIndex? exactIndex;
+    private readonly IvfIndex? ivfIndex;
     private readonly IvfSearchOptions ivfOptions;
+    private readonly bool useIvf;
 
-    /// <summary>
-    /// Stores immutable normalization, MCC, and IVF state used by all request handlers.
-    /// </summary>
-    /// <param name="normalization">Normalization denominators loaded from <c>normalization.json</c>.</param>
-    /// <param name="mcc">MCC risk arrays loaded from <c>mcc_risk.json</c>.</param>
-    /// <param name="ivfIndex">Loaded production IVF index.</param>
-    /// <param name="ivfOptions">Runtime IVF search controls.</param>
     private FraudScorer(
         NormalizationConstants normalization,
         MccRiskTable mcc,
-        IvfIndex ivfIndex,
-        IvfSearchOptions ivfOptions)
+        ExactIndex? exactIndex,
+        IvfIndex? ivfIndex,
+        IvfSearchOptions ivfOptions,
+        bool useIvf)
     {
         maxAmount = normalization.MaxAmount;
         maxInstallments = normalization.MaxInstallments;
@@ -45,12 +42,14 @@ internal sealed class FraudScorer
         maxMerchantAvgAmount = normalization.MaxMerchantAvgAmount;
         mccRisk = mcc.RiskByCode;
         mccRiskKnown = mcc.KnownByCode;
+        this.exactIndex = exactIndex;
         this.ivfIndex = ivfIndex;
         this.ivfOptions = ivfOptions;
+        this.useIvf = useIvf;
     }
 
     /// <summary>
-    /// Loads normalization constants, MCC risk, and the production IVF index.
+    /// Loads normalization constants, MCC risk, and the configured scorer index.
     /// </summary>
     /// <param name="dataDirectory">Directory containing generated runtime data files.</param>
     /// <returns>A fully initialized scorer ready to share across raw HTTP connections.</returns>
@@ -58,11 +57,14 @@ internal sealed class FraudScorer
     {
         NormalizationConstants normalization = NormalizationConstants.Load(Path.Combine(dataDirectory, "normalization.json"));
         MccRiskTable mcc = MccRiskTable.Load(Path.Combine(dataDirectory, "mcc_risk.json"));
-        IvfIndex ivfIndex = LoadIvf(dataDirectory);
-        IvfSearchOptions ivfOptions = IvfSearchOptions.FromEnvironment();
+        bool useIvf = string.Equals(Environment.GetEnvironmentVariable("SCORER_MODE"), "ivf", StringComparison.OrdinalIgnoreCase);
+
+        ExactIndex? exactIndex = useIvf ? null : LoadExact(dataDirectory);
+        IvfIndex? ivfIndex = useIvf ? LoadIvf(dataDirectory) : null;
+        IvfSearchOptions ivfOptions = useIvf ? IvfSearchOptions.FromEnvironment() : default;
 
         Console.WriteLine("Dataset loaded. Ready to serve.");
-        return new FraudScorer(normalization, mcc, ivfIndex, ivfOptions);
+        return new FraudScorer(normalization, mcc, exactIndex, ivfIndex, ivfOptions, useIvf);
     }
 
     /// <summary>
@@ -73,10 +75,6 @@ internal sealed class FraudScorer
     /// A keep-alive JSON response selected from the six possible fraud-score outputs,
     /// or <see cref="HttpResponses.BadRequest"/> when JSON parsing fails.
     /// </returns>
-    /// <remarks>
-    /// The method keeps per-request vectors on the stack, quantizes with the same
-    /// scale used by <c>DataConverter</c>, and returns one prebuilt response.
-    /// </remarks>
     public ReadOnlyMemory<byte> ScoreFraudRequest(ReadOnlySpan<byte> body)
     {
         FraudInput req;
@@ -89,52 +87,50 @@ internal sealed class FraudScorer
             return HttpResponses.BadRequest;
         }
 
-        Span<float> fv = stackalloc float[Dims];
-
-        fv[0] = Clamp(req.Amount / maxAmount);
-        fv[1] = Clamp(req.Installments / (float)maxInstallments);
-        fv[2] = Clamp((req.Amount / req.CustomerAvgAmount) / amountVsAvgRatio);
-
-        int reqMinuteStamp = req.RequestedMinuteStamp;
-        fv[3] = req.Hour / 23.0f;
-        fv[4] = req.DayOfWeek / 6.0f;
-
-        if (req.HasLastTransaction)
-        {
-            int minutes = reqMinuteStamp - req.LastMinuteStamp;
-            fv[5] = Clamp(minutes / (float)maxMinutes);
-            fv[6] = Clamp(req.KmFromCurrent / maxKm);
-        }
-        else
-        {
-            fv[5] = -1.0f;
-            fv[6] = -1.0f;
-        }
-
-        fv[7] = Clamp(req.KmFromHome / maxKm);
-        fv[8] = Clamp(req.TxCount24h / (float)maxTxCount24h);
-        fv[9] = req.IsOnline ? 1.0f : 0.0f;
-        fv[10] = req.CardPresent ? 1.0f : 0.0f;
-        fv[11] = req.UnknownMerchant ? 1.0f : 0.0f;
-        fv[12] = req.MccCode >= 0 && req.MccCode < mccRisk.Length && mccRiskKnown[req.MccCode] ? mccRisk[req.MccCode] : 0.5f;
-        fv[13] = Clamp(req.MerchantAvgAmount / maxMerchantAvgAmount);
-
         Span<short> qv = stackalloc short[PaddedDims];
-        int scale = ivfIndex.Scale;
-        for (int i = 0; i < Dims; i++)
-            qv[i] = QuantizeRounded(fv[i], scale);
+        int scale = useIvf ? ivfIndex!.Scale : exactIndex!.Scale;
+        QuantizeRequest(req, qv, scale);
         qv[Dims] = 0;
         qv[Dims + 1] = 0;
 
-        byte frauds = ivfIndex.FraudCount(qv, ivfOptions);
+        byte frauds = useIvf
+            ? ivfIndex!.FraudCount(qv, ivfOptions)
+            : exactIndex!.FraudCount(qv);
         return HttpResponses.FraudScores[frauds];
     }
 
+    private void QuantizeRequest(FraudInput req, Span<short> qv, int scale)
+    {
+        qv[0] = QuantizeRounded(Clamp(req.Amount / maxAmount), scale);
+        qv[1] = QuantizeRounded(Clamp(req.Installments / (float)maxInstallments), scale);
+        qv[2] = QuantizeRounded(Clamp((req.Amount / req.CustomerAvgAmount) / amountVsAvgRatio), scale);
+        qv[3] = QuantizeRounded(req.Hour / 23.0f, scale);
+        qv[4] = QuantizeRounded(req.DayOfWeek / 6.0f, scale);
+
+        if (req.HasLastTransaction)
+        {
+            int minutes = req.RequestedMinuteStamp - req.LastMinuteStamp;
+            qv[5] = QuantizeRounded(Clamp(minutes / (float)maxMinutes), scale);
+            qv[6] = QuantizeRounded(Clamp(req.KmFromCurrent / maxKm), scale);
+        }
+        else
+        {
+            qv[5] = (short)-scale;
+            qv[6] = (short)-scale;
+        }
+
+        qv[7] = QuantizeRounded(Clamp(req.KmFromHome / maxKm), scale);
+        qv[8] = QuantizeRounded(Clamp(req.TxCount24h / (float)maxTxCount24h), scale);
+        qv[9] = req.IsOnline ? (short)scale : (short)0;
+        qv[10] = req.CardPresent ? (short)scale : (short)0;
+        qv[11] = req.UnknownMerchant ? (short)scale : (short)0;
+        qv[12] = QuantizeRounded(req.MccCode >= 0 && req.MccCode < mccRisk.Length && mccRiskKnown[req.MccCode] ? mccRisk[req.MccCode] : 0.5f, scale);
+        qv[13] = QuantizeRounded(Clamp(req.MerchantAvgAmount / maxMerchantAvgAmount), scale);
+    }
+
     /// <summary>
-    /// Loads the required IVF index from <c>IVF_PATH</c> or <paramref name="dataDirectory"/>.
+    /// Loads the optional IVF index from <c>IVF_PATH</c> or <paramref name="dataDirectory"/>.
     /// </summary>
-    /// <param name="dataDirectory">Directory containing runtime data files.</param>
-    /// <returns>The loaded IVF index.</returns>
     private static IvfIndex LoadIvf(string dataDirectory)
     {
         string path = Environment.GetEnvironmentVariable("IVF_PATH") ?? Path.Combine(dataDirectory, "references.ivf.bin");
@@ -149,6 +145,20 @@ internal sealed class FraudScorer
         throw new InvalidOperationException(error);
     }
 
+    private static ExactIndex LoadExact(string dataDirectory)
+    {
+        string path = Environment.GetEnvironmentVariable("EXACT_PATH") ?? Path.Combine(dataDirectory, "references.bin");
+        if (ExactIndex.TryLoad(path, out ExactIndex? index, out string error) && index is not null)
+        {
+            Console.WriteLine($"Exact scorer enabled: {path}");
+            return index;
+        }
+
+        Console.WriteLine($"Exact scorer unavailable. {error}");
+        Environment.Exit(1);
+        throw new InvalidOperationException(error);
+    }
+
     /// <summary>
     /// Clamps a normalized feature value into the <c>0..1</c> interval.
     /// </summary>
@@ -157,11 +167,7 @@ internal sealed class FraudScorer
     private static float Clamp(float value) => value < 0f ? 0f : (value > 1f ? 1f : value);
 
     /// <summary>
-    /// Quantizes a normalized feature for IVF search using rounded int16 coordinates.
+    /// Quantizes a normalized feature for vector search using rounded int16 coordinates.
     /// </summary>
-    /// <param name="value">Normalized feature value, including the <c>-1</c> sentinel.</param>
-    /// <param name="scale">Dataset quantization scale.</param>
-    /// <returns>Rounded int16 coordinate used by the IVF scorer.</returns>
     private static short QuantizeRounded(float value, int scale) => (short)MathF.Round(value * scale);
-
 }

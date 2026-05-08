@@ -56,6 +56,27 @@ VectorizationTestRunner.Run("marks missing known merchant through hash parser", 
         throw new InvalidOperationException("expected merchant-b to be unknown");
 });
 
+VectorizationTestRunner.Run("loads exact index and counts top five fraud labels", () =>
+{
+    string path = Path.Combine(Path.GetTempPath(), $"rinha-exact-test-{Guid.NewGuid():N}.bin");
+    try
+    {
+        ExactTestIndex.Write(path);
+        if (!ExactIndex.TryLoad(path, out ExactIndex? index, out string error) || index is null)
+            throw new InvalidOperationException(error);
+
+        Span<short> query = stackalloc short[16];
+        byte frauds = index.FraudCount(query);
+
+        VectorizationTestRunner.AssertEqualInt(3, frauds);
+    }
+    finally
+    {
+        if (File.Exists(path))
+            File.Delete(path);
+    }
+});
+
 VectorizationTestRunner.Run("loads IVF index and repairs boundary fraud counts", () =>
 {
     string path = Path.Combine(Path.GetTempPath(), $"rinha-ivf-test-{Guid.NewGuid():N}.bin");
@@ -215,6 +236,27 @@ internal sealed class ScopedEnvironment : IDisposable
     {
         foreach ((string name, string? value) in previousValues)
             Environment.SetEnvironmentVariable(name, value);
+    }
+}
+
+/// <summary>
+/// Writes a tiny flat exact-index fixture for scorer tests.
+/// </summary>
+internal static class ExactTestIndex
+{
+    private const int Count = 5;
+    private const int Stride = 16;
+
+    public static void Write(string path)
+    {
+        using var stream = File.Create(path);
+        using var writer = new BinaryWriter(stream);
+        writer.Write(Count);
+
+        for (int i = 0; i < Count * Stride; i++)
+            writer.Write((short)0);
+
+        writer.Write(new byte[] { 1, 1, 1, 0, 0 });
     }
 }
 

@@ -11,10 +11,6 @@ RUN apk add --no-cache \
 ARG AOT
 ARG EXTRA_OPTIMIZE
 ARG BUILD_CONFIGURATION=Release
-ARG IVF_CLUSTERS=2048
-ARG IVF_TRAIN_SAMPLE=65536
-ARG IVF_ITERATIONS=6
-ARG IVF_SCALE=10000
 ARG CACHEBUST
 ARG TARGETARCH
 
@@ -33,7 +29,7 @@ COPY ["src/DataConverter/DataConverter.csproj", "DataConverter/"]
 RUN dotnet restore "DataConverter/DataConverter.csproj"
 COPY ["src/DataConverter/Program.cs", "DataConverter/"]
 COPY ["src/DataConverter/Usings.cs", "DataConverter/"]
-COPY ["src/DataConverter/IvfIndexBuilder.cs", "DataConverter/"]
+COPY ["src/DataConverter/ExactIndexBuilder.cs", "DataConverter/"]
 
 # Copy dataset files
 COPY ["data/references.json.gz", "data/"]
@@ -41,8 +37,7 @@ COPY ["data/mcc_risk.json", "data/"]
 COPY ["data/normalization.json", "data/"]
 
 RUN dotnet build "DataConverter/DataConverter.csproj" -c Release -o /app/build-converter
-RUN IVF_CLUSTERS=$IVF_CLUSTERS IVF_TRAIN_SAMPLE=$IVF_TRAIN_SAMPLE IVF_ITERATIONS=$IVF_ITERATIONS IVF_SCALE=$IVF_SCALE \
-    /app/build-converter/DataConverter data/
+RUN /app/build-converter/DataConverter data/
 
 # ── WebApi ──
 COPY ["src/WebApi/WebApi.csproj", "WebApi/"]
@@ -67,12 +62,13 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
 WORKDIR /app
 
 COPY --from=build /app/publish/WebApi /WebApi
-COPY --from=build /src/data/references.ivf.bin /data/
+COPY --from=build /src/data/references.bin /data/
 COPY --from=build /src/data/mcc_risk.json /data/
 COPY --from=build /src/data/normalization.json /data/
 
 ENV DATA_DIR=/data
-ENV IVF_PATH=/data/references.ivf.bin
+ENV EXACT_PATH=/data/references.bin
+ENV SCORER_MODE=exact
 ENV DOTNET_PROCESSOR_COUNT=1
 ENV DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS=1
 ENV DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT=1
