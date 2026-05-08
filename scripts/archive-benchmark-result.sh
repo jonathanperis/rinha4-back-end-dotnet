@@ -59,19 +59,25 @@ elif stamp="$(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$TIMESTAMP" '+%Y%m%d%H%M%S' 2>
 else
     stamp="$(date -u '+%Y%m%d%H%M%S')"
 fi
-report_file="${REPORT_PREFIX}-${stamp}-${SHORT_SHA}.json"
+safe_compose="${COMPOSE_FILE//[^a-zA-Z0-9]/-}"
+report_suffix=""
+if [[ "$REPORT_KIND" == "experiment" ]]; then
+    report_suffix="-$safe_compose"
+fi
+
+report_file="${REPORT_PREFIX}-${stamp}-${SHORT_SHA}${report_suffix}.json"
 report_path="$REPORTS_DIR/$report_file"
 if [[ -e "$report_path" ]]; then
     safe_kind="${REPORT_KIND//[^a-zA-Z0-9]/-}"
-    report_file="${REPORT_PREFIX}-${stamp}-${SHORT_SHA}-${safe_kind}.json"
+    report_file="${REPORT_PREFIX}-${stamp}-${SHORT_SHA}-${safe_kind}-${safe_compose}.json"
     report_path="$REPORTS_DIR/$report_file"
 fi
 html_report_file=""
 if [[ -f "$K6_HTML_REPORT" ]]; then
-    html_report_file="${REPORT_PREFIX}-${stamp}-${SHORT_SHA}.html"
+    html_report_file="${REPORT_PREFIX}-${stamp}-${SHORT_SHA}${report_suffix}.html"
     if [[ -e "$REPORTS_DIR/$html_report_file" ]]; then
         safe_kind="${REPORT_KIND//[^a-zA-Z0-9]/-}"
-        html_report_file="${REPORT_PREFIX}-${stamp}-${SHORT_SHA}-${safe_kind}.html"
+        html_report_file="${REPORT_PREFIX}-${stamp}-${SHORT_SHA}-${safe_kind}-${safe_compose}.html"
     fi
     cp "$K6_HTML_REPORT" "$REPORTS_DIR/$html_report_file"
 fi
