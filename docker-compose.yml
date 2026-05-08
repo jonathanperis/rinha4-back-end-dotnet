@@ -2,7 +2,7 @@ name: 'rinha-2026-dotnet'
 
 services:
   webapi1: &webapi
-    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-5012a0f5f71de1da753eea3a2ec8011fc8db3c60
+    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-e785f3f0791dd7a0e3358fd47458f65391e610c0
     pull_policy: always
     container_name: webapi-1
     user: root
@@ -15,6 +15,8 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "1"
+      MIN_WORKER_THREADS: "128"
+      SCORER_MODE: ivf
       IVF_FAST_NPROBE: "1"
       IVF_FULL_NPROBE: "1"
       IVF_BOUNDARY_FULL: "false"
@@ -55,6 +57,8 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "1"
+      MIN_WORKER_THREADS: "128"
+      SCORER_MODE: ivf
       IVF_FAST_NPROBE: "1"
       IVF_FULL_NPROBE: "1"
       IVF_BOUNDARY_FULL: "false"
