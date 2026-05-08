@@ -1,6 +1,7 @@
 string inputDir = DataConverterOptions.InputDirectory(args);
 string inputPath = Path.Combine(inputDir, "references.json.gz");
 string exactOutputPath = Path.Combine(inputDir, "references.bin");
+int exactMaxRefs = DataConverterOptions.ExactMaxRefs();
 
 const int Dims = 14;
 
@@ -11,7 +12,7 @@ float[] vectors;
 byte[] labels;
 int row = 0;
 
-// Single pass loads only the official vectors and labels needed to build exact KNN storage.
+// Single pass loads vectors and labels needed for reduced exact-reference storage.
 using (var fs = File.OpenRead(inputPath))
 using (var gz = new GZipStream(fs, CompressionMode.Decompress))
 using (var doc = JsonDocument.Parse(gz))
@@ -37,13 +38,16 @@ using (var doc = JsonDocument.Parse(gz))
     }
 }
 
-ExactIndexBuilder.Write(exactOutputPath, vectors, labels, count);
+ExactIndexBuilder.Write(exactOutputPath, vectors, labels, count, exactMaxRefs);
 long exactSize = new FileInfo(exactOutputPath).Length;
 Console.WriteLine($"Exact output: {exactSize / (1024.0 * 1024.0):F1} MB ({exactSize:N0} bytes)");
 
 /// <summary>
 /// Reads converter command-line options.
 /// </summary>
+/// <remarks>
+/// The converter writes Zan-style rounded int16 exact-reference storage.
+/// </remarks>
 internal static class DataConverterOptions
 {
     /// <summary>
@@ -61,4 +65,14 @@ internal static class DataConverterOptions
 
         return "/data";
     }
+
+    /// <summary>
+    /// Reads maximum exact-reference count. Zero or negative means all rows.
+    /// </summary>
+    public static int ExactMaxRefs()
+    {
+        string? value = Environment.GetEnvironmentVariable("EXACT_MAX_REFS");
+        return int.TryParse(value, CultureInfo.InvariantCulture, out int parsed) ? parsed : 100_000;
+    }
+
 }
