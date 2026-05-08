@@ -6,6 +6,7 @@ import Footer from '@/components/home/Footer.astro';
 const reports = await import('../../../public/reports/index.json');
 const rows = reports.default;
 const candidates = rows.filter((row) => row.report_kind === 'candidate');
+const calibrated = rows.filter((row) => row.report_kind === 'official-calibrated');
 const experiments = rows.filter((row) => row.report_kind === 'experiment');
 const latest = candidates[0];
 const pageSize = 5;
@@ -91,6 +92,55 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
         <button type="button" data-page-next>Next</button>
       </nav>
     </section>
+
+    {calibrated.length > 0 && (
+      <section class="report-table-wrap calibrated-wrap" data-paginated-table data-page-size={pageSize}>
+        <h2>Official-Calibrated Runs</h2>
+        <p>CPU-throttled CI runs tuned to approximate the official Mac Mini runner. Use as a predictor, not as submission evidence.</p>
+        <div class="report-scroll">
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th>Run</th>
+                <th class="num">p99</th>
+                <th class="num">Failures</th>
+                <th class="num">Score</th>
+                <th class="num">HTTP</th>
+                <th>Files</th>
+              </tr>
+            </thead>
+            <tbody>
+              {calibrated.map((row) => (
+                <tr data-page-row>
+                  <td>
+                    <a href={row.run_url} target="_blank" rel="noopener noreferrer">{new Date(row.timestamp).toLocaleString('sv-SE')}</a>
+                    <code>{row.short_sha}</code>
+                    <code>{row.compose_file}</code>
+                    {(row.benchmark_api_cpus || row.benchmark_proxy_cpus) && <code>cpu api {row.benchmark_api_cpus || 'default'} / proxy {row.benchmark_proxy_cpus || 'default'}</code>}
+                    {row.benchmark_repetitions && row.benchmark_repetitions !== '1' && <code>runs {row.benchmark_repetitions}</code>}
+                  </td>
+                  <td class="num">{row.p99}</td>
+                  <td class="num danger-text">{row.failure_rate}</td>
+                  <td class="num">{fmtScore(row.final_score)}</td>
+                  <td class="num">{row.http_errors}</td>
+                  <td>
+                    <span class="file-links">
+                      <a href={`../reports/${row.file}`} target="_blank" rel="noopener noreferrer">json</a>
+                      {row.html_report && <a href={`../reports/${row.html_report}`} target="_blank" rel="noopener noreferrer">html</a>}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <nav class="pagination" data-pagination aria-label="Official-calibrated run pages">
+          <button type="button" data-page-prev>Prev</button>
+          <span data-page-status></span>
+          <button type="button" data-page-next>Next</button>
+        </nav>
+      </section>
+    )}
 
     {experiments.length > 0 && (
       <section class="report-table-wrap experiment-wrap" data-paginated-table data-page-size={pageSize}>
@@ -207,6 +257,21 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
   .experiment-wrap {
     margin-top: 3rem;
     border-color: rgba(255, 179, 0, 0.45);
+  }
+  .calibrated-wrap {
+    margin-top: 3rem;
+    border-color: rgba(92, 255, 177, 0.42);
+  }
+  .calibrated-wrap h2 {
+    color: var(--term-green);
+    padding: 1rem 1rem 0;
+    font-size: 1.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .calibrated-wrap p {
+    color: var(--text-muted);
+    padding: 0 1rem 1rem;
   }
   .experiment-wrap h2 {
     color: var(--warn-amber);

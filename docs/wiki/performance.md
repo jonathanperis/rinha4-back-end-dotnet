@@ -18,6 +18,12 @@ Hot path choices:
 Transport is fast enough for the current target. Recent CI runs have shown `0`
 HTTP errors; p99 work is now inside IVF repair and vector scan cost.
 
+Latest official runner result for image `ci-5012a0f5f71de1da753eea3a2ec8011fc8db3c60`
+was p99 `6.90ms`, score `5161.39`, and `0%` failures. GitHub Actions ran the
+same class of candidate near p99 `1.80ms`, so CI now records a separate
+`official-calibrated` lane with lower container CPU quotas. Treat that lane as a
+hardware-mismatch predictor only; the submission compose remains unchanged.
+
 The active bottleneck is balancing full-repair accuracy with p99. Rounded IVF
 matched the public benchmark locally with `0` false positives and `0` false
 negatives, but the full-repair path still needs CI latency improvement.

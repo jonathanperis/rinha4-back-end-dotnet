@@ -219,6 +219,59 @@ jobs:
           git pull --rebase origin main
           bash scripts/archive-benchmark-result.sh
 
+      - name: Run calibrated benchmark against built image
+        env:
+          WEBAPI_IMAGE: ${{ needs.build-amd64.outputs.benchmark_image }}
+          BENCHMARK_PULL_IMAGE: "true"
+          BENCHMARK_NO_BUILD: "true"
+          COMPOSE_FILE: docker-compose.yml
+          OFFICIAL_REF: main
+          K6_IMAGE: grafana/k6:latest
+          RESULTS_DIR: benchmark-results-calibrated
+          IVF_CLUSTERS: "2048"
+          IVF_TRAIN_SAMPLE: "65536"
+          IVF_ITERATIONS: "6"
+          IVF_SCALE: "10000"
+          IVF_FAST_NPROBE: "1"
+          IVF_FULL_NPROBE: "1"
+          IVF_BOUNDARY_FULL: "false"
+          IVF_BBOX_REPAIR: "true"
+          IVF_REPAIR_MIN_FRAUDS: "0"
+          IVF_REPAIR_MAX_FRAUDS: "5"
+          BENCHMARK_API_CPUS: "0.20"
+          BENCHMARK_PROXY_CPUS: "0.10"
+          BENCHMARK_REPETITIONS: "1"
+        run: bash scripts/ci-official-benchmark.sh
+
+      - name: Archive calibrated benchmark report
+        env:
+          RESULTS_JSON: benchmark-results-calibrated/results.json
+          K6_HTML_REPORT: benchmark-results-calibrated/k6-report.html
+          COMPOSE_LOG: benchmark-results-calibrated/docker-compose.log
+          BENCHMARK_IMAGE: ${{ needs.build-amd64.outputs.benchmark_image }}
+          BENCHMARK_SHA: ${{ github.sha }}
+          BENCHMARK_RUN_ID: ${{ github.run_id }}
+          BENCHMARK_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BENCHMARK_TIMESTAMP: ${{ github.event.head_commit.timestamp }}
+          BENCHMARK_REPORT_KIND: official-calibrated
+          COMPOSE_FILE: docker-compose.yml
+          OFFICIAL_REF: main
+          K6_IMAGE: grafana/k6:latest
+          IVF_CLUSTERS: "2048"
+          IVF_TRAIN_SAMPLE: "65536"
+          IVF_ITERATIONS: "6"
+          IVF_SCALE: "10000"
+          IVF_FAST_NPROBE: "1"
+          IVF_FULL_NPROBE: "1"
+          IVF_BOUNDARY_FULL: "false"
+          IVF_BBOX_REPAIR: "true"
+          IVF_REPAIR_MIN_FRAUDS: "0"
+          IVF_REPAIR_MAX_FRAUDS: "5"
+          BENCHMARK_API_CPUS: "0.20"
+          BENCHMARK_PROXY_CPUS: "0.10"
+          BENCHMARK_REPETITIONS: "1"
+        run: bash scripts/archive-benchmark-result.sh
+
       - name: Commit benchmark report
         id: commit-benchmark-report
         run: |
@@ -248,7 +301,18 @@ jobs:
           path: |
             benchmark-results/results.json
             benchmark-results/k6-report.html
+            benchmark-results/results-repetition-*.json
+            benchmark-results/k6-report-repetition-*.html
+            benchmark-results/repetition-summary.json
             benchmark-results/docker-compose.log
             benchmark-results/docker-state-*.txt
-            benchmark-results/docker-compose.cpuset.yml
+            benchmark-results/docker-compose.calibration.yml
+            benchmark-results-calibrated/results.json
+            benchmark-results-calibrated/k6-report.html
+            benchmark-results-calibrated/results-repetition-*.json
+            benchmark-results-calibrated/k6-report-repetition-*.html
+            benchmark-results-calibrated/repetition-summary.json
+            benchmark-results-calibrated/docker-compose.log
+            benchmark-results-calibrated/docker-state-*.txt
+            benchmark-results-calibrated/docker-compose.calibration.yml
           if-no-files-found: ignore

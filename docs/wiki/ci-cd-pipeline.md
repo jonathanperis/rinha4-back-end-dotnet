@@ -18,6 +18,12 @@ main-branch benchmark keeps that compose layout. Manual runs can add a one-core
 overlay when diagnosing official mismatch, but that stress mode is stricter than
 the candidate tracking run.
 
+The build workflow also archives an `official-calibrated` run after the normal
+candidate run. That lane intentionally lowers CI container CPU quotas
+(`api=0.20`, `proxy=0.10` by default) to make the fast GitHub Actions runner
+behave closer to the official Mac Mini. It is a prediction signal only; the
+candidate/submission compose remains the source for official testing.
+
 Manual **Official-like Benchmark** runs can archive experiment reports too.
 For IVF, dispatch with `report_kind=experiment`, `IVF_FAST_NPROBE=1`,
 `IVF_FULL_NPROBE=1`, bbox repair on, `IVF_BOUNDARY_FULL=false`, repair fraud
@@ -28,6 +34,10 @@ Manual contention knobs:
 - `benchmark_stack_cpuset=0`: pin nginx + WebApi containers to one host CPU.
 - `benchmark_k6_cpuset=0`: also pin k6 to that CPU. Use only when diagnosing
   host contention; it is intentionally harsher than normal candidate tracking.
+- `benchmark_api_cpus` and `benchmark_proxy_cpus`: override service CPU quotas
+  for calibrated runs, for example `0.20` and `0.10`.
+- `benchmark_repetitions`: run k6 multiple times and archive the median-p99
+  result, with raw repetition files uploaded as artifacts.
 
 ## Report files
 
@@ -35,6 +45,7 @@ Manual contention knobs:
 | --- | --- |
 | `latest.json` | latest benchmark result |
 | `latest-candidate.json` | latest default submission-stack result |
+| `latest-calibrated.json` | latest official-calibrated prediction run |
 | `latest-experiment.json` | latest non-default experiment result |
 | `index.json` | sorted benchmark history |
 | `rinha-benchmark-*.json` | immutable benchmark records |

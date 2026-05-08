@@ -30,6 +30,7 @@ on:
         options:
           - experiment
           - candidate
+          - official-calibrated
       ivf_clusters:
         description: IVF build cluster count
         required: true
@@ -86,6 +87,34 @@ on:
         description: Optional Docker cpuset for k6 container; usually empty, set 0 only for full host-contention probes
         required: false
         default: ""
+      benchmark_api_cpuset:
+        description: Optional Docker cpuset for WebApi containers; overrides stack cpuset for API only
+        required: false
+        default: ""
+      benchmark_proxy_cpuset:
+        description: Optional Docker cpuset for proxy container; overrides stack cpuset for proxy only
+        required: false
+        default: ""
+      benchmark_api_cpus:
+        description: Optional calibrated CPU quota for each WebApi container, e.g. 0.20
+        required: false
+        default: ""
+      benchmark_proxy_cpus:
+        description: Optional calibrated CPU quota for proxy container, e.g. 0.10
+        required: false
+        default: ""
+      benchmark_api_memory:
+        description: Optional calibrated memory limit for each WebApi container, e.g. 165MB
+        required: false
+        default: ""
+      benchmark_proxy_memory:
+        description: Optional calibrated memory limit for proxy container, e.g. 20MB
+        required: false
+        default: ""
+      benchmark_repetitions:
+        description: Number of k6 repetitions; median p99 is archived when >1
+        required: true
+        default: "1"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -138,6 +167,13 @@ jobs:
           IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
           BENCHMARK_STACK_CPUSET: ${{ inputs.benchmark_stack_cpuset }}
           BENCHMARK_K6_CPUSET: ${{ inputs.benchmark_k6_cpuset }}
+          BENCHMARK_API_CPUSET: ${{ inputs.benchmark_api_cpuset }}
+          BENCHMARK_PROXY_CPUSET: ${{ inputs.benchmark_proxy_cpuset }}
+          BENCHMARK_API_CPUS: ${{ inputs.benchmark_api_cpus }}
+          BENCHMARK_PROXY_CPUS: ${{ inputs.benchmark_proxy_cpus }}
+          BENCHMARK_API_MEMORY: ${{ inputs.benchmark_api_memory }}
+          BENCHMARK_PROXY_MEMORY: ${{ inputs.benchmark_proxy_memory }}
+          BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
         run: bash scripts/ci-official-benchmark.sh
 
       - name: Archive benchmark report
@@ -166,6 +202,13 @@ jobs:
           IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
           BENCHMARK_STACK_CPUSET: ${{ inputs.benchmark_stack_cpuset }}
           BENCHMARK_K6_CPUSET: ${{ inputs.benchmark_k6_cpuset }}
+          BENCHMARK_API_CPUSET: ${{ inputs.benchmark_api_cpuset }}
+          BENCHMARK_PROXY_CPUSET: ${{ inputs.benchmark_proxy_cpuset }}
+          BENCHMARK_API_CPUS: ${{ inputs.benchmark_api_cpus }}
+          BENCHMARK_PROXY_CPUS: ${{ inputs.benchmark_proxy_cpus }}
+          BENCHMARK_API_MEMORY: ${{ inputs.benchmark_api_memory }}
+          BENCHMARK_PROXY_MEMORY: ${{ inputs.benchmark_proxy_memory }}
+          BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
         run: |
           git pull --rebase origin main
           bash scripts/archive-benchmark-result.sh
@@ -200,7 +243,10 @@ jobs:
           path: |
             benchmark-results/results.json
             benchmark-results/k6-report.html
+            benchmark-results/k6-report-repetition-*.html
+            benchmark-results/results-repetition-*.json
+            benchmark-results/repetition-summary.json
             benchmark-results/docker-compose.log
             benchmark-results/docker-state-*.txt
-            benchmark-results/docker-compose.cpuset.yml
+            benchmark-results/docker-compose.calibration.yml
           if-no-files-found: ignore

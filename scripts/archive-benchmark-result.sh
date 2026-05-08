@@ -28,6 +28,14 @@ IVF_REPAIR_MIN_FRAUDS="${IVF_REPAIR_MIN_FRAUDS:-}"
 IVF_REPAIR_MAX_FRAUDS="${IVF_REPAIR_MAX_FRAUDS:-}"
 BENCHMARK_STACK_CPUSET="${BENCHMARK_STACK_CPUSET:-}"
 BENCHMARK_K6_CPUSET="${BENCHMARK_K6_CPUSET:-}"
+BENCHMARK_API_CPUSET="${BENCHMARK_API_CPUSET:-}"
+BENCHMARK_PROXY_CPUSET="${BENCHMARK_PROXY_CPUSET:-}"
+BENCHMARK_API_CPUS="${BENCHMARK_API_CPUS:-}"
+BENCHMARK_PROXY_CPUS="${BENCHMARK_PROXY_CPUS:-}"
+BENCHMARK_API_MEMORY="${BENCHMARK_API_MEMORY:-}"
+BENCHMARK_PROXY_MEMORY="${BENCHMARK_PROXY_MEMORY:-}"
+BENCHMARK_REPETITIONS="${BENCHMARK_REPETITIONS:-1}"
+REPETITION_SUMMARY="${REPETITION_SUMMARY:-$(dirname "$RESULTS_JSON")/repetition-summary.json}"
 
 if [[ -z "$REPORT_KIND" ]]; then
     if [[ "$COMPOSE_FILE" == "docker-compose.yml" ]]; then
@@ -53,10 +61,24 @@ else
 fi
 report_file="${REPORT_PREFIX}-${stamp}-${SHORT_SHA}.json"
 report_path="$REPORTS_DIR/$report_file"
+if [[ -e "$report_path" ]]; then
+    safe_kind="${REPORT_KIND//[^a-zA-Z0-9]/-}"
+    report_file="${REPORT_PREFIX}-${stamp}-${SHORT_SHA}-${safe_kind}.json"
+    report_path="$REPORTS_DIR/$report_file"
+fi
 html_report_file=""
 if [[ -f "$K6_HTML_REPORT" ]]; then
     html_report_file="${REPORT_PREFIX}-${stamp}-${SHORT_SHA}.html"
+    if [[ -e "$REPORTS_DIR/$html_report_file" ]]; then
+        safe_kind="${REPORT_KIND//[^a-zA-Z0-9]/-}"
+        html_report_file="${REPORT_PREFIX}-${stamp}-${SHORT_SHA}-${safe_kind}.html"
+    fi
     cp "$K6_HTML_REPORT" "$REPORTS_DIR/$html_report_file"
+fi
+
+summary_arg=(--argjson repetition_summary null)
+if [[ -f "$REPETITION_SUMMARY" ]]; then
+    summary_arg=(--slurpfile repetition_summary "$REPETITION_SUMMARY")
 fi
 
 jq -n \
@@ -83,8 +105,16 @@ jq -n \
     --arg ivf_repair_max_frauds "$IVF_REPAIR_MAX_FRAUDS" \
     --arg benchmark_stack_cpuset "$BENCHMARK_STACK_CPUSET" \
     --arg benchmark_k6_cpuset "$BENCHMARK_K6_CPUSET" \
+    --arg benchmark_api_cpuset "$BENCHMARK_API_CPUSET" \
+    --arg benchmark_proxy_cpuset "$BENCHMARK_PROXY_CPUSET" \
+    --arg benchmark_api_cpus "$BENCHMARK_API_CPUS" \
+    --arg benchmark_proxy_cpus "$BENCHMARK_PROXY_CPUS" \
+    --arg benchmark_api_memory "$BENCHMARK_API_MEMORY" \
+    --arg benchmark_proxy_memory "$BENCHMARK_PROXY_MEMORY" \
+    --arg benchmark_repetitions "$BENCHMARK_REPETITIONS" \
     --arg source "zanfranceschi/rinha-de-backend-2026:test/test.js" \
     --slurpfile result "$RESULTS_JSON" \
+    "${summary_arg[@]}" \
     '{
         metadata: {
             timestamp: $timestamp,
@@ -99,13 +129,22 @@ jq -n \
             official_ref: $official_ref,
             k6_image: $k6_image,
             source: $source,
-            environment: (if $benchmark_stack_cpuset == "" then
-                "GitHub Actions ubuntu-latest; official-like only, not official Rinha hardware"
-            else
+            environment: (if ($benchmark_api_cpus + $benchmark_proxy_cpus) != "" then
+                "GitHub Actions ubuntu-latest; calibrated CPU limits api=" + (if $benchmark_api_cpus == "" then "default" else $benchmark_api_cpus end) + ", proxy=" + (if $benchmark_proxy_cpus == "" then "default" else $benchmark_proxy_cpus end) + "; not official Rinha hardware"
+            elif $benchmark_stack_cpuset != "" then
                 "GitHub Actions ubuntu-latest; stack pinned to cpuset " + $benchmark_stack_cpuset + "; closer contention probe, not official Rinha hardware"
+            else
+                "GitHub Actions ubuntu-latest; official-like only, not official Rinha hardware"
             end),
             benchmark_stack_cpuset: $benchmark_stack_cpuset,
             benchmark_k6_cpuset: $benchmark_k6_cpuset,
+            benchmark_api_cpuset: $benchmark_api_cpuset,
+            benchmark_proxy_cpuset: $benchmark_proxy_cpuset,
+            benchmark_api_cpus: $benchmark_api_cpus,
+            benchmark_proxy_cpus: $benchmark_proxy_cpus,
+            benchmark_api_memory: $benchmark_api_memory,
+            benchmark_proxy_memory: $benchmark_proxy_memory,
+            benchmark_repetitions: $benchmark_repetitions,
             benchmark_config: {
                 ivf_clusters: $ivf_clusters,
                 ivf_train_sample: $ivf_train_sample,
@@ -117,7 +156,8 @@ jq -n \
                 ivf_bbox_repair: $ivf_bbox_repair,
                 ivf_repair_min_frauds: $ivf_repair_min_frauds,
                 ivf_repair_max_frauds: $ivf_repair_max_frauds
-            }
+            },
+            repetition_summary: (if ($repetition_summary | type) == "array" then ($repetition_summary[0] // null) else $repetition_summary end)
         },
         result: $result[0]
     }' > "$report_path"
@@ -138,6 +178,13 @@ for report in "$REPORTS_DIR"/${REPORT_PREFIX}-*.json; do
         report_kind: (.metadata.report_kind // (if .metadata.compose_file == "docker-compose.yml" then "candidate" else "experiment" end)),
         benchmark_stack_cpuset: (.metadata.benchmark_stack_cpuset // ""),
         benchmark_k6_cpuset: (.metadata.benchmark_k6_cpuset // ""),
+        benchmark_api_cpuset: (.metadata.benchmark_api_cpuset // ""),
+        benchmark_proxy_cpuset: (.metadata.benchmark_proxy_cpuset // ""),
+        benchmark_api_cpus: (.metadata.benchmark_api_cpus // ""),
+        benchmark_proxy_cpus: (.metadata.benchmark_proxy_cpus // ""),
+        benchmark_api_memory: (.metadata.benchmark_api_memory // ""),
+        benchmark_proxy_memory: (.metadata.benchmark_proxy_memory // ""),
+        benchmark_repetitions: (.metadata.benchmark_repetitions // "1"),
         ivf_scale: (.metadata.benchmark_config.ivf_scale // ""),
         ivf_fast_nprobe: (.metadata.benchmark_config.ivf_fast_nprobe // ""),
         ivf_full_nprobe: (.metadata.benchmark_config.ivf_full_nprobe // ""),
@@ -163,6 +210,11 @@ fi
 experiment_file="$(jq -r 'map(select(.report_kind == "experiment")) | .[0].file // empty' "$REPORTS_DIR/index.json")"
 if [[ -n "$experiment_file" ]]; then
     cp "$REPORTS_DIR/$experiment_file" "$REPORTS_DIR/latest-experiment.json"
+fi
+
+calibrated_file="$(jq -r 'map(select(.report_kind == "official-calibrated")) | .[0].file // empty' "$REPORTS_DIR/index.json")"
+if [[ -n "$calibrated_file" ]]; then
+    cp "$REPORTS_DIR/$calibrated_file" "$REPORTS_DIR/latest-calibrated.json"
 fi
 
 echo "Archived benchmark report: $report_path"

@@ -10,7 +10,9 @@ const result = latest.default.result;
 const metadata = latest.default.metadata;
 const runs = index.default;
 const candidates = runs.filter((run) => run.report_kind === 'candidate');
+const calibrated = runs.filter((run) => run.report_kind === 'official-calibrated');
 const experiments = runs.filter((run) => run.report_kind === 'experiment');
+const latestCalibrated = calibrated[0];
 const officialScore = Number(officialResult.scoring.final_score).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const officialClosedAt = new Intl.DateTimeFormat('en-US', {
   dateStyle: 'medium',
@@ -96,6 +98,12 @@ const detectionScore = Number(result.scoring.detection_score.value).toLocaleStri
       <span class="metric-value">{score}</span>
       <span class="metric-label">CI score</span>
     </div>
+    {latestCalibrated && (
+      <div class="stress-metric">
+        <span class="metric-value">{latestCalibrated.p99}</span>
+        <span class="metric-label">calibrated p99</span>
+      </div>
+    )}
   </div>
 
   <div class="stress-links">
