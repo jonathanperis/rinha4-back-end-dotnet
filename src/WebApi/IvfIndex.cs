@@ -21,8 +21,6 @@ internal sealed partial class IvfIndex
     private readonly short[] centroids;
     private readonly short[] bboxMin;
     private readonly short[] bboxMax;
-    private readonly short[] bboxMinByCluster;
-    private readonly short[] bboxMaxByCluster;
     private readonly int[] offsets;
     private readonly byte[] labels;
     private readonly int[] ids;
@@ -37,8 +35,6 @@ internal sealed partial class IvfIndex
     /// <param name="centroids">Dimension-major int16 centroid array.</param>
     /// <param name="bboxMin">Per-cluster int16 minimum bounds.</param>
     /// <param name="bboxMax">Per-cluster int16 maximum bounds.</param>
-    /// <param name="bboxMinByCluster">Cluster-major minimum bounds for scalar early-exit repair.</param>
-    /// <param name="bboxMaxByCluster">Cluster-major maximum bounds for scalar early-exit repair.</param>
     /// <param name="offsets">Cluster block offsets.</param>
     /// <param name="labels">Padded one-byte labels.</param>
     /// <param name="ids">Padded original reference ids.</param>
@@ -52,8 +48,6 @@ internal sealed partial class IvfIndex
         short[] centroids,
         short[] bboxMin,
         short[] bboxMax,
-        short[] bboxMinByCluster,
-        short[] bboxMaxByCluster,
         int[] offsets,
         byte[] labels,
         int[] ids,
@@ -67,8 +61,6 @@ internal sealed partial class IvfIndex
         this.centroids = centroids;
         this.bboxMin = bboxMin;
         this.bboxMax = bboxMax;
-        this.bboxMinByCluster = bboxMinByCluster;
-        this.bboxMaxByCluster = bboxMaxByCluster;
         this.offsets = offsets;
         this.labels = labels;
         this.ids = ids;
@@ -146,8 +138,6 @@ internal sealed partial class IvfIndex
             ReadArray(stream, centroids);
             ReadArray(stream, bboxMin);
             ReadArray(stream, bboxMax);
-            short[] bboxMinByCluster = ToClusterMajor(bboxMin, clusters);
-            short[] bboxMaxByCluster = ToClusterMajor(bboxMax, clusters);
             ReadArray(stream, offsets);
             stream.ReadExactly(labels);
             ReadArray(stream, ids);
@@ -159,7 +149,7 @@ internal sealed partial class IvfIndex
                 return false;
             }
 
-            index = new IvfIndex(count, clusters, scale, useInt32Distances, blockLanes, centroids, bboxMin, bboxMax, bboxMinByCluster, bboxMaxByCluster, offsets, labels, ids, blocks);
+            index = new IvfIndex(count, clusters, scale, useInt32Distances, blockLanes, centroids, bboxMin, bboxMax, offsets, labels, ids, blocks);
             return true;
         }
         catch (Exception ex) when (ex is IOException or EndOfStreamException or ArgumentException or OverflowException)
@@ -212,24 +202,5 @@ internal sealed partial class IvfIndex
     {
         for (int dim = 0; dim < Dims; dim++)
             queryVectors[dim] = Vector256.Create((int)query[dim]);
-    }
-
-    /// <summary>
-    /// Converts dimension-major cluster bounds into cluster-major bounds for scalar repair.
-    /// </summary>
-    /// <param name="bounds">Dimension-major bounds loaded from the IVF file.</param>
-    /// <param name="clusters">Number of IVF clusters.</param>
-    /// <returns>Cluster-major bounds with each cluster's dimensions stored contiguously.</returns>
-    private static short[] ToClusterMajor(short[] bounds, int clusters)
-    {
-        var transposed = GC.AllocateUninitializedArray<short>(bounds.Length);
-        for (int cluster = 0; cluster < clusters; cluster++)
-        {
-            int clusterBase = cluster * Dims;
-            for (int dim = 0; dim < Dims; dim++)
-                transposed[clusterBase + dim] = bounds[dim * clusters + cluster];
-        }
-
-        return transposed;
     }
 }
