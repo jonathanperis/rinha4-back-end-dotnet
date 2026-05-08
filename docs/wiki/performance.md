@@ -21,10 +21,10 @@ HTTP errors; p99 work is now inside IVF repair and vector scan cost.
 The active bottleneck is balancing full-repair accuracy with p99. Rounded IVF
 matched the public benchmark locally with `0` false positives and `0` false
 negatives, but the full-repair path still needs CI latency improvement.
-The current best zero-failure CI lane uses `2048` IVF clusters: p99 `11.72ms`,
-score `4931.04`. `4096` clusters raised p99 to `16.69ms`; `1024` clusters
-raised p99 to `19.78ms`; `1536` clusters replayed at `0` failures locally but
-was slower than the 2048 local replay, so it was not promoted.
+The current best zero-failure CI lane uses `2048` IVF clusters with scalar bbox
+repair: p99 `2.76ms`, score `5559.57`. AVX2 bbox repair raised p99 to
+`5.37ms`; a cluster-major bbox copy raised p99 to `6.89ms`; `4096` clusters
+raised p99 to `16.69ms`; `1024` clusters raised p99 to `19.78ms`.
 Lower-scale IVF3 int32 A/B reduced accumulation cost structurally but was not
 candidate-safe on public replay: scale `1000` missed `21` labels, and scale
 `4096` missed `4` labels.
@@ -39,7 +39,7 @@ The current production lane is IVF approximate nearest-neighbor search:
 - build centroids and compact vector blocks from `references.json.gz`
 - load `references.ivf.bin` at startup
 - scan the nearest cluster first with `IVF_FAST_NPROBE=1`
-- use bbox repair to scan clusters whose bounding box can still beat the current top-five bound
+- use scalar bbox repair with early exit to scan only clusters whose bounding box can still beat the current top-five bound
 - rank candidates with rounded int16 squared L2 distance
 - use one-pass full bbox repair for the accuracy candidate
 
