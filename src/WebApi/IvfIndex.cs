@@ -186,12 +186,6 @@ internal sealed class IvfIndex
         Span<byte> candidateLabels = stackalloc byte[5];
         candidateDistances.Fill(long.MaxValue);
         candidateIds.Fill(int.MaxValue);
-        Span<Vector256<int>> queryVectors = stackalloc Vector256<int>[Dims];
-        if (Avx2.IsSupported && blockLanes == 8)
-        {
-            for (int dim = 0; dim < Dims; dim++)
-                queryVectors[dim] = Vector256.Create((int)quantizedQuery[dim]);
-        }
 
         for (int cluster = 0; cluster < clusters; cluster++)
         {
@@ -208,11 +202,11 @@ internal sealed class IvfIndex
         for (int i = 0; i < nProbe; i++)
         {
             int cluster = bestClusters[i];
-            ScanBlocks(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], quantizedQuery, queryVectors);
+            ScanBlocks(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], quantizedQuery);
         }
 
         if (repair)
-            RepairByBoundingBox(candidateDistances, candidateIds, candidateLabels, bestClusters, quantizedQuery, queryVectors);
+            RepairByBoundingBox(candidateDistances, candidateIds, candidateLabels, bestClusters, quantizedQuery);
 
         return FraudCount(candidateLabels);
     }
@@ -230,8 +224,7 @@ internal sealed class IvfIndex
         Span<int> candidateIds,
         Span<byte> candidateLabels,
         scoped ReadOnlySpan<int> probedClusters,
-        ReadOnlySpan<short> query,
-        ReadOnlySpan<Vector256<int>> queryVectors)
+        ReadOnlySpan<short> query)
     {
         long worstDistance = candidateDistances[^1];
         for (int cluster = 0; cluster < clusters; cluster++)
@@ -242,7 +235,7 @@ internal sealed class IvfIndex
 
             if (BoundingBoxCanImprove(cluster, query, worstDistance))
             {
-                ScanBlocks(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], query, queryVectors);
+                ScanBlocks(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], query);
                 worstDistance = candidateDistances[^1];
             }
         }
@@ -263,12 +256,11 @@ internal sealed class IvfIndex
         Span<byte> candidateLabels,
         int startBlock,
         int endBlock,
-        ReadOnlySpan<short> query,
-        ReadOnlySpan<Vector256<int>> queryVectors)
+        ReadOnlySpan<short> query)
     {
         if (Avx2.IsSupported && blockLanes == 8)
         {
-            ScanBlocksAvx2(candidateDistances, candidateIds, candidateLabels, startBlock, endBlock, queryVectors);
+            ScanBlocksAvx2(candidateDistances, candidateIds, candidateLabels, startBlock, endBlock, query);
             return;
         }
 
@@ -290,8 +282,12 @@ internal sealed class IvfIndex
         Span<byte> candidateLabels,
         int startBlock,
         int endBlock,
-        ReadOnlySpan<Vector256<int>> queryVectors)
+        ReadOnlySpan<short> query)
     {
+        Span<Vector256<int>> queryVectors = stackalloc Vector256<int>[Dims];
+        for (int dim = 0; dim < Dims; dim++)
+            queryVectors[dim] = Vector256.Create((int)query[dim]);
+
         Span<long> laneDistances = stackalloc long[8];
         for (int block = startBlock; block < endBlock; block++)
         {
