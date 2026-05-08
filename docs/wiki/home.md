@@ -11,6 +11,7 @@ The current build is optimized for latency first:
 - prebuilt HTTP responses
 - rounded int16 IVF fraud classifier with an experimental IVF3 int32 scan path
 - archived official-like k6 results after each main build
+- one-core CI contention probe for candidate benchmarks
 
 The project target is explicit: top-10 ranking, p99 close to 1ms, and 0% failures.
 
@@ -22,7 +23,9 @@ The home page reads the latest official Rinha issue result from
 `docs/public/official/latest.json` and the latest CI candidate result from
 `docs/public/reports/latest-candidate.json`.
 
-CI results are useful for regression tracking. They are not official Rinha hardware results.
+CI results are useful for regression tracking. They are not official Rinha
+hardware results. Current candidate CI runs pin service containers to one host
+CPU to reduce the gap between GitHub-hosted runners and official preview runs.
 
 ## Active lane
 

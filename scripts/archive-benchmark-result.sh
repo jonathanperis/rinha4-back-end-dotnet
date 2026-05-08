@@ -26,6 +26,8 @@ IVF_BOUNDARY_FULL="${IVF_BOUNDARY_FULL:-}"
 IVF_BBOX_REPAIR="${IVF_BBOX_REPAIR:-}"
 IVF_REPAIR_MIN_FRAUDS="${IVF_REPAIR_MIN_FRAUDS:-}"
 IVF_REPAIR_MAX_FRAUDS="${IVF_REPAIR_MAX_FRAUDS:-}"
+BENCHMARK_STACK_CPUSET="${BENCHMARK_STACK_CPUSET:-}"
+BENCHMARK_K6_CPUSET="${BENCHMARK_K6_CPUSET:-}"
 
 if [[ -z "$REPORT_KIND" ]]; then
     if [[ "$COMPOSE_FILE" == "docker-compose.yml" ]]; then
@@ -79,6 +81,8 @@ jq -n \
     --arg ivf_bbox_repair "$IVF_BBOX_REPAIR" \
     --arg ivf_repair_min_frauds "$IVF_REPAIR_MIN_FRAUDS" \
     --arg ivf_repair_max_frauds "$IVF_REPAIR_MAX_FRAUDS" \
+    --arg benchmark_stack_cpuset "$BENCHMARK_STACK_CPUSET" \
+    --arg benchmark_k6_cpuset "$BENCHMARK_K6_CPUSET" \
     --arg source "zanfranceschi/rinha-de-backend-2026:test/test.js" \
     --slurpfile result "$RESULTS_JSON" \
     '{
@@ -95,7 +99,13 @@ jq -n \
             official_ref: $official_ref,
             k6_image: $k6_image,
             source: $source,
-            environment: "GitHub Actions ubuntu-latest; official-like only, not official Rinha hardware",
+            environment: (if $benchmark_stack_cpuset == "" then
+                "GitHub Actions ubuntu-latest; official-like only, not official Rinha hardware"
+            else
+                "GitHub Actions ubuntu-latest; stack pinned to cpuset " + $benchmark_stack_cpuset + "; closer contention probe, not official Rinha hardware"
+            end),
+            benchmark_stack_cpuset: $benchmark_stack_cpuset,
+            benchmark_k6_cpuset: $benchmark_k6_cpuset,
             benchmark_config: {
                 ivf_clusters: $ivf_clusters,
                 ivf_train_sample: $ivf_train_sample,
@@ -126,6 +136,8 @@ for report in "$REPORTS_DIR"/${REPORT_PREFIX}-*.json; do
         image: .metadata.image,
         compose_file: .metadata.compose_file,
         report_kind: (.metadata.report_kind // (if .metadata.compose_file == "docker-compose.yml" then "candidate" else "experiment" end)),
+        benchmark_stack_cpuset: (.metadata.benchmark_stack_cpuset // ""),
+        benchmark_k6_cpuset: (.metadata.benchmark_k6_cpuset // ""),
         ivf_scale: (.metadata.benchmark_config.ivf_scale // ""),
         ivf_fast_nprobe: (.metadata.benchmark_config.ivf_fast_nprobe // ""),
         ivf_full_nprobe: (.metadata.benchmark_config.ivf_full_nprobe // ""),

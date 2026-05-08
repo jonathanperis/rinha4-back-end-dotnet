@@ -78,6 +78,14 @@ on:
         description: Inclusive repair fraud-count maximum
         required: true
         default: "5"
+      benchmark_stack_cpuset:
+        description: Optional Docker cpuset for WebApi/nginx containers; set 0 for one-core contention probe
+        required: false
+        default: ""
+      benchmark_k6_cpuset:
+        description: Optional Docker cpuset for k6 container; usually empty, set 0 only for full host-contention probes
+        required: false
+        default: ""
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -128,6 +136,8 @@ jobs:
           IVF_BBOX_REPAIR: ${{ inputs.ivf_bbox_repair }}
           IVF_REPAIR_MIN_FRAUDS: ${{ inputs.ivf_repair_min_frauds }}
           IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
+          BENCHMARK_STACK_CPUSET: ${{ inputs.benchmark_stack_cpuset }}
+          BENCHMARK_K6_CPUSET: ${{ inputs.benchmark_k6_cpuset }}
         run: bash scripts/ci-official-benchmark.sh
 
       - name: Archive benchmark report
@@ -154,6 +164,8 @@ jobs:
           IVF_BBOX_REPAIR: ${{ inputs.ivf_bbox_repair }}
           IVF_REPAIR_MIN_FRAUDS: ${{ inputs.ivf_repair_min_frauds }}
           IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
+          BENCHMARK_STACK_CPUSET: ${{ inputs.benchmark_stack_cpuset }}
+          BENCHMARK_K6_CPUSET: ${{ inputs.benchmark_k6_cpuset }}
         run: bash scripts/archive-benchmark-result.sh
 
       - name: Commit benchmark report
@@ -188,4 +200,6 @@ jobs:
             benchmark-results/results.json
             benchmark-results/k6-report.html
             benchmark-results/docker-compose.log
+            benchmark-results/docker-state-*.txt
+            benchmark-results/docker-compose.cpuset.yml
           if-no-files-found: ignore

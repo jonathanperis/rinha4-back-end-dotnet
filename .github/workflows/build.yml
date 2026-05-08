@@ -188,6 +188,7 @@ jobs:
           IVF_BBOX_REPAIR: "true"
           IVF_REPAIR_MIN_FRAUDS: "0"
           IVF_REPAIR_MAX_FRAUDS: "5"
+          BENCHMARK_STACK_CPUSET: "0"
         run: bash scripts/ci-official-benchmark.sh
 
       - name: Archive benchmark report
@@ -213,6 +214,7 @@ jobs:
           IVF_BBOX_REPAIR: "true"
           IVF_REPAIR_MIN_FRAUDS: "0"
           IVF_REPAIR_MAX_FRAUDS: "5"
+          BENCHMARK_STACK_CPUSET: "0"
         run: bash scripts/archive-benchmark-result.sh
 
       - name: Commit benchmark report
@@ -246,4 +248,6 @@ jobs:
             benchmark-results/results.json
             benchmark-results/k6-report.html
             benchmark-results/docker-compose.log
+            benchmark-results/docker-state-*.txt
+            benchmark-results/docker-compose.cpuset.yml
           if-no-files-found: ignore

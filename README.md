@@ -277,7 +277,9 @@ CI official-like benchmark:
 - Trigger: manual `workflow_dispatch`
 - Test source: clones `zanfranceschi/rinha-de-backend-2026` and runs official `test/test.js`
 - Stack start: `docker compose --compatibility` so Compose maps `deploy.resources.limits` into local container limits
-- Artifacts: `benchmark-results/results.json` and `benchmark-results/docker-compose.log`
+- Optional contention probe: set `benchmark_stack_cpuset=0` to pin nginx and both WebApi containers to one host CPU. The main-branch auto benchmark now uses this mode so CI p99 is less optimistic than unconstrained GitHub-hosted runs.
+- Optional full-host probe: set `benchmark_k6_cpuset=0` too when k6 should contend on the same CPU. This is stricter than official-like service limits and is for diagnosis only.
+- Artifacts: `benchmark-results/results.json`, `benchmark-results/k6-report.html`, `benchmark-results/docker-compose.log`, and `benchmark-results/docker-state-*.txt`
 - Main build workflow also runs the same benchmark automatically after the amd64 image build/push succeeds.
 - Automatic runs use immutable image tag `ci-${GITHUB_SHA}` instead of rebuilding from checkout.
 - Automatic main-branch benchmark results are archived under `docs/public/reports/`, matching the historical report style used in the previous Rinha repository:
@@ -302,8 +304,10 @@ Current local/CI signal:
 - latest published candidate is updated by the main benchmark after each successful image build
 
 Local replay numbers are correctness checks against the public payload. CI
-benchmark numbers are official-like GitHub Actions results, not official Rinha
-hardware results.
+benchmark numbers are regression signals, not official Rinha hardware results.
+Older CI runs before the cpuset probe could report unrealistically low p99 on
+GitHub-hosted runners because k6 and Docker had more host CPU headroom than the
+official `1 CPU / 350 MB` envelope exposes.
 
 Run from GitHub Actions:
 
@@ -312,7 +316,9 @@ Run from GitHub Actions:
 3. Choose compose file:
    - `docker-compose.yml` for nginx stream baseline
 4. For IVF experiment, set `report_kind=experiment`, tune `IVF_CLUSTERS` or `IVF_SCALE`, and keep `IVF_FAST_NPROBE=1`, `IVF_FULL_NPROBE=1`, `IVF_BBOX_REPAIR=true`, `IVF_BOUNDARY_FULL=false`, and repair frauds `0..5`.
-5. Run workflow.
+5. For official-mismatch investigation, set `benchmark_stack_cpuset=0`. Leave
+   `benchmark_k6_cpuset` empty unless the goal is max local contention.
+6. Run workflow.
 
 Manual runs can also benchmark a pushed image by filling `webapi_image`; when set,
 the workflow pulls that image and starts Compose with `--no-build`.
