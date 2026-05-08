@@ -11,7 +11,6 @@ on:
         options:
           - docker-compose.yml
           - docker-compose.haproxy.yml
-          - docker-compose.custom-lb.yml
       official_ref:
         description: Rinha official repo ref to clone for test/test.js and test-data.json
         required: true
