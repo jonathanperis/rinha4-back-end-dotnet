@@ -79,6 +79,7 @@ jobs:
             AOT=true
             EXTRA_OPTIMIZE=true
             BUILD_CONFIGURATION=Release
+            IVF_SCALE=10000
             CACHEBUST=${{ github.sha }}
 
       - name: Set benchmark image
@@ -130,6 +131,7 @@ jobs:
             AOT=true
             EXTRA_OPTIMIZE=true
             BUILD_CONFIGURATION=Release
+            IVF_SCALE=10000
             CACHEBUST=${{ github.sha }}
 
   benchmark-amd64:
@@ -174,6 +176,16 @@ jobs:
           OFFICIAL_REF: main
           K6_IMAGE: grafana/k6:latest
           RESULTS_DIR: benchmark-results
+          IVF_CLUSTERS: "4096"
+          IVF_TRAIN_SAMPLE: "65536"
+          IVF_ITERATIONS: "6"
+          IVF_SCALE: "10000"
+          IVF_FAST_NPROBE: "1"
+          IVF_FULL_NPROBE: "1"
+          IVF_BOUNDARY_FULL: "false"
+          IVF_BBOX_REPAIR: "true"
+          IVF_REPAIR_MIN_FRAUDS: "0"
+          IVF_REPAIR_MAX_FRAUDS: "5"
         run: bash scripts/ci-official-benchmark.sh
 
       - name: Archive benchmark report
@@ -189,6 +201,16 @@ jobs:
           COMPOSE_FILE: docker-compose.yml
           OFFICIAL_REF: main
           K6_IMAGE: grafana/k6:latest
+          IVF_CLUSTERS: "4096"
+          IVF_TRAIN_SAMPLE: "65536"
+          IVF_ITERATIONS: "6"
+          IVF_SCALE: "10000"
+          IVF_FAST_NPROBE: "1"
+          IVF_FULL_NPROBE: "1"
+          IVF_BOUNDARY_FULL: "false"
+          IVF_BBOX_REPAIR: "true"
+          IVF_REPAIR_MIN_FRAUDS: "0"
+          IVF_REPAIR_MAX_FRAUDS: "5"
         run: bash scripts/archive-benchmark-result.sh
 
       - name: Commit benchmark report

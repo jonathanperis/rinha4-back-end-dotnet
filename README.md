@@ -61,7 +61,7 @@ Default path:
 4. A small in-process HTTP parser reads headers, content length, and body.
 5. A manual `Utf8JsonReader` parser extracts only fields needed by vectorization.
 6. Request fields become a normalized 14-dimensional vector.
-7. Vector is quantized to `int16` with `scale=10000`.
+7. Vector is quantized to `int16` with the IVF header scale, default `10000`.
 8. IVF scans candidate clusters and repairs with bounding-box lower bounds.
 9. Rounded int16 top-five labels map directly to one of six prebuilt HTTP/JSON byte responses.
 
@@ -102,7 +102,7 @@ The binary file is embedded in the Docker image. The runtime container does not 
 IVF format:
 
 ```text
-int32 magic = "IVF2"
+int32 magic = "IVF2" | "IVF3"
 int32 count
 int32 clusters
 int32 dims
@@ -119,8 +119,17 @@ int16 blocks[total_blocks * dims * block_lanes]
 ```
 
 The runtime uses rounded int16 coordinates because the public labels match
-rounded quantized KNN behavior. The previous bucket fallback and float32 rerank
-paths were removed after IVF became the production classifier.
+rounded quantized KNN behavior. Default `IVF_SCALE=10000` writes IVF2 and uses
+int64 accumulation to preserve accuracy. Experimental `IVF_SCALE<=4096` writes
+IVF3 and uses int32 AVX2 centroid, bbox, and block scan accumulation for A/B.
+The previous bucket fallback and float32 rerank paths were removed after IVF
+became the production classifier.
+
+Runtime IVF code is split by role:
+
+- `IvfIndex.cs` loads and validates the binary file, stores immutable arrays, and dispatches search.
+- `IvfIndex.Int64.cs` keeps the IVF2 candidate path with int64 accumulation for `IVF_SCALE=10000`.
+- `IvfIndex.Int32.cs` keeps the experimental IVF3 lower-scale path with int32 AVX2 accumulation.
 
 ## Fraud Vector
 
@@ -186,7 +195,7 @@ Implemented:
 - `stackalloc` for request vectors
 - no per-request response serialization
 - no hot-path logging
-- rounded int16 IVF classifier
+- rounded int16 IVF classifier, with experimental IVF3 int32 scan path behind `IVF_SCALE<=4096`
 
 ## Reverse Proxy
 
@@ -247,14 +256,8 @@ docker compose up --build
 curl -i http://localhost:9999/ready
 ```
 
-Run full Docker stack:
-
-```bash
-docker compose up --build
-```
-
 Docker IVF build parameters are also tunable with `IVF_CLUSTERS`,
-`IVF_TRAIN_SAMPLE`, and `IVF_ITERATIONS`.
+`IVF_TRAIN_SAMPLE`, `IVF_ITERATIONS`, and `IVF_SCALE`.
 
 ## Benchmarks
 
@@ -278,9 +281,13 @@ CI official-like benchmark:
 Current local/CI signal:
 
 - rounded IVF local replay over public `test-data.json`: `0` FP, `0` FN
+- IVF3 lower-scale local replay was tested as A/B and is not candidate-safe yet:
+  `IVF_SCALE=1000` produced `10` FP and `11` FN; `IVF_SCALE=4096` produced `1` FP and `3` FN
 - latest published candidate is updated by the main benchmark after each successful image build
 
-Those numbers are official-like GitHub Actions results, not official Rinha hardware results.
+Local replay numbers are correctness checks against the public payload. CI
+benchmark numbers are official-like GitHub Actions results, not official Rinha
+hardware results.
 
 Run from GitHub Actions:
 
@@ -288,7 +295,7 @@ Run from GitHub Actions:
 2. Select **Official-like Benchmark**.
 3. Choose compose file:
    - `docker-compose.yml` for nginx stream baseline
-4. For IVF experiment, set `report_kind=experiment`, `IVF_FAST_NPROBE=1`, `IVF_FULL_NPROBE=1`, `IVF_BBOX_REPAIR=true`, `IVF_BOUNDARY_FULL=false`, and repair frauds `0..5`.
+4. For IVF experiment, set `report_kind=experiment`, tune `IVF_SCALE`, and keep `IVF_FAST_NPROBE=1`, `IVF_FULL_NPROBE=1`, `IVF_BBOX_REPAIR=true`, `IVF_BOUNDARY_FULL=false`, and repair frauds `0..5`.
 5. Run workflow.
 
 Manual runs can also benchmark a pushed image by filling `webapi_image`; when set,
@@ -301,7 +308,7 @@ The repository publishes an Astro documentation site from `docs/`.
 
 Pages structure:
 
-- `/` home dashboard with latest official-like benchmark metrics
+- `/` home dashboard with latest official Rinha issue metrics and latest CI candidate cards
 - `/reports/` benchmark history from `docs/public/reports/index.json`
 - `/docs/` searchable implementation notes generated from `docs/wiki/*.md`
 
@@ -343,7 +350,7 @@ Build details:
 
 - SDK image builds converter and API.
 - converter creates `references.ivf.bin`.
-- image builds accept `IVF_CLUSTERS`, `IVF_TRAIN_SAMPLE`, and `IVF_ITERATIONS` build args.
+- image builds accept `IVF_CLUSTERS`, `IVF_TRAIN_SAMPLE`, `IVF_ITERATIONS`, and `IVF_SCALE` build args.
 - API is published with NativeAOT.
 - runtime image contains only API binary plus data files.
 
@@ -371,8 +378,8 @@ Main blocker for top-10 target:
 
 Likely next moves:
 
-1. Run CI benchmark with IVF2: 4096 clusters, int16 centroids, dimension-major bbox SIMD.
-2. Optimize repair p99 with lower bbox overhead and/or better cluster layout.
+1. Keep IVF2 scale 10000 as candidate default because public replay stays at `0` FP/FN.
+2. Profile repair p99 and compare lower-scale IVF3 A/B against previous IVF2 results.
 3. Compare new CI p99 against #9 .NET reference (`1.73ms`) while preserving `0%` failures.
 4. Promote IVF submission when CI shows `0` failures and p99 below #9.
 5. Track official issue `#2088` for the next preview result from the updated submission branch.

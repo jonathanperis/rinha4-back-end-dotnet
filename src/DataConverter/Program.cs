@@ -6,7 +6,7 @@ IvfBuildOptions ivfOptions = DataConverterOptions.IvfOptions();
 const int Dims = 14;
 
 Console.WriteLine("Loading references.json.gz...");
-Console.WriteLine($"IVF build: clusters={ivfOptions.Clusters}, train_sample={ivfOptions.TrainSample}, iterations={ivfOptions.Iterations}");
+Console.WriteLine($"IVF build: clusters={ivfOptions.Clusters}, train_sample={ivfOptions.TrainSample}, iterations={ivfOptions.Iterations}, scale={ivfOptions.Scale}");
 
 int count;
 float[] vectors;
@@ -74,7 +74,8 @@ internal static class DataConverterOptions
     public static IvfBuildOptions IvfOptions() => new(
         EnvInt("IVF_CLUSTERS", 4096),
         EnvInt("IVF_TRAIN_SAMPLE", 65_536),
-        EnvInt("IVF_ITERATIONS", 6));
+        EnvInt("IVF_ITERATIONS", 6),
+        Math.Min(EnvInt("IVF_SCALE", IvfIndexBuilder.DefaultScale), short.MaxValue));
 
     /// <summary>
     /// Reads an integer environment variable with fallback.

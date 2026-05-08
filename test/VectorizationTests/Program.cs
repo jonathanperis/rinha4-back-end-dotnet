@@ -145,8 +145,8 @@ internal static class IvfRepairAssertions
         Span<float> query = stackalloc float[14];
         Span<short> quantized = stackalloc short[16];
 
-        byte fastOnly = index.FraudCount(query, quantized, new IvfSearchOptions(1, 1, false, false, 1, 4));
-        byte repaired = index.FraudCount(query, quantized, new IvfSearchOptions(1, 1, true, true, 1, 4));
+        byte fastOnly = index.FraudCount(quantized, new IvfSearchOptions(1, 1, false, false, 1, 4));
+        byte repaired = index.FraudCount(quantized, new IvfSearchOptions(1, 1, true, true, 1, 4));
 
         VectorizationTestRunner.AssertEqualInt(expectedFastOnly, fastOnly);
         VectorizationTestRunner.AssertEqualInt(expectedRepaired, repaired);
@@ -198,11 +198,11 @@ internal sealed class ScopedEnvironment : IDisposable
 /// </remarks>
 internal static class IvfTestIndex
 {
-    private const int Magic = 0x32465649;
+    private const int Magic = 0x33465649;
     private const int Count = 11;
     private const int Clusters = 2;
     private const int Dims = 14;
-    private const int Scale = 10000;
+    private const int Scale = 1000;
     private const int BlockLanes = 8;
     private const int TotalBlocks = 2;
 

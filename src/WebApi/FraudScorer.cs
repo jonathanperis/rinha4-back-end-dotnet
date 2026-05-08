@@ -10,7 +10,6 @@ internal sealed class FraudScorer
 {
     private const int Dims = 14;
     private const int PaddedDims = 16;
-    private const int Scale = 10000;
 
     private readonly float maxAmount;
     private readonly int maxInstallments;
@@ -121,12 +120,13 @@ internal sealed class FraudScorer
         fv[13] = Clamp(req.MerchantAvgAmount / maxMerchantAvgAmount);
 
         Span<short> qv = stackalloc short[PaddedDims];
+        int scale = ivfIndex.Scale;
         for (int i = 0; i < Dims; i++)
-            qv[i] = QuantizeRounded(fv[i], Scale);
+            qv[i] = QuantizeRounded(fv[i], scale);
         qv[Dims] = 0;
         qv[Dims + 1] = 0;
 
-        byte frauds = ivfIndex.FraudCount(fv, qv, ivfOptions);
+        byte frauds = ivfIndex.FraudCount(qv, ivfOptions);
         return HttpResponses.FraudScores[frauds];
     }
 

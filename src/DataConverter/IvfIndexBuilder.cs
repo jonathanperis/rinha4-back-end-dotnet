@@ -4,7 +4,8 @@
 /// <param name="Clusters">Number of inverted-file clusters to train.</param>
 /// <param name="TrainSample">Number of evenly spaced references used by k-means.</param>
 /// <param name="Iterations">Number of k-means refinement iterations.</param>
-internal readonly record struct IvfBuildOptions(int Clusters, int TrainSample, int Iterations);
+/// <param name="Scale">Quantization scale used for int16 persisted vectors.</param>
+internal readonly record struct IvfBuildOptions(int Clusters, int TrainSample, int Iterations, int Scale);
 
 /// <summary>
 /// Builds the <c>references.ivf.bin</c> file used by the WebApi IVF scorer mode.
@@ -16,10 +17,12 @@ internal readonly record struct IvfBuildOptions(int Clusters, int TrainSample, i
 /// </remarks>
 internal static class IvfIndexBuilder
 {
-    private const int Magic = 0x32465649; // IVF2
+    private const int MagicV2 = 0x32465649; // IVF2
+    private const int MagicV3 = 0x33465649; // IVF3
     private const int Dims = 14;
     private const int BlockLanes = 8;
-    private const short Scale = 10000;
+    public const int DefaultScale = 10000;
+    public const int MaxInt32Scale = 4096;
 
     /// <summary>
     /// Trains, packs, and writes an IVF binary index.
@@ -32,6 +35,8 @@ internal static class IvfIndexBuilder
     public static void Write(string outputPath, float[] vectors, byte[] labels, int count, IvfBuildOptions options)
     {
         int clusters = Math.Min(Math.Min(options.Clusters, count), ushort.MaxValue);
+        int scale = Math.Clamp(options.Scale, 1, short.MaxValue);
+        int magic = scale <= MaxInt32Scale ? MagicV3 : MagicV2;
         Console.WriteLine("Training IVF centroids...");
         float[] centroids = TrainCentroids(vectors, count, clusters, options.TrainSample, options.Iterations);
 
@@ -73,7 +78,7 @@ internal static class IvfIndexBuilder
 
             for (int dim = 0; dim < Dims; dim++)
             {
-                short value = Quantize(vectors[rowBase + dim]);
+                short value = Quantize(vectors[rowBase + dim], scale);
                 blocks[blockBase + dim * BlockLanes + lane] = value;
                 int bboxIndex = cluster * Dims + dim;
                 if (value < bboxMin[bboxIndex]) bboxMin[bboxIndex] = value;
@@ -94,17 +99,17 @@ internal static class IvfIndexBuilder
             }
         }
 
-        short[] transposedCentroids = QuantizeTransposeCentroids(centroids, clusters);
+        short[] transposedCentroids = QuantizeTransposeCentroids(centroids, clusters, scale);
         short[] transposedBboxMin = TransposeBounds(bboxMin, clusters);
         short[] transposedBboxMax = TransposeBounds(bboxMax, clusters);
         using var stream = File.Create(outputPath);
         using var writer = new BinaryWriter(stream);
 
-        writer.Write(Magic);
+        writer.Write(magic);
         writer.Write(count);
         writer.Write(clusters);
         writer.Write(Dims);
-        writer.Write((int)Scale);
+        writer.Write(scale);
         writer.Write(BlockLanes);
         writer.Write(totalBlocks);
         WriteShorts(writer, transposedCentroids);
@@ -259,14 +264,14 @@ internal static class IvfIndexBuilder
     /// <param name="centroids">Row-major centroid array.</param>
     /// <param name="clusters">Number of centroids.</param>
     /// <returns>Dimension-major quantized centroid array.</returns>
-    private static short[] QuantizeTransposeCentroids(float[] centroids, int clusters)
+    private static short[] QuantizeTransposeCentroids(float[] centroids, int clusters, int scale)
     {
         var transposed = new short[centroids.Length];
         for (int cluster = 0; cluster < clusters; cluster++)
         {
             int centroidBase = cluster * Dims;
             for (int dim = 0; dim < Dims; dim++)
-                transposed[dim * clusters + cluster] = Quantize(centroids[centroidBase + dim]);
+                transposed[dim * clusters + cluster] = Quantize(centroids[centroidBase + dim], scale);
         }
 
         return transposed;
@@ -292,16 +297,16 @@ internal static class IvfIndexBuilder
     }
 
     /// <summary>
-    /// Quantizes a normalized float to int16 using the same scale as the WebApi scorer.
+    /// Quantizes a normalized float to int16 using the configured IVF scale.
     /// </summary>
     /// <param name="value">Normalized vector value, including the allowed <c>-1</c> sentinel.</param>
     /// <returns>Scaled int16 value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static short Quantize(float value)
+    private static short Quantize(float value, int scale)
     {
         if (value < -1.0f) value = -1.0f;
         if (value > 1.0f) value = 1.0f;
-        return (short)MathF.Round(value * Scale);
+        return (short)MathF.Round(value * scale);
     }
 
     /// <summary>

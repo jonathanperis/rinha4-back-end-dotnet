@@ -21,6 +21,9 @@ HTTP errors; p99 work is now inside IVF repair and vector scan cost.
 The active bottleneck is balancing full-repair accuracy with p99. Rounded IVF
 matched the public benchmark locally with `0` false positives and `0` false
 negatives, but the full-repair path still needs CI latency improvement.
+Lower-scale IVF3 int32 A/B reduced accumulation cost structurally but was not
+candidate-safe on public replay: scale `1000` missed `21` labels, and scale
+`4096` missed `4` labels.
 
 ## Accuracy experiments
 

@@ -23,4 +23,7 @@ Ranking pressure:
 - 0% failures preserves detection score
 - HTTP errors destroy score quickly
 
-This repository currently has `0` HTTP errors in the latest CI-like run, but still loses ranking score through fraud classification errors. Accuracy work is the main remaining lane.
+This repository currently keeps transport errors at `0` in CI-like runs. The
+candidate IVF2 path also replays the public payload with `0` false positives and
+`0` false negatives locally. Remaining ranking work is p99 reduction without
+giving back correctness.

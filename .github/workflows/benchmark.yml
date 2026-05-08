@@ -42,6 +42,10 @@ on:
         description: IVF k-means iterations
         required: true
         default: "6"
+      ivf_scale:
+        description: IVF int16 quantization scale
+        required: true
+        default: "10000"
       ivf_fast_nprobe:
         description: IVF first-pass nprobe
         required: true
@@ -117,6 +121,7 @@ jobs:
           IVF_CLUSTERS: ${{ inputs.ivf_clusters }}
           IVF_TRAIN_SAMPLE: ${{ inputs.ivf_train_sample }}
           IVF_ITERATIONS: ${{ inputs.ivf_iterations }}
+          IVF_SCALE: ${{ inputs.ivf_scale }}
           IVF_FAST_NPROBE: ${{ inputs.ivf_fast_nprobe }}
           IVF_FULL_NPROBE: ${{ inputs.ivf_full_nprobe }}
           IVF_BOUNDARY_FULL: ${{ inputs.ivf_boundary_full }}
@@ -142,6 +147,7 @@ jobs:
           IVF_CLUSTERS: ${{ inputs.ivf_clusters }}
           IVF_TRAIN_SAMPLE: ${{ inputs.ivf_train_sample }}
           IVF_ITERATIONS: ${{ inputs.ivf_iterations }}
+          IVF_SCALE: ${{ inputs.ivf_scale }}
           IVF_FAST_NPROBE: ${{ inputs.ivf_fast_nprobe }}
           IVF_FULL_NPROBE: ${{ inputs.ivf_full_nprobe }}
           IVF_BOUNDARY_FULL: ${{ inputs.ivf_boundary_full }}

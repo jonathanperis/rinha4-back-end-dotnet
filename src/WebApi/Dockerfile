@@ -14,6 +14,7 @@ ARG BUILD_CONFIGURATION=Release
 ARG IVF_CLUSTERS=4096
 ARG IVF_TRAIN_SAMPLE=65536
 ARG IVF_ITERATIONS=6
+ARG IVF_SCALE=10000
 ARG CACHEBUST
 ARG TARGETARCH
 
@@ -40,7 +41,7 @@ COPY ["data/mcc_risk.json", "data/"]
 COPY ["data/normalization.json", "data/"]
 
 RUN dotnet build "DataConverter/DataConverter.csproj" -c Release -o /app/build-converter
-RUN IVF_CLUSTERS=$IVF_CLUSTERS IVF_TRAIN_SAMPLE=$IVF_TRAIN_SAMPLE IVF_ITERATIONS=$IVF_ITERATIONS \
+RUN IVF_CLUSTERS=$IVF_CLUSTERS IVF_TRAIN_SAMPLE=$IVF_TRAIN_SAMPLE IVF_ITERATIONS=$IVF_ITERATIONS IVF_SCALE=$IVF_SCALE \
     /app/build-converter/DataConverter data/
 
 # ── WebApi ──

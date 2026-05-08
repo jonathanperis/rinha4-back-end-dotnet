@@ -28,7 +28,7 @@ nginx stream :9999
 
 The `references.ivf.bin` file stores:
 
-- `IVF2` magic
+- `IVF2` magic for the candidate default, or `IVF3` magic for lower-scale int32 A/B
 - trained int16 centroids in dimension-major layout
 - per-cluster int16 bounding boxes in dimension-major layout
 - packed int16 vector blocks
@@ -40,7 +40,15 @@ Default and only runtime mode uses IVF.
 
 Startup loads the IVF index and runs nearest-cluster search. Current settings
 target `nprobe=1`, one-pass full bbox repair, and rounded int16 squared L2
-ranking. If the IVF file is missing or invalid, startup fails.
+ranking. IVF2 uses int64 accumulation for accuracy; IVF3 is available for
+lower-scale int32 scan experiments. If the IVF file is missing or invalid,
+startup fails.
+
+Runtime implementation is split into focused partial files:
+
+- `IvfIndex.cs`: binary loading, validation, immutable arrays, and search dispatch
+- `IvfIndex.Int64.cs`: IVF2 candidate path for `IVF_SCALE=10000`
+- `IvfIndex.Int32.cs`: IVF3 lower-scale int32 A/B path
 
 ## Startup readiness
 

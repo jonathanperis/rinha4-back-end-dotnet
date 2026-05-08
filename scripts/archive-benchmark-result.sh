@@ -19,6 +19,7 @@ REPORT_KIND="${BENCHMARK_REPORT_KIND:-}"
 IVF_CLUSTERS="${IVF_CLUSTERS:-}"
 IVF_TRAIN_SAMPLE="${IVF_TRAIN_SAMPLE:-}"
 IVF_ITERATIONS="${IVF_ITERATIONS:-}"
+IVF_SCALE="${IVF_SCALE:-}"
 IVF_FAST_NPROBE="${IVF_FAST_NPROBE:-}"
 IVF_FULL_NPROBE="${IVF_FULL_NPROBE:-}"
 IVF_BOUNDARY_FULL="${IVF_BOUNDARY_FULL:-}"
@@ -71,6 +72,7 @@ jq -n \
     --arg ivf_clusters "$IVF_CLUSTERS" \
     --arg ivf_train_sample "$IVF_TRAIN_SAMPLE" \
     --arg ivf_iterations "$IVF_ITERATIONS" \
+    --arg ivf_scale "$IVF_SCALE" \
     --arg ivf_fast_nprobe "$IVF_FAST_NPROBE" \
     --arg ivf_full_nprobe "$IVF_FULL_NPROBE" \
     --arg ivf_boundary_full "$IVF_BOUNDARY_FULL" \
@@ -98,6 +100,7 @@ jq -n \
                 ivf_clusters: $ivf_clusters,
                 ivf_train_sample: $ivf_train_sample,
                 ivf_iterations: $ivf_iterations,
+                ivf_scale: $ivf_scale,
                 ivf_fast_nprobe: $ivf_fast_nprobe,
                 ivf_full_nprobe: $ivf_full_nprobe,
                 ivf_boundary_full: $ivf_boundary_full,
@@ -123,6 +126,7 @@ for report in "$REPORTS_DIR"/${REPORT_PREFIX}-*.json; do
         image: .metadata.image,
         compose_file: .metadata.compose_file,
         report_kind: (.metadata.report_kind // (if .metadata.compose_file == "docker-compose.yml" then "candidate" else "experiment" end)),
+        ivf_scale: (.metadata.benchmark_config.ivf_scale // ""),
         ivf_fast_nprobe: (.metadata.benchmark_config.ivf_fast_nprobe // ""),
         ivf_full_nprobe: (.metadata.benchmark_config.ivf_full_nprobe // ""),
         html_report: .metadata.html_report,

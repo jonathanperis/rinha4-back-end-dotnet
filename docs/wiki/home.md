@@ -9,7 +9,7 @@ The current build is optimized for latency first:
 - socket-file healthchecks before nginx starts
 - manual JSON request parsing
 - prebuilt HTTP responses
-- rounded int16 IVF fraud classifier
+- rounded int16 IVF fraud classifier with an experimental IVF3 int32 scan path
 - archived official-like k6 results after each main build
 
 The project target is explicit: top-10 ranking, p99 close to 1ms, and 0% failures.
@@ -18,14 +18,11 @@ The project target is explicit: top-10 ranking, p99 close to 1ms, and 0% failure
 
 Latest CI benchmark history lives at `/reports/`.
 
-Recent official-like signal from GitHub Actions:
+The home page reads the latest official Rinha issue result from
+`docs/public/official/latest.json` and the latest CI candidate result from
+`docs/public/reports/latest-candidate.json`.
 
-- p99: `1.35ms`
-- HTTP errors: `0`
-- failure rate: `2.35%`
-- score: `3204.75`
-
-Those results are useful for regression tracking. They are not official Rinha hardware results.
+CI results are useful for regression tracking. They are not official Rinha hardware results.
 
 ## Active lane
 

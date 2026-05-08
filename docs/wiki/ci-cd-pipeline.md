@@ -15,8 +15,8 @@ The automatic main-branch benchmark runs against the immutable image tag built i
 
 Manual **Official-like Benchmark** runs can archive experiment reports too.
 For IVF, dispatch with `report_kind=experiment`, `IVF_FAST_NPROBE=1`,
-`IVF_FULL_NPROBE=1`, bbox repair on, `IVF_BOUNDARY_FULL=false`, and repair
-fraud range `0..5`.
+`IVF_FULL_NPROBE=1`, bbox repair on, `IVF_BOUNDARY_FULL=false`, repair fraud
+range `0..5`, and the `IVF_SCALE` value under test.
 
 ## Report files
 
