@@ -289,6 +289,12 @@ internal sealed partial class IvfIndex
         Span<int> bestClusters,
         Span<long> bestDistances)
     {
+        if (bestClusters.Length == 1)
+        {
+            FindNearestCentroidLong(query, queryVectors, bestClusters, bestDistances);
+            return;
+        }
+
         if (Avx2.IsSupported)
         {
             FindNearestCentroidsAvx2Long(query, queryVectors, bestClusters, bestDistances);
@@ -341,6 +347,70 @@ internal sealed partial class IvfIndex
     }
 
     /// <summary>
+    /// Finds nearest IVF2 centroid for the common nprobe=1 path.
+    /// </summary>
+    /// <param name="query">Int16 query vector used for scalar tail clusters.</param>
+    /// <param name="queryVectors">Pre-broadcast AVX2 query vectors.</param>
+    /// <param name="bestClusters">Single-slot best cluster id.</param>
+    /// <param name="bestDistances">Single-slot best centroid distance.</param>
+    private void FindNearestCentroidLong(
+        ReadOnlySpan<short> query,
+        scoped ReadOnlySpan<Vector256<int>> queryVectors,
+        Span<int> bestClusters,
+        Span<long> bestDistances)
+    {
+        long bestDistance = long.MaxValue;
+        int bestCluster = 0;
+        int cluster = 0;
+
+        if (Avx2.IsSupported)
+        {
+            Span<long> laneDistances = stackalloc long[8];
+            int simdLimit = clusters & ~7;
+            for (; cluster < simdLimit; cluster += 8)
+            {
+                Vector256<long> accLo = Vector256<long>.Zero;
+                Vector256<long> accHi = Vector256<long>.Zero;
+                for (int dim = 0; dim < Dims; dim++)
+                {
+                    ref short centroidRef = ref centroids[dim * clusters + cluster];
+                    Vector256<int> centroid = Avx2.ConvertToVector256Int32(Unsafe.ReadUnaligned<Vector128<short>>(ref Unsafe.As<short, byte>(ref centroidRef)));
+                    Vector256<int> diff = Avx2.Subtract(queryVectors[dim], centroid);
+                    Vector256<int> squared = Avx2.MultiplyLow(diff, diff);
+
+                    accLo = Avx2.Add(accLo, Avx2.ConvertToVector256Int64(squared.GetLower()));
+                    accHi = Avx2.Add(accHi, Avx2.ConvertToVector256Int64(squared.GetUpper()));
+                }
+
+                accLo.CopyTo(laneDistances);
+                accHi.CopyTo(laneDistances[4..]);
+                for (int lane = 0; lane < 8; lane++)
+                {
+                    long distance = laneDistances[lane];
+                    if (distance < bestDistance)
+                    {
+                        bestDistance = distance;
+                        bestCluster = cluster + lane;
+                    }
+                }
+            }
+        }
+
+        for (; cluster < clusters; cluster++)
+        {
+            long distance = CentroidDistanceLong(cluster, query);
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                bestCluster = cluster;
+            }
+        }
+
+        bestClusters[0] = bestCluster;
+        bestDistances[0] = bestDistance;
+    }
+
+    /// <summary>
     /// Computes IVF2 quantized centroid distance for one cluster.
     /// </summary>
     /// <param name="cluster">Cluster id.</param>
@@ -365,6 +435,7 @@ internal sealed partial class IvfIndex
     /// <param name="distances">Mutable best centroid distances.</param>
     /// <param name="cluster">Candidate cluster id.</param>
     /// <param name="distance">Candidate centroid distance.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void InsertProbeLong(Span<int> clusters, Span<long> distances, int cluster, long distance)
     {
         int last = distances.Length - 1;
@@ -388,17 +459,15 @@ internal sealed partial class IvfIndex
     /// </summary>
     /// <param name="candidateLabels">Candidate labels ordered nearest-first.</param>
     /// <returns>Fraud count from <c>0</c> through <c>5</c>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static byte CountFrauds(ReadOnlySpan<byte> candidateLabels)
     {
-        byte count = 0;
-        int limit = Math.Min(5, candidateLabels.Length);
-        for (int i = 0; i < limit; i++)
-        {
-            if (candidateLabels[i] != 0)
-                count++;
-        }
-
-        return count;
+        ref byte label = ref MemoryMarshal.GetReference(candidateLabels);
+        return (byte)((label != 0 ? 1 : 0) +
+                      (Unsafe.Add(ref label, 1) != 0 ? 1 : 0) +
+                      (Unsafe.Add(ref label, 2) != 0 ? 1 : 0) +
+                      (Unsafe.Add(ref label, 3) != 0 ? 1 : 0) +
+                      (Unsafe.Add(ref label, 4) != 0 ? 1 : 0));
     }
 
     /// <summary>
