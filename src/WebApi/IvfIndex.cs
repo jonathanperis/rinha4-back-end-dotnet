@@ -255,13 +255,23 @@ internal sealed class IvfIndex
         scoped ReadOnlySpan<int> probedClusters,
         ReadOnlySpan<short> query)
     {
+        int bitsetWords = (clusters + 63) >> 6;
+        Span<ulong> scannedClusters = stackalloc ulong[bitsetWords];
+        foreach (int cluster in probedClusters)
+            scannedClusters[cluster >> 6] |= 1UL << (cluster & 63);
+
+        long worstDistance = candidateDistances[^1];
         for (int cluster = 0; cluster < clusters; cluster++)
         {
-            if (offsets[cluster] == offsets[cluster + 1] || Contains(probedClusters, cluster))
+            if (offsets[cluster] == offsets[cluster + 1] ||
+                (scannedClusters[cluster >> 6] & (1UL << (cluster & 63))) != 0)
                 continue;
 
-            if (BoundingBoxLowerBound(cluster, query) <= candidateDistances[^1])
+            if (BoundingBoxLowerBound(cluster, query) <= worstDistance)
+            {
                 ScanBlocks(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], query);
+                worstDistance = candidateDistances[^1];
+            }
         }
     }
 
@@ -463,23 +473,6 @@ internal sealed class IvfIndex
 
         distances[pos] = distance;
         clusters[pos] = cluster;
-    }
-
-    /// <summary>
-    /// Checks whether a cluster was already scanned.
-    /// </summary>
-    /// <param name="values">Scanned cluster ids.</param>
-    /// <param name="value">Cluster id to find.</param>
-    /// <returns><see langword="true"/> when <paramref name="value"/> exists in <paramref name="values"/>.</returns>
-    private static bool Contains(ReadOnlySpan<int> values, int value)
-    {
-        foreach (int item in values)
-        {
-            if (item == value)
-                return true;
-        }
-
-        return false;
     }
 
     /// <summary>
