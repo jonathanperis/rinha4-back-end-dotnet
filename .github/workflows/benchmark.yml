@@ -1,20 +1,16 @@
-name: Official-like Benchmark
+name: Competitor Benchmark
 
 on:
   workflow_dispatch:
     inputs:
       compose_file:
-        description: Docker Compose LB override to benchmark
+        description: Compose file to benchmark
         required: true
-        default: docker-compose.nginx.yml
+        default: all-comparison
         type: choice
         options:
           - all-comparison
-          - all-lb-variants
-          - docker-compose.nginx.yml
-          - docker-compose.haproxy.yml
-          - docker-compose.envoy.yml
-          - docker-compose.yarp.yml
+          - competitor-compose/jonathanperis/docker-compose.yml
           - competitor-compose/zan/docker-compose.yml
           - competitor-compose/danilo/docker-compose.yml
           - competitor-compose/jordao/docker-compose.yml
@@ -27,105 +23,11 @@ on:
         required: true
         default: grafana/k6:latest
       webapi_image:
-        description: Optional prebuilt WebApi image; empty means build from checkout
-        required: false
-        default: ""
-      report_kind:
-        description: Report lane used by GitHub Pages archive
-        required: true
-        default: experiment
-        type: choice
-        options:
-          - experiment
-          - candidate
-          - comparison
-          - official-calibrated
-      exact_max_refs:
-        description: Exact scorer reference cap; <=0 uses all references
-        required: true
-        default: "100000"
-      ivf_clusters:
-        description: IVF build cluster count
-        required: true
-        default: "2048"
-      ivf_train_sample:
-        description: IVF build training sample size
-        required: true
-        default: "65536"
-      ivf_iterations:
-        description: IVF k-means iterations
-        required: true
-        default: "6"
-      ivf_scale:
-        description: IVF int16 quantization scale
-        required: true
-        default: "10000"
-      ivf_fast_nprobe:
-        description: IVF first-pass nprobe
-        required: true
-        default: "1"
-      ivf_full_nprobe:
-        description: IVF boundary-pass nprobe
-        required: true
-        default: "1"
-      ivf_boundary_full:
-        description: Enable boundary second pass
-        required: true
-        default: "false"
-        type: choice
-        options:
-          - "true"
-          - "false"
-      ivf_bbox_repair:
-        description: Enable bounding-box repair
-        required: true
-        default: "true"
-        type: choice
-        options:
-          - "true"
-          - "false"
-      ivf_repair_min_frauds:
-        description: Inclusive repair fraud-count minimum
-        required: true
-        default: "0"
-      ivf_repair_max_frauds:
-        description: Inclusive repair fraud-count maximum
-        required: true
-        default: "5"
-      benchmark_stack_cpuset:
-        description: Optional Docker cpuset for WebApi/LB containers; set 0 for one-core contention probe
-        required: false
-        default: ""
-      benchmark_k6_cpuset:
-        description: Optional Docker cpuset for k6 container; usually empty, set 0 only for full host-contention probes
-        required: false
-        default: ""
-      benchmark_api_cpuset:
-        description: Optional Docker cpuset for WebApi containers; overrides stack cpuset for API only
-        required: false
-        default: ""
-      benchmark_proxy_cpuset:
-        description: Optional Docker cpuset for proxy container; overrides stack cpuset for proxy only
-        required: false
-        default: ""
-      benchmark_api_cpus:
-        description: Optional calibrated CPU quota for each WebApi container, e.g. 0.20
-        required: false
-        default: ""
-      benchmark_proxy_cpus:
-        description: Optional calibrated CPU quota for proxy container, e.g. 0.10
-        required: false
-        default: ""
-      benchmark_api_memory:
-        description: Optional calibrated memory limit for each WebApi container, e.g. 165MB
-        required: false
-        default: ""
-      benchmark_proxy_memory:
-        description: Optional calibrated memory limit for proxy container, e.g. 20MB
+        description: Optional Jonathan Peris image override
         required: false
         default: ""
       benchmark_repetitions:
-        description: Number of k6 repetitions; median p99 is archived when >1
+        description: Number of k6 repetitions; median p99 is selected when >1
         required: true
         default: "1"
 
@@ -133,74 +35,34 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  official-like-benchmark:
-    name: ${{ matrix.lb.name }} official-like k6 benchmark
+  benchmark:
+    name: ${{ matrix.participant.name }} benchmark
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        lb:
-          - name: nginx
-            compose_file: docker-compose.nginx.yml
-            group: ours-lb comparison
-            standalone: "false"
-            pull_image: "false"
-            no_build: "false"
-          - name: haproxy
-            compose_file: docker-compose.haproxy.yml
-            group: ours-lb
-            standalone: "false"
-            pull_image: "false"
-            no_build: "false"
-          - name: envoy
-            compose_file: docker-compose.envoy.yml
-            group: ours-lb
-            standalone: "false"
-            pull_image: "false"
-            no_build: "false"
-          - name: yarp
-            compose_file: docker-compose.yarp.yml
-            group: ours-lb
-            standalone: "false"
-            pull_image: "false"
-            no_build: "false"
+        participant:
+          - name: jonathanperis
+            compose_file: competitor-compose/jonathanperis/docker-compose.yml
           - name: zan
             compose_file: competitor-compose/zan/docker-compose.yml
-            group: comparison
-            standalone: "true"
-            pull_image: "true"
-            no_build: "true"
           - name: danilo
             compose_file: competitor-compose/danilo/docker-compose.yml
-            group: comparison
-            standalone: "true"
-            pull_image: "true"
-            no_build: "true"
           - name: jordao
             compose_file: competitor-compose/jordao/docker-compose.yml
-            group: comparison
-            standalone: "true"
-            pull_image: "true"
-            no_build: "true"
-    concurrency:
-      group: benchmark-${{ github.run_id }}-${{ matrix.lb.name }}
-      cancel-in-progress: false
 
     permissions:
-      actions: write
-      contents: write
+      contents: read
 
     steps:
       - name: Checkout
-        if: ${{ inputs.compose_file == matrix.lb.compose_file || (inputs.compose_file == 'all-lb-variants' && contains(matrix.lb.group, 'ours-lb')) || (inputs.compose_file == 'all-comparison' && contains(matrix.lb.group, 'comparison')) }}
+        if: ${{ inputs.compose_file == matrix.participant.compose_file || inputs.compose_file == 'all-comparison' }}
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Show runner capacity
-        if: ${{ inputs.compose_file == matrix.lb.compose_file || (inputs.compose_file == 'all-lb-variants' && contains(matrix.lb.group, 'ours-lb')) || (inputs.compose_file == 'all-comparison' && contains(matrix.lb.group, 'comparison')) }}
+        if: ${{ inputs.compose_file == matrix.participant.compose_file || inputs.compose_file == 'all-comparison' }}
         run: |
           uname -a
           nproc
@@ -209,159 +71,125 @@ jobs:
           docker compose version
 
       - name: Run benchmark
-        if: ${{ inputs.compose_file == matrix.lb.compose_file || (inputs.compose_file == 'all-lb-variants' && contains(matrix.lb.group, 'ours-lb')) || (inputs.compose_file == 'all-comparison' && contains(matrix.lb.group, 'comparison')) }}
+        if: ${{ inputs.compose_file == matrix.participant.compose_file || inputs.compose_file == 'all-comparison' }}
         env:
-          COMPOSE_FILE: ${{ matrix.lb.compose_file }}
+          COMPOSE_FILE: ${{ matrix.participant.compose_file }}
           OFFICIAL_REF: ${{ inputs.official_ref }}
           K6_IMAGE: ${{ inputs.k6_image }}
-          WEBAPI_IMAGE: ${{ inputs.webapi_image }}
-          BENCHMARK_PULL_IMAGE: ${{ matrix.lb.pull_image == 'true' && 'true' || (inputs.webapi_image != '' && 'true' || 'false') }}
-          BENCHMARK_NO_BUILD: ${{ matrix.lb.no_build == 'true' && 'true' || (inputs.webapi_image != '' && 'true' || 'false') }}
-          BENCHMARK_STANDALONE_COMPOSE: ${{ matrix.lb.standalone }}
-          RESULTS_DIR: benchmark-results-${{ matrix.lb.name }}
-          IVF_CLUSTERS: ${{ inputs.ivf_clusters }}
-          IVF_TRAIN_SAMPLE: ${{ inputs.ivf_train_sample }}
-          IVF_ITERATIONS: ${{ inputs.ivf_iterations }}
-          IVF_SCALE: ${{ inputs.ivf_scale }}
-          IVF_FAST_NPROBE: ${{ inputs.ivf_fast_nprobe }}
-          IVF_FULL_NPROBE: ${{ inputs.ivf_full_nprobe }}
-          IVF_BOUNDARY_FULL: ${{ inputs.ivf_boundary_full }}
-          IVF_BBOX_REPAIR: ${{ inputs.ivf_bbox_repair }}
-          IVF_REPAIR_MIN_FRAUDS: ${{ inputs.ivf_repair_min_frauds }}
-          IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
-          BENCHMARK_STACK_CPUSET: ${{ inputs.benchmark_stack_cpuset }}
-          BENCHMARK_K6_CPUSET: ${{ inputs.benchmark_k6_cpuset }}
-          BENCHMARK_API_CPUSET: ${{ inputs.benchmark_api_cpuset }}
-          BENCHMARK_PROXY_CPUSET: ${{ inputs.benchmark_proxy_cpuset }}
-          BENCHMARK_API_CPUS: ${{ inputs.benchmark_api_cpus }}
-          BENCHMARK_PROXY_CPUS: ${{ inputs.benchmark_proxy_cpus }}
-          BENCHMARK_API_MEMORY: ${{ inputs.benchmark_api_memory }}
-          BENCHMARK_PROXY_MEMORY: ${{ inputs.benchmark_proxy_memory }}
+          WEBAPI_IMAGE: ${{ matrix.participant.name == 'jonathanperis' && inputs.webapi_image || '' }}
+          BENCHMARK_PULL_IMAGE: "true"
+          BENCHMARK_NO_BUILD: "true"
+          BENCHMARK_STANDALONE_COMPOSE: "true"
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
-          EXACT_MAX_REFS: ${{ inputs.exact_max_refs }}
-        run: bash scripts/ci-official-benchmark.sh
-
-      - name: Write benchmark metadata
-        if: ${{ always() && (inputs.compose_file == matrix.lb.compose_file || (inputs.compose_file == 'all-lb-variants' && contains(matrix.lb.group, 'ours-lb')) || (inputs.compose_file == 'all-comparison' && contains(matrix.lb.group, 'comparison'))) }}
+          RESULTS_DIR: benchmark-results-${{ matrix.participant.name }}
         run: |
-          mkdir -p benchmark-results-${{ matrix.lb.name }}
-          cat > benchmark-results-${{ matrix.lb.name }}/metadata.env <<'EOF'
-          LB_NAME=${{ matrix.lb.name }}
-          COMPOSE_FILE=${{ matrix.lb.compose_file }}
-          EOF
+          set -euo pipefail
 
-      - name: Upload benchmark artifacts
-        if: ${{ always() && (inputs.compose_file == matrix.lb.compose_file || (inputs.compose_file == 'all-lb-variants' && contains(matrix.lb.group, 'ours-lb')) || (inputs.compose_file == 'all-comparison' && contains(matrix.lb.group, 'comparison'))) }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: rinha-benchmark-results-${{ matrix.lb.name }}-${{ github.run_number }}
-          path: |
-            benchmark-results-${{ matrix.lb.name }}/metadata.env
-            benchmark-results-${{ matrix.lb.name }}/results.json
-            benchmark-results-${{ matrix.lb.name }}/k6-report.html
-            benchmark-results-${{ matrix.lb.name }}/k6-report-repetition-*.html
-            benchmark-results-${{ matrix.lb.name }}/results-repetition-*.json
-            benchmark-results-${{ matrix.lb.name }}/repetition-summary.json
-            benchmark-results-${{ matrix.lb.name }}/docker-compose.log
-            benchmark-results-${{ matrix.lb.name }}/docker-state-*.txt
-            benchmark-results-${{ matrix.lb.name }}/docker-compose.calibration.yml
-          if-no-files-found: ignore
+          OFFICIAL_REPO="https://github.com/zanfranceschi/rinha-de-backend-2026.git"
+          mkdir -p "$RESULTS_DIR"
+          rm -rf "$RESULTS_DIR/official"
 
-  archive-benchmark-reports:
-    name: Archive benchmark reports
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: official-like-benchmark
-    if: ${{ always() && !cancelled() }}
-    permissions:
-      actions: write
-      contents: write
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Download benchmark artifacts
-        uses: actions/download-artifact@v7
-        with:
-          pattern: rinha-benchmark-results-*-${{ github.run_number }}
-          path: benchmark-artifacts
-
-      - name: Archive benchmark reports
-        id: archive-benchmark-reports
-        env:
-          BENCHMARK_IMAGE: ${{ inputs.webapi_image }}
-          BENCHMARK_SHA: ${{ github.sha }}
-          BENCHMARK_RUN_ID: ${{ github.run_id }}
-          BENCHMARK_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          BENCHMARK_REPORT_KIND: ${{ inputs.compose_file == 'all-lb-variants' && 'experiment' || (inputs.compose_file == 'all-comparison' && 'comparison' || inputs.report_kind) }}
-          OFFICIAL_REF: ${{ inputs.official_ref }}
-          K6_IMAGE: ${{ inputs.k6_image }}
-          IVF_CLUSTERS: ${{ inputs.ivf_clusters }}
-          IVF_TRAIN_SAMPLE: ${{ inputs.ivf_train_sample }}
-          IVF_ITERATIONS: ${{ inputs.ivf_iterations }}
-          IVF_SCALE: ${{ inputs.ivf_scale }}
-          IVF_FAST_NPROBE: ${{ inputs.ivf_fast_nprobe }}
-          IVF_FULL_NPROBE: ${{ inputs.ivf_full_nprobe }}
-          IVF_BOUNDARY_FULL: ${{ inputs.ivf_boundary_full }}
-          IVF_BBOX_REPAIR: ${{ inputs.ivf_bbox_repair }}
-          IVF_REPAIR_MIN_FRAUDS: ${{ inputs.ivf_repair_min_frauds }}
-          IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
-          BENCHMARK_STACK_CPUSET: ${{ inputs.benchmark_stack_cpuset }}
-          BENCHMARK_K6_CPUSET: ${{ inputs.benchmark_k6_cpuset }}
-          BENCHMARK_API_CPUSET: ${{ inputs.benchmark_api_cpuset }}
-          BENCHMARK_PROXY_CPUSET: ${{ inputs.benchmark_proxy_cpuset }}
-          BENCHMARK_API_CPUS: ${{ inputs.benchmark_api_cpus }}
-          BENCHMARK_PROXY_CPUS: ${{ inputs.benchmark_proxy_cpus }}
-          BENCHMARK_API_MEMORY: ${{ inputs.benchmark_api_memory }}
-          BENCHMARK_PROXY_MEMORY: ${{ inputs.benchmark_proxy_memory }}
-          BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
-          EXACT_MAX_REFS: ${{ inputs.exact_max_refs }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin "${GITHUB_REF_NAME:-main}"
-          archived=false
-          for metadata in benchmark-artifacts/*/metadata.env; do
-            [ -f "$metadata" ] || continue
-            artifact_dir="$(dirname "$metadata")"
-            COMPOSE_FILE=""
-            LB_NAME=""
-            source "$metadata"
-            if [ ! -f "$artifact_dir/results.json" ]; then
-              echo "No results for $LB_NAME; skip archive"
-              continue
-            fi
-            RESULTS_JSON="$artifact_dir/results.json" \
-              K6_HTML_REPORT="$artifact_dir/k6-report.html" \
-              COMPOSE_LOG="$artifact_dir/docker-compose.log" \
-              REPETITION_SUMMARY="$artifact_dir/repetition-summary.json" \
-              COMPOSE_FILE="$COMPOSE_FILE" \
-              bash scripts/archive-benchmark-result.sh
-            archived=true
-          done
-          echo "archived=$archived" >> "$GITHUB_OUTPUT"
-
-      - name: Commit benchmark reports
-        id: commit-benchmark-reports
-        if: steps.archive-benchmark-reports.outputs.archived == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/public/reports
-          if git diff --cached --quiet; then
-            echo "No benchmark report changes to commit"
-            echo "committed=false" >> "$GITHUB_OUTPUT"
-          else
-            git commit -m "docs: archive rinha benchmark"
-            git push
-            echo "committed=true" >> "$GITHUB_OUTPUT"
+          if ! [[ "$BENCHMARK_REPETITIONS" =~ ^[0-9]+$ ]] || [[ "$BENCHMARK_REPETITIONS" -lt 1 ]]; then
+            echo "BENCHMARK_REPETITIONS must be a positive integer" >&2
+            exit 1
           fi
 
-      - name: Refresh GitHub Pages report site
-        if: steps.commit-benchmark-reports.outputs.committed == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh workflow run pages.yml --ref main
+          compose_args=(--compatibility -f "$COMPOSE_FILE")
+
+          cleanup() {
+            docker compose "${compose_args[@]}" logs --no-color > "$RESULTS_DIR/docker-compose.log" 2>&1 || true
+            docker compose "${compose_args[@]}" down --volumes --remove-orphans > /dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          echo "==> Fetching official Rinha test"
+          git clone --depth 1 --branch "$OFFICIAL_REF" "$OFFICIAL_REPO" "$RESULTS_DIR/official"
+
+          echo "==> Pulling published images"
+          docker compose "${compose_args[@]}" pull
+
+          echo "==> Starting stack"
+          if [[ -n "${WEBAPI_IMAGE:-}" ]]; then
+            echo "Using WEBAPI_IMAGE=$WEBAPI_IMAGE"
+          fi
+          docker compose "${compose_args[@]}" up -d --no-build
+
+          echo "==> Waiting for /ready"
+          for attempt in {1..20}; do
+            if curl -fsS http://localhost:9999/ready > /dev/null 2>&1; then
+              echo "Ready after attempt $attempt"
+              break
+            fi
+            if [[ "$attempt" == "20" ]]; then
+              echo "Service did not become ready" >&2
+              exit 1
+            fi
+            sleep 3
+          done
+
+          echo "==> Running official k6 benchmark"
+          chmod -R a+rwX "$RESULTS_DIR/official"
+          repeat_files=()
+          for repetition in $(seq 1 "$BENCHMARK_REPETITIONS"); do
+            echo "==> k6 repetition $repetition/$BENCHMARK_REPETITIONS"
+            rm -f "$RESULTS_DIR/official/test/results.json" "$RESULTS_DIR/official/test/k6-report.html"
+            docker run --rm \
+              --network host \
+              --user "$(id -u):$(id -g)" \
+              -e K6_NO_USAGE_REPORT=true \
+              -e K6_WEB_DASHBOARD=true \
+              -e K6_WEB_DASHBOARD_PORT=-1 \
+              -e K6_WEB_DASHBOARD_EXPORT=test/k6-report.html \
+              -v "$PWD/$RESULTS_DIR/official:/official" \
+              -w /official \
+              "$K6_IMAGE" run test/test.js
+
+            result_file="$RESULTS_DIR/results-repetition-$repetition.json"
+            cp "$RESULTS_DIR/official/test/results.json" "$result_file"
+            repeat_files+=("$result_file")
+            if [[ -f "$RESULTS_DIR/official/test/k6-report.html" ]]; then
+              cp "$RESULTS_DIR/official/test/k6-report.html" "$RESULTS_DIR/k6-report-repetition-$repetition.html"
+            fi
+          done
+
+          if [[ "$BENCHMARK_REPETITIONS" -eq 1 ]]; then
+            cp "${repeat_files[0]}" "$RESULTS_DIR/results.json"
+            if [[ -f "$RESULTS_DIR/k6-report-repetition-1.html" ]]; then
+              cp "$RESULTS_DIR/k6-report-repetition-1.html" "$RESULTS_DIR/k6-report.html"
+            fi
+          else
+            selected_repetition="$(jq -s '
+              to_entries
+              | sort_by((.value.p99 | sub("ms"; "") | tonumber))
+              | .[((length - 1) / 2 | floor)].key + 1
+            ' "${repeat_files[@]}")"
+            cp "$RESULTS_DIR/results-repetition-$selected_repetition.json" "$RESULTS_DIR/results.json"
+            if [[ -f "$RESULTS_DIR/k6-report-repetition-$selected_repetition.html" ]]; then
+              cp "$RESULTS_DIR/k6-report-repetition-$selected_repetition.html" "$RESULTS_DIR/k6-report.html"
+            fi
+            jq -s --argjson selected_repetition "$selected_repetition" '{
+              repetitions: length,
+              selected: "median_by_p99",
+              selected_repetition: $selected_repetition,
+              p99_ms: (map(.p99 | sub("ms"; "") | tonumber) | sort | {min: .[0], median: .[((length - 1) / 2 | floor)], max: .[-1]}),
+              final_score: (map(.scoring.final_score) | sort | {min: .[0], median: .[((length - 1) / 2 | floor)], max: .[-1]}),
+              failure_rate: map(.scoring.failure_rate)
+            }' "${repeat_files[@]}" > "$RESULTS_DIR/repetition-summary.json"
+          fi
+
+          jq . "$RESULTS_DIR/results.json"
+
+      - name: Upload benchmark artifacts
+        if: ${{ always() && (inputs.compose_file == matrix.participant.compose_file || inputs.compose_file == 'all-comparison') }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: rinha-benchmark-${{ matrix.participant.name }}-${{ github.run_number }}
+          path: |
+            benchmark-results-${{ matrix.participant.name }}/results.json
+            benchmark-results-${{ matrix.participant.name }}/k6-report.html
+            benchmark-results-${{ matrix.participant.name }}/k6-report-repetition-*.html
+            benchmark-results-${{ matrix.participant.name }}/results-repetition-*.json
+            benchmark-results-${{ matrix.participant.name }}/repetition-summary.json
+            benchmark-results-${{ matrix.participant.name }}/docker-compose.log
+            benchmark-results-${{ matrix.participant.name }}/docker-state-*.txt
+          if-no-files-found: ignore
