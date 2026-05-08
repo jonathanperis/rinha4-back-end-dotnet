@@ -1,14 +1,14 @@
 {
   "metadata": {
-    "timestamp": "2026-05-08T17:58:07Z",
+    "timestamp": "2026-05-08T17:58:05Z",
     "sha": "4b621d63e52c425afffe4a25d078cddd45e4e258",
     "short_sha": "4b621d63e52c",
     "run_id": "25570864820",
     "run_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25570864820",
     "image": "",
-    "compose_file": "docker-compose.yarp.yml",
+    "compose_file": "docker-compose.envoy.yml",
     "report_kind": "experiment",
-    "html_report": "rinha-benchmark-20260508175807-4b621d63e52c-docker-compose-yarp-yml.html",
+    "html_report": "rinha-benchmark-20260508175805-4b621d63e52c-docker-compose-envoy-yml.html",
     "official_ref": "main",
     "k6_image": "grafana/k6:latest",
     "source": "zanfranceschi/rinha-de-backend-2026:test/test.js",
@@ -46,20 +46,20 @@
       "edge_case_count": 797,
       "edge_case_rate": 0.0147
     },
-    "p99": "38.10ms",
+    "p99": "1.70ms",
     "scoring": {
       "breakdown": {
         "false_positive_detections": 0,
         "false_negative_detections": 0,
         "true_positive_detections": 24037,
-        "true_negative_detections": 30023,
+        "true_negative_detections": 30021,
         "http_errors": 0
       },
       "failure_rate": "0%",
       "weighted_errors_E": 0,
       "error_rate_epsilon": 0,
       "p99_score": {
-        "value": 1419.06,
+        "value": 2770.18,
         "cut_triggered": false
       },
       "detection_score": {
@@ -68,7 +68,7 @@
         "absolute_penalty": 0,
         "cut_triggered": false
       },
-      "final_score": 4419.06
+      "final_score": 5770.18
     }
   }
 }
