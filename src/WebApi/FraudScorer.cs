@@ -86,6 +86,7 @@ internal sealed class FraudScorer
     /// The method keeps per-request vectors on the stack, quantizes with the same
     /// scale used by <c>DataConverter</c>, and returns one prebuilt response.
     /// </remarks>
+    [SkipLocalsInit]
     public ReadOnlyMemory<byte> ScoreFraudRequest(ReadOnlySpan<byte> body)
     {
         FraudInput req;

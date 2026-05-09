@@ -10,6 +10,7 @@ internal sealed partial class IvfIndex
     /// <param name="nProbe">Number of nearest centroid clusters to scan.</param>
     /// <param name="repair">Whether bbox repair may scan additional clusters.</param>
     /// <returns>Fraud count from retained nearest candidates.</returns>
+    [SkipLocalsInit]
     private byte FraudCountOnceLong(
         ReadOnlySpan<short> quantizedQuery,
         int nProbe,
@@ -93,6 +94,7 @@ internal sealed partial class IvfIndex
     /// <summary>
     /// Scans bbox lower bounds eight clusters at a time using the dimension-major bound layout.
     /// </summary>
+    [SkipLocalsInit]
     private void RepairByBoundingBoxAvx2Long(
         Span<long> candidateDistances,
         Span<int> candidateIds,
@@ -195,6 +197,7 @@ internal sealed partial class IvfIndex
     /// <param name="startBlock">Inclusive block offset.</param>
     /// <param name="endBlock">Exclusive block offset.</param>
     /// <param name="queryVectors">Pre-broadcast AVX2 query vectors.</param>
+    [SkipLocalsInit]
     private void ScanBlocksAvx2Long(
         Span<long> candidateDistances,
         Span<int> candidateIds,
@@ -423,6 +426,7 @@ internal sealed partial class IvfIndex
     /// <param name="queryVectors">Pre-broadcast AVX2 query vectors.</param>
     /// <param name="bestClusters">Mutable best cluster ids.</param>
     /// <param name="bestDistances">Mutable best centroid distances.</param>
+    [SkipLocalsInit]
     private void FindNearestCentroidsAvx2Long(
         ReadOnlySpan<short> query,
         scoped ReadOnlySpan<Vector256<int>> queryVectors,
@@ -464,6 +468,7 @@ internal sealed partial class IvfIndex
     /// <param name="queryVectors">Pre-broadcast AVX2 query vectors.</param>
     /// <param name="bestClusters">Single-slot best cluster id.</param>
     /// <param name="bestDistances">Single-slot best centroid distance.</param>
+    [SkipLocalsInit]
     private void FindNearestCentroidLong(
         ReadOnlySpan<short> query,
         scoped ReadOnlySpan<Vector256<int>> queryVectors,
