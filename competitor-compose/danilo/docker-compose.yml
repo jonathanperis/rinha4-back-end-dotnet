@@ -19,7 +19,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.20"
+          cpus: "0.24"
           memory: "32MB"
 
   api1:
@@ -38,7 +38,7 @@ services:
       PROFILE_MIN_COUNT: "15"
       PROFILE_LEGIT_MIN_COUNT: "5"
       PROFILE_FRAUD_MIN_COUNT: "15"
-      EXACT_FALLBACK: risky
+      EXACT_FALLBACK: "risky"
       RISKY_BUCKETS: "1"
       RISKY_AMOUNT_MIN: "400"
       RISKY_AMOUNT_MAX: "3000"
@@ -60,7 +60,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.40"
+          cpus: "0.38"
           memory: "156MB"
 
   api2:
@@ -79,7 +79,7 @@ services:
       PROFILE_MIN_COUNT: "15"
       PROFILE_LEGIT_MIN_COUNT: "5"
       PROFILE_FRAUD_MIN_COUNT: "15"
-      EXACT_FALLBACK: risky
+      EXACT_FALLBACK: "risky"
       RISKY_BUCKETS: "1"
       RISKY_AMOUNT_MIN: "400"
       RISKY_AMOUNT_MAX: "3000"
@@ -101,7 +101,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.40"
+          cpus: "0.38"
           memory: "156MB"
 
 volumes:
