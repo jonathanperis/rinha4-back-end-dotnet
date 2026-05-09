@@ -211,24 +211,44 @@ internal sealed partial class IvfIndex
             Vector256<long> accLo = Vector256<long>.Zero;
             Vector256<long> accHi = Vector256<long>.Zero;
 
-            for (int dim = 0; dim < Dims; dim++)
-            {
-                ref short blockRef = ref blocks[blockBase + dim * blockLanes];
-                Vector128<short> packedValues = Unsafe.ReadUnaligned<Vector128<short>>(ref Unsafe.As<short, byte>(ref blockRef));
-                Vector256<int> values = Avx2.ConvertToVector256Int32(packedValues);
-                Vector256<int> diff = Avx2.Subtract(queryVectors[dim], values);
-                Vector256<int> squared = Avx2.MultiplyLow(diff, diff);
-
-                accLo = Avx2.Add(accLo, Avx2.ConvertToVector256Int64(squared.GetLower()));
-                accHi = Avx2.Add(accHi, Avx2.ConvertToVector256Int64(squared.GetUpper()));
-            }
+            AddBlockDimLong(blockBase, 5, queryVectors, ref accLo, ref accHi);
+            AddBlockDimLong(blockBase, 6, queryVectors, ref accLo, ref accHi);
+            AddBlockDimLong(blockBase, 2, queryVectors, ref accLo, ref accHi);
+            AddBlockDimLong(blockBase, 0, queryVectors, ref accLo, ref accHi);
+            AddBlockDimLong(blockBase, 7, queryVectors, ref accLo, ref accHi);
+            AddBlockDimLong(blockBase, 8, queryVectors, ref accLo, ref accHi);
+            AddBlockDimLong(blockBase, 11, queryVectors, ref accLo, ref accHi);
+            AddBlockDimLong(blockBase, 12, queryVectors, ref accLo, ref accHi);
 
             accLo.CopyTo(laneDistances);
             accHi.CopyTo(laneDistances[4..]);
 
             long worstDistance = candidateDistances[^1];
+            int passMask = 0;
             for (int lane = 0; lane < blockLanes; lane++)
             {
+                if (laneDistances[lane] <= worstDistance)
+                    passMask |= 1 << lane;
+            }
+
+            if (passMask == 0)
+                continue;
+
+            AddBlockDimLong(blockBase, 9, queryVectors, ref accLo, ref accHi);
+            AddBlockDimLong(blockBase, 10, queryVectors, ref accLo, ref accHi);
+            AddBlockDimLong(blockBase, 1, queryVectors, ref accLo, ref accHi);
+            AddBlockDimLong(blockBase, 13, queryVectors, ref accLo, ref accHi);
+            AddBlockDimLong(blockBase, 3, queryVectors, ref accLo, ref accHi);
+            AddBlockDimLong(blockBase, 4, queryVectors, ref accLo, ref accHi);
+
+            accLo.CopyTo(laneDistances);
+            accHi.CopyTo(laneDistances[4..]);
+
+            for (int lane = 0; lane < blockLanes; lane++)
+            {
+                if ((passMask & (1 << lane)) == 0)
+                    continue;
+
                 long distance = laneDistances[lane];
                 if (distance > worstDistance)
                     continue;
@@ -241,6 +261,24 @@ internal sealed partial class IvfIndex
                 worstDistance = candidateDistances[^1];
             }
         }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void AddBlockDimLong(
+        int blockBase,
+        int dim,
+        scoped ReadOnlySpan<Vector256<int>> queryVectors,
+        ref Vector256<long> accLo,
+        ref Vector256<long> accHi)
+    {
+        ref short blockRef = ref blocks[blockBase + dim * blockLanes];
+        Vector128<short> packedValues = Unsafe.ReadUnaligned<Vector128<short>>(ref Unsafe.As<short, byte>(ref blockRef));
+        Vector256<int> values = Avx2.ConvertToVector256Int32(packedValues);
+        Vector256<int> diff = Avx2.Subtract(queryVectors[dim], values);
+        Vector256<int> squared = Avx2.MultiplyLow(diff, diff);
+
+        accLo = Avx2.Add(accLo, Avx2.ConvertToVector256Int64(squared.GetLower()));
+        accHi = Avx2.Add(accHi, Avx2.ConvertToVector256Int64(squared.GetUpper()));
     }
 
     /// <summary>
