@@ -79,7 +79,7 @@ jobs:
             AOT=true
             EXTRA_OPTIMIZE=true
             BUILD_CONFIGURATION=Release
-            IVF_CLUSTERS=4096
+            IVF_CLUSTERS=2048
             IVF_SCALE=10000
             CACHEBUST=${{ github.sha }}
 
@@ -132,7 +132,7 @@ jobs:
             AOT=true
             EXTRA_OPTIMIZE=true
             BUILD_CONFIGURATION=Release
-            IVF_CLUSTERS=4096
+            IVF_CLUSTERS=2048
             IVF_SCALE=10000
             CACHEBUST=${{ github.sha }}
 
@@ -178,7 +178,7 @@ jobs:
           OFFICIAL_REF: main
           K6_IMAGE: grafana/k6:latest
           RESULTS_DIR: benchmark-results
-          IVF_CLUSTERS: "4096"
+          IVF_CLUSTERS: "2048"
           IVF_TRAIN_SAMPLE: "65536"
           IVF_ITERATIONS: "6"
           IVF_SCALE: "10000"
@@ -204,7 +204,7 @@ jobs:
           COMPOSE_FILE: docker-compose.nginx.yml
           OFFICIAL_REF: main
           K6_IMAGE: grafana/k6:latest
-          IVF_CLUSTERS: "4096"
+          IVF_CLUSTERS: "2048"
           IVF_TRAIN_SAMPLE: "65536"
           IVF_ITERATIONS: "6"
           IVF_SCALE: "10000"
@@ -230,7 +230,7 @@ jobs:
           OFFICIAL_REF: main
           K6_IMAGE: grafana/k6:latest
           RESULTS_DIR: benchmark-results-calibrated
-          IVF_CLUSTERS: "4096"
+          IVF_CLUSTERS: "2048"
           IVF_TRAIN_SAMPLE: "65536"
           IVF_ITERATIONS: "6"
           IVF_SCALE: "10000"
@@ -259,7 +259,7 @@ jobs:
           COMPOSE_FILE: docker-compose.nginx.yml
           OFFICIAL_REF: main
           K6_IMAGE: grafana/k6:latest
-          IVF_CLUSTERS: "4096"
+          IVF_CLUSTERS: "2048"
           IVF_TRAIN_SAMPLE: "65536"
           IVF_ITERATIONS: "6"
           IVF_SCALE: "10000"
