@@ -33,6 +33,7 @@ services:
       EXACT_PATH: /data/references.bin
       IVF_PATH: /data/references.ivf.bin
       BUCKET_PATH: /data/references.bucket.bin
+      BUCKET_PROFILE_FASTPATH: "${BUCKET_PROFILE_FASTPATH:-false}"
     tmpfs:
       - /tmp
     volumes:
@@ -71,6 +72,7 @@ services:
       EXACT_PATH: /data/references.bin
       IVF_PATH: /data/references.ivf.bin
       BUCKET_PATH: /data/references.bucket.bin
+      BUCKET_PROFILE_FASTPATH: "${BUCKET_PROFILE_FASTPATH:-false}"
     tmpfs:
       - /tmp
     volumes:
