@@ -113,10 +113,10 @@ on:
         description: Optional calibrated memory limit for each WebApi container, e.g. 165MB
         required: false
         default: ""
-      benchmark_proxy_memory:
-        description: Optional calibrated memory limit for proxy container, e.g. 20MB
-        required: false
-        default: ""
+      accept_loops:
+        description: WebApi ACCEPT_LOOPS value
+        required: true
+        default: "1"
       benchmark_repetitions:
         description: Number of k6 repetitions; median p99 is archived when >1
         required: true
@@ -193,7 +193,7 @@ jobs:
           BENCHMARK_API_CPUS: ${{ inputs.benchmark_api_cpus }}
           BENCHMARK_PROXY_CPUS: ${{ inputs.benchmark_proxy_cpus }}
           BENCHMARK_API_MEMORY: ${{ inputs.benchmark_api_memory }}
-          BENCHMARK_PROXY_MEMORY: ${{ inputs.benchmark_proxy_memory }}
+          ACCEPT_LOOPS: ${{ inputs.accept_loops }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
           MIN_WORKER_THREADS: ${{ inputs.min_worker_threads }}
           SCORER_MODE: ${{ inputs.scorer_mode }}
@@ -273,7 +273,7 @@ jobs:
           BENCHMARK_API_CPUS: ${{ inputs.benchmark_api_cpus }}
           BENCHMARK_PROXY_CPUS: ${{ inputs.benchmark_proxy_cpus }}
           BENCHMARK_API_MEMORY: ${{ inputs.benchmark_api_memory }}
-          BENCHMARK_PROXY_MEMORY: ${{ inputs.benchmark_proxy_memory }}
+          ACCEPT_LOOPS: ${{ inputs.accept_loops }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
           MIN_WORKER_THREADS: ${{ inputs.min_worker_threads }}
           SCORER_MODE: ${{ inputs.scorer_mode }}

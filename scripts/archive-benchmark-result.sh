@@ -36,6 +36,7 @@ BENCHMARK_API_MEMORY="${BENCHMARK_API_MEMORY:-}"
 BENCHMARK_PROXY_MEMORY="${BENCHMARK_PROXY_MEMORY:-}"
 BENCHMARK_REPETITIONS="${BENCHMARK_REPETITIONS:-1}"
 SCORER_MODE="${SCORER_MODE:-}"
+ACCEPT_LOOPS="${ACCEPT_LOOPS:-}"
 REPETITION_SUMMARY="${REPETITION_SUMMARY:-$(dirname "$RESULTS_JSON")/repetition-summary.json}"
 
 if [[ -z "$REPORT_KIND" ]]; then
@@ -120,6 +121,7 @@ jq -n \
     --arg benchmark_proxy_memory "$BENCHMARK_PROXY_MEMORY" \
     --arg benchmark_repetitions "$BENCHMARK_REPETITIONS" \
     --arg scorer_mode "$SCORER_MODE" \
+    --arg accept_loops "$ACCEPT_LOOPS" \
     --arg source "zanfranceschi/rinha-de-backend-2026:test/test.js" \
     --slurpfile result "$RESULTS_JSON" \
     "${summary_arg[@]}" \
@@ -164,7 +166,8 @@ jq -n \
                 ivf_bbox_repair: $ivf_bbox_repair,
                 ivf_repair_min_frauds: $ivf_repair_min_frauds,
                 ivf_repair_max_frauds: $ivf_repair_max_frauds,
-                scorer_mode: $scorer_mode
+                scorer_mode: $scorer_mode,
+                accept_loops: $accept_loops
             },
             repetition_summary: (if ($repetition_summary | type) == "array" then ($repetition_summary[0] // null) else $repetition_summary end)
         },
