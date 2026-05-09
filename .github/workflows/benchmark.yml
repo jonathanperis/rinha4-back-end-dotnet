@@ -116,6 +116,10 @@ on:
         description: Number of k6 repetitions; median p99 is archived when >1
         required: true
         default: "1"
+      min_worker_threads:
+        description: WebApi MIN_WORKER_THREADS value
+        required: true
+        default: "128"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -187,6 +191,7 @@ jobs:
           BENCHMARK_API_MEMORY: ${{ inputs.benchmark_api_memory }}
           BENCHMARK_PROXY_MEMORY: ${{ inputs.benchmark_proxy_memory }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
+          MIN_WORKER_THREADS: ${{ inputs.min_worker_threads }}
         run: bash scripts/ci-official-benchmark.sh
 
       - name: Write benchmark metadata
@@ -266,6 +271,7 @@ jobs:
           BENCHMARK_API_MEMORY: ${{ inputs.benchmark_api_memory }}
           BENCHMARK_PROXY_MEMORY: ${{ inputs.benchmark_proxy_memory }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
+          MIN_WORKER_THREADS: ${{ inputs.min_worker_threads }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
