@@ -1,6 +1,6 @@
 services:
   lb:
-    image: ${NGINX_IMAGE:-nginx:latest}
+    image: ${NGINX_IMAGE:-nginx:alpine}
     container_name: rinha-lb
     user: root
     volumes:
