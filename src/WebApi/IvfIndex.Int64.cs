@@ -337,23 +337,51 @@ internal sealed partial class IvfIndex
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void InsertCandidateLong(Span<long> distances, Span<int> ids, Span<byte> labels, long distance, byte label, int id)
     {
-        int last = distances.Length - 1;
-        if (distance > distances[last] || (distance == distances[last] && id >= ids[last]))
+        if (!IsBetterCandidate(distance, id, distances[4], ids[4]))
             return;
 
-        int pos = last;
-        while (pos > 0 && (distance < distances[pos - 1] || (distance == distances[pos - 1] && id < ids[pos - 1])))
+        if (IsBetterCandidate(distance, id, distances[0], ids[0]))
         {
-            distances[pos] = distances[pos - 1];
-            ids[pos] = ids[pos - 1];
-            labels[pos] = labels[pos - 1];
-            pos--;
+            distances[4] = distances[3]; ids[4] = ids[3]; labels[4] = labels[3];
+            distances[3] = distances[2]; ids[3] = ids[2]; labels[3] = labels[2];
+            distances[2] = distances[1]; ids[2] = ids[1]; labels[2] = labels[1];
+            distances[1] = distances[0]; ids[1] = ids[0]; labels[1] = labels[0];
+            distances[0] = distance; ids[0] = id; labels[0] = label;
+            return;
         }
 
-        distances[pos] = distance;
-        ids[pos] = id;
-        labels[pos] = label;
+        if (IsBetterCandidate(distance, id, distances[1], ids[1]))
+        {
+            distances[4] = distances[3]; ids[4] = ids[3]; labels[4] = labels[3];
+            distances[3] = distances[2]; ids[3] = ids[2]; labels[3] = labels[2];
+            distances[2] = distances[1]; ids[2] = ids[1]; labels[2] = labels[1];
+            distances[1] = distance; ids[1] = id; labels[1] = label;
+            return;
+        }
+
+        if (IsBetterCandidate(distance, id, distances[2], ids[2]))
+        {
+            distances[4] = distances[3]; ids[4] = ids[3]; labels[4] = labels[3];
+            distances[3] = distances[2]; ids[3] = ids[2]; labels[3] = labels[2];
+            distances[2] = distance; ids[2] = id; labels[2] = label;
+            return;
+        }
+
+        if (IsBetterCandidate(distance, id, distances[3], ids[3]))
+        {
+            distances[4] = distances[3]; ids[4] = ids[3]; labels[4] = labels[3];
+            distances[3] = distance; ids[3] = id; labels[3] = label;
+            return;
+        }
+
+        distances[4] = distance;
+        ids[4] = id;
+        labels[4] = label;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsBetterCandidate(long distance, int id, long currentDistance, int currentId) =>
+        distance < currentDistance || (distance == currentDistance && id < currentId);
 
     /// <summary>
     /// Checks whether an IVF2 cluster bounding box can still beat the current top-five bound.
