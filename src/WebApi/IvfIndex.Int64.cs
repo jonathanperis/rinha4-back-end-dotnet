@@ -76,14 +76,10 @@ internal sealed partial class IvfIndex
         }
 
         long worstDistance = candidateDistances[^1];
-        Span<ulong> probedBits = stackalloc ulong[probedClusters.Length > 4 ? (clusters + 63) >> 6 : 0];
-        if (!probedBits.IsEmpty)
-            MarkProbedClusters(probedClusters, probedBits);
-
         for (int cluster = 0; cluster < clusters; cluster++)
         {
             if (offsets[cluster] == offsets[cluster + 1] ||
-                IsProbed(cluster, probedClusters, probedBits))
+                IsProbed(cluster, probedClusters))
                 continue;
 
             if (BoundingBoxCanImproveLong(cluster, query, worstDistance))
@@ -110,9 +106,6 @@ internal sealed partial class IvfIndex
         long worstDistance = candidateDistances[^1];
         int cluster = 0;
         int simdLimit = clusters & ~7;
-        Span<ulong> probedBits = stackalloc ulong[probedClusters.Length > 4 ? (clusters + 63) >> 6 : 0];
-        if (!probedBits.IsEmpty)
-            MarkProbedClusters(probedClusters, probedBits);
 
         for (; cluster < simdLimit; cluster += 8)
         {
@@ -141,7 +134,7 @@ internal sealed partial class IvfIndex
                 int currentCluster = cluster + lane;
                 if (laneDistances[lane] > worstDistance ||
                     offsets[currentCluster] == offsets[currentCluster + 1] ||
-                    IsProbed(currentCluster, probedClusters, probedBits))
+                    IsProbed(currentCluster, probedClusters))
                 {
                     continue;
                 }
@@ -154,7 +147,7 @@ internal sealed partial class IvfIndex
         for (; cluster < clusters; cluster++)
         {
             if (offsets[cluster] == offsets[cluster + 1] ||
-                IsProbed(cluster, probedClusters, probedBits))
+                IsProbed(cluster, probedClusters))
                 continue;
 
             if (BoundingBoxCanImproveLong(cluster, query, worstDistance))
@@ -604,21 +597,6 @@ internal sealed partial class IvfIndex
         }
 
         return false;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsProbed(int cluster, ReadOnlySpan<int> probedClusters, ReadOnlySpan<ulong> probedBits)
-    {
-        if (!probedBits.IsEmpty)
-            return (probedBits[cluster >> 6] & (1UL << (cluster & 63))) != 0;
-
-        return IsProbed(cluster, probedClusters);
-    }
-
-    private static void MarkProbedClusters(ReadOnlySpan<int> probedClusters, Span<ulong> probedBits)
-    {
-        foreach (int cluster in probedClusters)
-            probedBits[cluster >> 6] |= 1UL << (cluster & 63);
     }
 
 }
