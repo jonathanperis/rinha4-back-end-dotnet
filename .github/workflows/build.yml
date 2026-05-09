@@ -240,7 +240,7 @@ jobs:
           IVF_BBOX_REPAIR: "true"
           IVF_REPAIR_MIN_FRAUDS: "0"
           IVF_REPAIR_MAX_FRAUDS: "5"
-          BENCHMARK_API_CPUS: "0.20"
+          BENCHMARK_API_CPUS: "0.45"
           BENCHMARK_PROXY_CPUS: "0.10"
           BENCHMARK_REPETITIONS: "1"
         run: bash scripts/ci-official-benchmark.sh
@@ -269,7 +269,7 @@ jobs:
           IVF_BBOX_REPAIR: "true"
           IVF_REPAIR_MIN_FRAUDS: "0"
           IVF_REPAIR_MAX_FRAUDS: "5"
-          BENCHMARK_API_CPUS: "0.20"
+          BENCHMARK_API_CPUS: "0.45"
           BENCHMARK_PROXY_CPUS: "0.10"
           BENCHMARK_REPETITIONS: "1"
         run: bash scripts/archive-benchmark-result.sh
