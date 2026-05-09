@@ -56,6 +56,30 @@ VectorizationTestRunner.Run("marks missing known merchant through hash parser", 
         throw new InvalidOperationException("expected merchant-b to be unknown");
 });
 
+VectorizationTestRunner.Run("parses full official payload shape", () =>
+{
+    FraudInput input = FraudRequestParser.Parse("""
+        {"id":"tx-test","transaction":{"amount":384.88,"installments":3,"requested_at":"2026-03-11T20:23:35Z"},"customer":{"avg_amount":769.76,"tx_count_24h":3,"known_merchants":["MERC-009","MERC-001","MERC-001"]},"merchant":{"id":"MERC-001","mcc":"5912","avg_amount":298.95},"terminal":{"is_online":false,"card_present":true,"km_from_home":13.7090520965},"last_transaction":{"timestamp":"2026-03-11T14:58:35Z","km_from_current":18.8626479774}}
+        """u8);
+
+    VectorizationTestRunner.AssertEqual(384.88, input.Amount);
+    VectorizationTestRunner.AssertEqualInt(3, input.Installments);
+    VectorizationTestRunner.AssertEqualInt(20, input.Hour);
+    VectorizationTestRunner.AssertEqualInt(2, input.DayOfWeek);
+    VectorizationTestRunner.AssertEqual(769.76, input.CustomerAvgAmount);
+    VectorizationTestRunner.AssertEqualInt(3, input.TxCount24h);
+    if (input.UnknownMerchant)
+        throw new InvalidOperationException("expected MERC-001 to be known");
+    VectorizationTestRunner.AssertEqualInt(5912, input.MccCode);
+    VectorizationTestRunner.AssertEqual(298.95, input.MerchantAvgAmount);
+    if (input.IsOnline || !input.CardPresent)
+        throw new InvalidOperationException("expected terminal booleans to parse");
+    VectorizationTestRunner.AssertEqual(13.7090520965, input.KmFromHome);
+    if (!input.HasLastTransaction)
+        throw new InvalidOperationException("expected last transaction");
+    VectorizationTestRunner.AssertEqual(18.8626479774, input.KmFromCurrent);
+});
+
 VectorizationTestRunner.Run("loads exact index and counts top five fraud labels", () =>
 {
     string path = Path.Combine(Path.GetTempPath(), $"rinha-exact-test-{Guid.NewGuid():N}.bin");
@@ -146,6 +170,12 @@ internal static class VectorizationTestRunner
     public static void AssertEqual(float expected, float actual)
     {
         if (MathF.Abs(expected - actual) > 0.0001f)
+            throw new InvalidOperationException($"expected {expected.ToString(CultureInfo.InvariantCulture)}, got {actual.ToString(CultureInfo.InvariantCulture)}");
+    }
+
+    public static void AssertEqual(double expected, double actual)
+    {
+        if (Math.Abs(expected - actual) > 0.0000001)
             throw new InvalidOperationException($"expected {expected.ToString(CultureInfo.InvariantCulture)}, got {actual.ToString(CultureInfo.InvariantCulture)}");
     }
 

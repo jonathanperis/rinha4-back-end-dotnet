@@ -16,6 +16,9 @@ internal static class FraudRequestParser
     /// <exception cref="JsonException">Thrown when the request shape or token type is invalid.</exception>
     public static FraudInput Parse(ReadOnlySpan<byte> body)
     {
+        if (TryParseFast(body, out FraudInput fastInput))
+            return fastInput;
+
         var reader = new Utf8JsonReader(body);
         var input = new FraudInput();
         ulong merchantHash = 0;
@@ -69,6 +72,283 @@ internal static class FraudRequestParser
 
         input.UnknownMerchant = !MerchantIsKnown(merchantHash, merchantLength, hasMerchant, knownHashes, knownLengths, knownCount, knownExtra);
         return input;
+    }
+
+    private static bool TryParseFast(ReadOnlySpan<byte> body, out FraudInput input)
+    {
+        input = default;
+
+        if (!TryGetObject(body, "transaction"u8, out ReadOnlySpan<byte> transaction) ||
+            !TryReadDouble(transaction, "amount"u8, out input.Amount) ||
+            !TryReadInt(transaction, "installments"u8, out input.Installments) ||
+            !TryReadString(transaction, "requested_at"u8, out ReadOnlySpan<byte> requestedAt))
+            return false;
+
+        FraudVectorizer.ParseIsoUtc(requestedAt, out input.Hour, out input.DayOfWeek, out input.RequestedSecondStamp);
+
+        if (!TryGetObject(body, "customer"u8, out ReadOnlySpan<byte> customer) ||
+            !TryReadDouble(customer, "avg_amount"u8, out input.CustomerAvgAmount) ||
+            !TryReadInt(customer, "tx_count_24h"u8, out input.TxCount24h))
+            return false;
+
+        if (!TryGetObject(body, "merchant"u8, out ReadOnlySpan<byte> merchant) ||
+            !TryReadString(merchant, "id"u8, out ReadOnlySpan<byte> merchantId) ||
+            !TryReadMcc(merchant, out input.MccCode) ||
+            !TryReadDouble(merchant, "avg_amount"u8, out input.MerchantAvgAmount))
+            return false;
+
+        if (!TryGetObject(body, "terminal"u8, out ReadOnlySpan<byte> terminal) ||
+            !TryReadBool(terminal, "is_online"u8, out input.IsOnline) ||
+            !TryReadBool(terminal, "card_present"u8, out input.CardPresent) ||
+            !TryReadDouble(terminal, "km_from_home"u8, out input.KmFromHome))
+            return false;
+
+        if (!TryReadKnownMerchant(customer, merchantId, out bool knownMerchant))
+            return false;
+        input.UnknownMerchant = !knownMerchant;
+
+        if (!TryGetNullableObject(body, "last_transaction"u8, out ReadOnlySpan<byte> lastTransaction, out bool hasLastTransaction))
+            return false;
+
+        if (hasLastTransaction)
+        {
+            if (!TryReadString(lastTransaction, "timestamp"u8, out ReadOnlySpan<byte> lastTimestamp) ||
+                !TryReadDouble(lastTransaction, "km_from_current"u8, out input.KmFromCurrent))
+                return false;
+
+            FraudVectorizer.ParseIsoUtc(lastTimestamp, out _, out _, out input.LastSecondStamp);
+            input.HasLastTransaction = true;
+        }
+
+        return true;
+    }
+
+    private static bool TryGetObject(ReadOnlySpan<byte> body, ReadOnlySpan<byte> propertyName, out ReadOnlySpan<byte> value) =>
+        TryGetNullableObject(body, propertyName, out value, out bool hasValue) && hasValue;
+
+    private static bool TryGetNullableObject(ReadOnlySpan<byte> body, ReadOnlySpan<byte> propertyName, out ReadOnlySpan<byte> value, out bool hasValue)
+    {
+        value = default;
+        hasValue = false;
+        if (!TryFindValue(body, propertyName, out int start))
+            return false;
+
+        if (start + 4 <= body.Length && body.Slice(start, 4).SequenceEqual("null"u8))
+            return true;
+
+        if (start >= body.Length || body[start] != (byte)'{')
+            return false;
+
+        int end = FindMatchingBrace(body, start);
+        if (end < 0)
+            return false;
+
+        value = body.Slice(start + 1, end - start - 1);
+        hasValue = true;
+        return true;
+    }
+
+    private static bool TryReadDouble(ReadOnlySpan<byte> source, ReadOnlySpan<byte> propertyName, out double value)
+    {
+        value = 0;
+        return TryFindValue(source, propertyName, out int start) &&
+               Utf8Parser.TryParse(source[start..], out value, out _);
+    }
+
+    private static bool TryReadInt(ReadOnlySpan<byte> source, ReadOnlySpan<byte> propertyName, out int value)
+    {
+        value = 0;
+        return TryFindValue(source, propertyName, out int start) &&
+               Utf8Parser.TryParse(source[start..], out value, out _);
+    }
+
+    private static bool TryReadBool(ReadOnlySpan<byte> source, ReadOnlySpan<byte> propertyName, out bool value)
+    {
+        value = false;
+        if (!TryFindValue(source, propertyName, out int start))
+            return false;
+
+        if (start + 4 <= source.Length && source.Slice(start, 4).SequenceEqual("true"u8))
+        {
+            value = true;
+            return true;
+        }
+
+        if (start + 5 <= source.Length && source.Slice(start, 5).SequenceEqual("false"u8))
+            return true;
+
+        return false;
+    }
+
+    private static bool TryReadString(ReadOnlySpan<byte> source, ReadOnlySpan<byte> propertyName, out ReadOnlySpan<byte> value)
+    {
+        value = default;
+        if (!TryFindValue(source, propertyName, out int start) || start >= source.Length || source[start] != (byte)'\"')
+            return false;
+
+        int contentStart = start + 1;
+        for (int i = contentStart; i < source.Length; i++)
+        {
+            byte current = source[i];
+            if (current == (byte)'\\')
+                return false;
+            if (current == (byte)'\"')
+            {
+                value = source.Slice(contentStart, i - contentStart);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryReadMcc(ReadOnlySpan<byte> merchant, out int code)
+    {
+        code = -1;
+        if (!TryFindValue(merchant, "mcc"u8, out int start))
+            return false;
+
+        if (start < merchant.Length && merchant[start] == (byte)'\"')
+        {
+            int contentStart = start + 1;
+            int contentEnd = contentStart;
+            while (contentEnd < merchant.Length && merchant[contentEnd] != (byte)'\"')
+            {
+                if (merchant[contentEnd] == (byte)'\\')
+                    return false;
+                contentEnd++;
+            }
+
+            return TryParseDigits(merchant.Slice(contentStart, contentEnd - contentStart), out code);
+        }
+
+        return Utf8Parser.TryParse(merchant[start..], out code, out _);
+    }
+
+    private static bool TryReadKnownMerchant(ReadOnlySpan<byte> customer, ReadOnlySpan<byte> merchantId, out bool known)
+    {
+        known = false;
+        if (!TryFindValue(customer, "known_merchants"u8, out int start) || start >= customer.Length || customer[start] != (byte)'[')
+            return false;
+
+        int pos = start + 1;
+        while (pos < customer.Length)
+        {
+            pos = SkipWhitespace(customer, pos);
+            if (pos >= customer.Length)
+                return false;
+            if (customer[pos] == (byte)']')
+                return true;
+            if (customer[pos] != (byte)'\"')
+                return false;
+
+            int contentStart = ++pos;
+            while (pos < customer.Length && customer[pos] != (byte)'\"')
+            {
+                if (customer[pos] == (byte)'\\')
+                    return false;
+                pos++;
+            }
+
+            if (pos >= customer.Length)
+                return false;
+
+            if (customer.Slice(contentStart, pos - contentStart).SequenceEqual(merchantId))
+                known = true;
+
+            pos = SkipWhitespace(customer, pos + 1);
+            if (pos < customer.Length && customer[pos] == (byte)',')
+                pos++;
+        }
+
+        return false;
+    }
+
+    private static bool TryFindValue(ReadOnlySpan<byte> source, ReadOnlySpan<byte> propertyName, out int valueStart)
+    {
+        valueStart = -1;
+        Span<byte> pattern = stackalloc byte[propertyName.Length + 2];
+        pattern[0] = (byte)'\"';
+        propertyName.CopyTo(pattern[1..]);
+        pattern[^1] = (byte)'\"';
+
+        int searchStart = 0;
+        while (searchStart < source.Length)
+        {
+            int relative = source[searchStart..].IndexOf(pattern);
+            if (relative < 0)
+                return false;
+
+            int pos = searchStart + relative + pattern.Length;
+            pos = SkipWhitespace(source, pos);
+            if (pos < source.Length && source[pos] == (byte)':')
+            {
+                valueStart = SkipWhitespace(source, pos + 1);
+                return valueStart < source.Length;
+            }
+
+            searchStart += relative + 1;
+        }
+
+        return false;
+    }
+
+    private static int FindMatchingBrace(ReadOnlySpan<byte> source, int start)
+    {
+        int depth = 0;
+        bool inString = false;
+        for (int i = start; i < source.Length; i++)
+        {
+            byte current = source[i];
+            if (inString)
+            {
+                if (current == (byte)'\\')
+                    return -1;
+                if (current == (byte)'\"')
+                    inString = false;
+                continue;
+            }
+
+            if (current == (byte)'\"')
+                inString = true;
+            else if (current == (byte)'{')
+                depth++;
+            else if (current == (byte)'}' && --depth == 0)
+                return i;
+        }
+
+        return -1;
+    }
+
+    private static int SkipWhitespace(ReadOnlySpan<byte> source, int pos)
+    {
+        while (pos < source.Length)
+        {
+            byte value = source[pos];
+            if (value != (byte)' ' && value != (byte)'\n' && value != (byte)'\r' && value != (byte)'\t')
+                break;
+            pos++;
+        }
+
+        return pos;
+    }
+
+    private static bool TryParseDigits(ReadOnlySpan<byte> value, out int parsed)
+    {
+        parsed = 0;
+        for (int i = 0; i < value.Length; i++)
+        {
+            byte digit = (byte)(value[i] - (byte)'0');
+            if (digit > 9)
+            {
+                parsed = -1;
+                return true;
+            }
+
+            parsed = parsed * 10 + digit;
+        }
+
+        return true;
     }
 
     /// <summary>

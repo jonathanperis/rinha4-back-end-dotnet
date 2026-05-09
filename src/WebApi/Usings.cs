@@ -1,4 +1,5 @@
 global using System.Buffers;
+global using System.Buffers.Text;
 global using System.Globalization;
 global using System.IO.MemoryMappedFiles;
 global using System.Net;
