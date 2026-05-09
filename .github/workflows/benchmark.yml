@@ -14,6 +14,7 @@ on:
           - competitor-compose/zan/docker-compose.yml
           - competitor-compose/danilo/docker-compose.yml
           - competitor-compose/jordao/docker-compose.yml
+          - competitor-compose/hanake0/docker-compose.yml
       official_ref:
         description: Rinha official repo ref to clone for test/test.js and test-data.json
         required: true
@@ -52,6 +53,8 @@ jobs:
             compose_file: competitor-compose/danilo/docker-compose.yml
           - name: jordao
             compose_file: competitor-compose/jordao/docker-compose.yml
+          - name: hanake0
+            compose_file: competitor-compose/hanake0/docker-compose.yml
 
     permissions:
       contents: read
