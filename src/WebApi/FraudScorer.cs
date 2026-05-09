@@ -10,6 +10,20 @@ internal sealed class FraudScorer
 {
     private const int Dims = 14;
     private const int PaddedDims = 16;
+    private const int WarmUpPasses = 4;
+
+    private static readonly byte[][] WarmUpPayloads =
+    [
+        """
+        {"id":"warm-http-1","transaction":{"amount":41.12,"installments":2,"requested_at":"2026-03-11T18:45:53Z"},"customer":{"avg_amount":82.24,"tx_count_24h":3,"known_merchants":["MERC-003","MERC-016"]},"merchant":{"id":"MERC-016","mcc":"5411","avg_amount":60.25},"terminal":{"is_online":false,"card_present":true,"km_from_home":29.23},"last_transaction":null}
+        """u8.ToArray(),
+        """
+        {"id":"warm-http-2","transaction":{"amount":3200.0,"installments":9,"requested_at":"2026-03-17T02:04:06Z"},"customer":{"avg_amount":68.88,"tx_count_24h":18,"known_merchants":["MERC-004","MERC-007","MERC-015"]},"merchant":{"id":"MERC-062","mcc":"7801","avg_amount":25.55},"terminal":{"is_online":true,"card_present":false,"km_from_home":881.61},"last_transaction":{"timestamp":"2026-03-17T01:58:06Z","km_from_current":660.92}}
+        """u8.ToArray(),
+        """
+        {"id":"warm-http-3","transaction":{"amount":384.88,"installments":3,"requested_at":"2026-03-11T20:23:35Z"},"customer":{"avg_amount":769.76,"tx_count_24h":3,"known_merchants":["MERC-009","MERC-001"]},"merchant":{"id":"MERC-001","mcc":"5912","avg_amount":298.95},"terminal":{"is_online":false,"card_present":true,"km_from_home":13.71},"last_transaction":{"timestamp":"2026-03-11T14:58:35Z","km_from_current":18.86}}
+        """u8.ToArray()
+    ];
 
     private readonly double maxAmount;
     private readonly int maxInstallments;
@@ -70,7 +84,7 @@ internal sealed class FraudScorer
         IvfSearchOptions ivfOptions = mode == ScorerMode.Ivf ? IvfSearchOptions.FromEnvironment() : default;
         BucketSearchOptions bucketOptions = mode == ScorerMode.Bucket ? BucketSearchOptions.FromEnvironment() : default;
 
-        Console.WriteLine("Dataset loaded. Ready to serve.");
+        Console.WriteLine("Dataset loaded.");
         return new FraudScorer(normalization, mcc, exactIndex, ivfIndex, ivfOptions, bucketIndex, bucketOptions, mode);
     }
 
@@ -116,6 +130,22 @@ internal sealed class FraudScorer
             _ => bucketIndex!.FraudCount(qv, bucketOptions)
         };
         return HttpResponses.FraudScores[frauds];
+    }
+
+    /// <summary>
+    /// Runs representative requests before the socket is exposed so hot scorer pages and branches are ready.
+    /// </summary>
+    public void WarmUp()
+    {
+        int checksum = 0;
+
+        for (int pass = 0; pass < WarmUpPasses; pass++)
+        {
+            foreach (byte[] payload in WarmUpPayloads)
+                checksum ^= ScoreFraudRequest(payload).Span[0];
+        }
+
+        GC.KeepAlive(checksum);
     }
 
     private void QuantizeRequest(FraudInput req, Span<short> qv, int scale)

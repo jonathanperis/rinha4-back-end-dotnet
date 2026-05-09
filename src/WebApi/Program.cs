@@ -2,6 +2,7 @@ string? socketPath = Environment.GetEnvironmentVariable("SOCKET_PATH");
 string dataDirectory = Environment.GetEnvironmentVariable("DATA_DIR") ?? "/data";
 SetMinWorkerThreads();
 var scorer = FraudScorer.Load(dataDirectory);
+scorer.WarmUp();
 var server = new RawHttpServer(socketPath, scorer);
 
 await server.RunAsync();
