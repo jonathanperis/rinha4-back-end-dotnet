@@ -186,7 +186,7 @@ internal sealed partial class IvfIndex
     {
         if (Avx2.IsSupported && blockLanes == 8)
         {
-            ScanBlocksAvx2Long(candidateDistances, candidateIds, candidateLabels, startBlock, endBlock, query, queryVectors);
+            ScanBlocksAvx2Long(candidateDistances, candidateIds, candidateLabels, startBlock, endBlock, queryVectors);
             return;
         }
 
@@ -208,7 +208,6 @@ internal sealed partial class IvfIndex
         Span<byte> candidateLabels,
         int startBlock,
         int endBlock,
-        ReadOnlySpan<short> query,
         scoped ReadOnlySpan<Vector256<int>> queryVectors)
     {
         Span<long> laneDistances = stackalloc long[8];
@@ -233,24 +232,14 @@ internal sealed partial class IvfIndex
 
             long worstDistance = candidateDistances[^1];
             int passMask = 0;
-            int passCount = 0;
             for (int lane = 0; lane < blockLanes; lane++)
             {
                 if (laneDistances[lane] <= worstDistance)
-                {
                     passMask |= 1 << lane;
-                    passCount++;
-                }
             }
 
             if (passMask == 0)
                 continue;
-
-            if (passCount <= 2)
-            {
-                FinishBlockScalarLong(candidateDistances, candidateIds, candidateLabels, blockBase, labelBase, passMask, laneDistances, query);
-                continue;
-            }
 
             AddBlockDimLong(blockBase, 9, queryVectors, ref accLo, ref accHi);
             AddBlockDimLong(blockBase, 10, queryVectors, ref accLo, ref accHi);
@@ -279,46 +268,6 @@ internal sealed partial class IvfIndex
                 worstDistance = candidateDistances[^1];
             }
         }
-    }
-
-    private void FinishBlockScalarLong(
-        Span<long> candidateDistances,
-        Span<int> candidateIds,
-        Span<byte> candidateLabels,
-        int blockBase,
-        int labelBase,
-        int passMask,
-        ReadOnlySpan<long> partialDistances,
-        ReadOnlySpan<short> query)
-    {
-        long worstDistance = candidateDistances[^1];
-        for (int lane = 0; lane < blockLanes; lane++)
-        {
-            if ((passMask & (1 << lane)) == 0)
-                continue;
-
-            int id = ids[labelBase + lane];
-            if (id < 0)
-                continue;
-
-            long distance = partialDistances[lane];
-            distance = AddBlockLaneDimLong(distance, blockBase, 9, lane, query); if (distance > worstDistance) continue;
-            distance = AddBlockLaneDimLong(distance, blockBase, 10, lane, query); if (distance > worstDistance) continue;
-            distance = AddBlockLaneDimLong(distance, blockBase, 1, lane, query); if (distance > worstDistance) continue;
-            distance = AddBlockLaneDimLong(distance, blockBase, 13, lane, query); if (distance > worstDistance) continue;
-            distance = AddBlockLaneDimLong(distance, blockBase, 3, lane, query); if (distance > worstDistance) continue;
-            distance = AddBlockLaneDimLong(distance, blockBase, 4, lane, query); if (distance > worstDistance) continue;
-
-            InsertCandidateLong(candidateDistances, candidateIds, candidateLabels, distance, labels[labelBase + lane], id);
-            worstDistance = candidateDistances[^1];
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private long AddBlockLaneDimLong(long distance, int blockBase, int dim, int lane, ReadOnlySpan<short> query)
-    {
-        int diff = query[dim] - blocks[blockBase + dim * blockLanes + lane];
-        return distance + (long)diff * diff;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
