@@ -10,6 +10,7 @@ on:
         type: choice
         options:
           - docker-compose.nginx.yml
+          - docker-compose.haproxy.yml
       official_ref:
         description: Rinha official repo ref to clone for test/test.js and test-data.json
         required: true
@@ -131,6 +132,8 @@ jobs:
         lb:
           - name: nginx
             compose_file: docker-compose.nginx.yml
+          - name: haproxy
+            compose_file: docker-compose.haproxy.yml
     concurrency:
       group: benchmark-${{ github.run_id }}-${{ matrix.lb.name }}
       cancel-in-progress: false
