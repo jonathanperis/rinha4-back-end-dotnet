@@ -9,6 +9,8 @@ internal sealed unsafe class BucketIndex : IDisposable
     private const int K = 5;
     private const int BucketCount = 4096;
     private const int ProfileCount = 1 << 22;
+    private const int RiskyFineExtraBits = 3;
+    private const int RiskyFineBucketCount = BucketCount << RiskyFineExtraBits;
     private const int HeaderBytes = 7 * sizeof(int);
     private const byte LegitMask = 1;
     private const byte FraudMask = 2;
@@ -26,6 +28,10 @@ internal sealed unsafe class BucketIndex : IDisposable
     private readonly short* vectors;
     private readonly ushort* profileCounts;
     private readonly byte* profileMasks;
+    private readonly int[] riskyPositions;
+    private readonly int[] riskyFineBucketOffsets;
+    private readonly int[] riskyCoarseFineOffsets;
+    private readonly int[] riskyFineKeys;
 
     private BucketIndex(
         MemoryMappedFile mappedFile,
@@ -38,7 +44,11 @@ internal sealed unsafe class BucketIndex : IDisposable
         byte* labels,
         short* vectors,
         ushort* profileCounts,
-        byte* profileMasks)
+        byte* profileMasks,
+        int[] riskyPositions,
+        int[] riskyFineBucketOffsets,
+        int[] riskyCoarseFineOffsets,
+        int[] riskyFineKeys)
     {
         this.mappedFile = mappedFile;
         this.accessor = accessor;
@@ -51,6 +61,10 @@ internal sealed unsafe class BucketIndex : IDisposable
         this.vectors = vectors;
         this.profileCounts = profileCounts;
         this.profileMasks = profileMasks;
+        this.riskyPositions = riskyPositions;
+        this.riskyFineBucketOffsets = riskyFineBucketOffsets;
+        this.riskyCoarseFineOffsets = riskyCoarseFineOffsets;
+        this.riskyFineKeys = riskyFineKeys;
     }
 
     public int Scale => scale;
@@ -113,6 +127,17 @@ internal sealed unsafe class BucketIndex : IDisposable
                     return false;
                 }
 
+                bool buildRiskyFallback = IsRiskyFallbackEnabled();
+                BuildRiskyFallbackIndex(
+                    buildRiskyFallback,
+                    (short*)(ptr + vectorsOffset),
+                    count,
+                    scale,
+                    out int[] riskyPositions,
+                    out int[] riskyFineBucketOffsets,
+                    out int[] riskyCoarseFineOffsets,
+                    out int[] riskyFineKeys);
+
                 index = new BucketIndex(
                     mappedFile,
                     accessor,
@@ -124,7 +149,11 @@ internal sealed unsafe class BucketIndex : IDisposable
                     ptr + labelsOffset,
                     (short*)(ptr + vectorsOffset),
                     (ushort*)(ptr + profileCountsOffset),
-                    ptr + profileMasksOffset);
+                    ptr + profileMasksOffset,
+                    riskyPositions,
+                    riskyFineBucketOffsets,
+                    riskyCoarseFineOffsets,
+                    riskyFineKeys);
                 return true;
             }
             catch
@@ -176,10 +205,54 @@ internal sealed unsafe class BucketIndex : IDisposable
 
     CandidateSearchDone:
         byte frauds = CountFrauds(topLabels);
-        if (options.ExactFallback && (candidates < K || (frauds > 0 && frauds < K)))
+        if (candidates < K)
             return ExactFraudCount(query);
 
+        if (ShouldUseExactFallback(query, frauds, options))
+            return options.RiskyFallback ? RiskyFraudCount(query, allowFullTiebreak: true) : ExactFraudCount(query);
+
         return frauds;
+    }
+
+    [SkipLocalsInit]
+    private byte RiskyFraudCount(ReadOnlySpan<short> query, bool allowFullTiebreak)
+    {
+        if (riskyPositions.Length < K)
+            return ExactFraudCount(query);
+
+        Span<long> topDist = stackalloc long[K];
+        Span<int> topIds = stackalloc int[K];
+        Span<byte> topLabels = stackalloc byte[K];
+        topDist.Fill(long.MaxValue);
+        topIds.Fill(int.MaxValue);
+
+        ReadOnlySpan<ushort> neighborKeys = NeighborKeyOrders.AsSpan(BucketKey(query) * BucketCount, BucketCount);
+        for (int neighborIndex = 0; neighborIndex < neighborKeys.Length; neighborIndex++)
+        {
+            int coarseKey = neighborKeys[neighborIndex];
+            if (RiskyBucketLowerBound(coarseKey, query) >= topDist[^1])
+                continue;
+
+            int fineStart = riskyCoarseFineOffsets[coarseKey];
+            int fineEnd = riskyCoarseFineOffsets[coarseKey + 1];
+            for (int finePos = fineStart; finePos < fineEnd; finePos++)
+            {
+                int fineKey = riskyFineKeys[finePos];
+                if (RiskyFineBucketLowerBound(fineKey, query) >= topDist[^1])
+                    continue;
+
+                int start = riskyFineBucketOffsets[fineKey];
+                int end = riskyFineBucketOffsets[fineKey + 1];
+                for (int pos = start; pos < end; pos++)
+                    Consider(riskyPositions[pos], query, topDist, topIds, topLabels);
+            }
+        }
+
+        if (topDist[^1] == long.MaxValue)
+            return ExactFraudCount(query);
+
+        byte frauds = CountFrauds(topLabels);
+        return allowFullTiebreak && NeedsFullRiskyTiebreak(query, frauds) ? ExactFraudCount(query) : frauds;
     }
 
     private bool TryProfileFastDecision(ReadOnlySpan<short> query, BucketSearchOptions options, out byte frauds)
@@ -282,6 +355,116 @@ internal sealed unsafe class BucketIndex : IDisposable
         return frauds == 0 || frauds == K;
     }
 
+    private static bool ShouldUseExactFallback(ReadOnlySpan<short> query, byte frauds, BucketSearchOptions options)
+    {
+        if (frauds > 0 && frauds < K)
+            return options.ExactFallback;
+
+        return options.RiskyFallback && IsStrongFallbackRisk(query, frauds);
+    }
+
+    private static bool IsStrongFallbackRisk(ReadOnlySpan<short> query, byte frauds)
+    {
+        if (frauds != 0 && frauds != K)
+            return false;
+
+        if (frauds == 0 && IsHighRiskOnlineFallback(query))
+            return true;
+
+        if (IsStrongProfileTiebreak(query, frauds))
+            return true;
+
+        if (frauds == K &&
+            query[5] >= 600 && query[5] <= 850 &&
+            query[9] == 0 &&
+            query[10] == 0 &&
+            query[11] == 0 &&
+            query[12] <= 2000 &&
+            query[0] >= 1100 && query[0] <= 1300 &&
+            query[2] >= 4000 && query[2] <= 4600 &&
+            query[7] >= 550 && query[7] <= 750 &&
+            query[8] >= 2000 && query[8] <= 3000 &&
+            query[13] >= 220 && query[13] <= 320)
+        {
+            return true;
+        }
+
+        return query[5] >= 0 &&
+               query[10] == 0 &&
+               query[0] >= 450 && query[0] <= 1100 &&
+               query[2] >= 900 && query[2] <= 2500 &&
+               query[7] >= 500 && query[7] <= 2000 &&
+               query[8] >= 2000 && query[8] <= 4500;
+    }
+
+    private static bool IsStrongProfileTiebreak(ReadOnlySpan<short> query, byte frauds)
+    {
+        if (query[5] < 0 || query[13] > 220)
+            return false;
+
+        if (frauds == 0)
+        {
+            return
+                (query[9] == 0 &&
+                 query[10] > 0 &&
+                 query[12] >= 7500 &&
+                 query[0] >= 450 && query[0] <= 600 &&
+                 query[2] >= 1000 && query[2] <= 1200 &&
+                 query[7] >= 400 && query[7] <= 600 &&
+                 query[8] >= 4000 && query[8] <= 5000) ||
+                (query[9] > 0 &&
+                 query[10] == 0 &&
+                 query[12] <= 2500 &&
+                 query[0] >= 2100 && query[0] <= 2300 &&
+                 query[2] >= 4400 && query[2] <= 4900 &&
+                 query[7] >= 700 && query[7] <= 950 &&
+                 query[8] >= 2000 && query[8] <= 3000) ||
+                (query[9] > 0 &&
+                 query[10] == 0 &&
+                 query[11] > 0 &&
+                 query[12] >= 4000 && query[12] <= 5000 &&
+                 query[0] >= 1200 && query[0] <= 1500 &&
+                 query[2] >= 3300 && query[2] <= 3800 &&
+                 query[7] >= 3300 && query[7] <= 3900 &&
+                 query[8] >= 2000 && query[8] <= 3000);
+        }
+
+        return query[9] == 0 &&
+               query[10] > 0 &&
+               query[12] <= 2500 &&
+               query[0] >= 2700 && query[0] <= 3000 &&
+               query[2] >= 9000 &&
+               query[7] >= 3500 && query[7] <= 4000 &&
+               query[8] >= 2500 && query[8] <= 3500;
+    }
+
+    private static bool NeedsFullRiskyTiebreak(ReadOnlySpan<short> query, byte frauds)
+    {
+        if (query[5] < 0 || query[9] <= 0 || query[10] != 0)
+            return false;
+
+        if (frauds >= 3)
+        {
+            return query[11] == 0 &&
+                   query[12] <= 1700 &&
+                   query[0] >= 500 && query[0] <= 900 &&
+                   query[2] >= 1000 && query[2] <= 2200 &&
+                   query[7] >= 350 && query[7] <= 900 &&
+                   query[8] >= 1800 && query[8] <= 3000;
+        }
+
+        return IsHighRiskOnlineFallback(query);
+    }
+
+    private static bool IsHighRiskOnlineFallback(ReadOnlySpan<short> query) =>
+        query[12] >= 8000 &&
+        query[1] >= 5500 &&
+        query[6] >= 1000 && query[6] <= 1700 &&
+        query[7] >= 300 && query[7] <= 4200 &&
+        query[8] >= 3800 && query[8] <= 6000 &&
+        ((query[0] >= 450 && query[0] <= 600 && query[2] <= 1200) ||
+         (query[0] >= 2500 && query[0] <= 3100 && query[2] >= 9000));
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private int BucketKey(ReadOnlySpan<short> vector)
     {
@@ -366,6 +549,254 @@ internal sealed unsafe class BucketIndex : IDisposable
         }
 
         return count;
+    }
+
+    private static void BuildRiskyFallbackIndex(
+        bool enabled,
+        short* vectors,
+        int count,
+        int scale,
+        out int[] positions,
+        out int[] fineBucketOffsets,
+        out int[] coarseFineOffsets,
+        out int[] fineKeys)
+    {
+        if (!enabled)
+        {
+            positions = [];
+            fineBucketOffsets = [];
+            coarseFineOffsets = [];
+            fineKeys = [];
+            return;
+        }
+
+        RiskyFallbackFilter filter = RiskyFallbackFilter.FromEnvironment();
+        var fineCounts = new int[RiskyFineBucketCount];
+        for (int pos = 0; pos < count; pos++)
+        {
+            short* vector = vectors + (long)pos * Dims;
+            if (IsRiskyFallbackReference(vector, filter))
+                fineCounts[RiskyFineBucketKey(vector, scale)]++;
+        }
+
+        fineBucketOffsets = new int[RiskyFineBucketCount + 1];
+        coarseFineOffsets = new int[BucketCount + 1];
+        for (int fineKey = 0; fineKey < RiskyFineBucketCount; fineKey++)
+        {
+            fineBucketOffsets[fineKey + 1] = fineBucketOffsets[fineKey] + fineCounts[fineKey];
+            if (fineCounts[fineKey] != 0)
+                coarseFineOffsets[(fineKey >> RiskyFineExtraBits) + 1]++;
+        }
+
+        for (int key = 0; key < BucketCount; key++)
+            coarseFineOffsets[key + 1] += coarseFineOffsets[key];
+
+        fineKeys = new int[coarseFineOffsets[BucketCount]];
+        var fineKeyPositions = new int[BucketCount];
+        coarseFineOffsets.AsSpan(0, BucketCount).CopyTo(fineKeyPositions);
+        for (int fineKey = 0; fineKey < RiskyFineBucketCount; fineKey++)
+        {
+            if (fineCounts[fineKey] == 0)
+                continue;
+
+            int coarseKey = fineKey >> RiskyFineExtraBits;
+            fineKeys[fineKeyPositions[coarseKey]++] = fineKey;
+        }
+
+        positions = GC.AllocateUninitializedArray<int>(fineBucketOffsets[^1]);
+        var writePositions = new int[RiskyFineBucketCount];
+        fineBucketOffsets.AsSpan(0, RiskyFineBucketCount).CopyTo(writePositions);
+        for (int pos = 0; pos < count; pos++)
+        {
+            short* vector = vectors + (long)pos * Dims;
+            if (!IsRiskyFallbackReference(vector, filter))
+                continue;
+
+            int fineKey = RiskyFineBucketKey(vector, scale);
+            positions[writePositions[fineKey]++] = pos;
+        }
+    }
+
+    private static bool IsRiskyFallbackReference(short* vector, RiskyFallbackFilter filter)
+    {
+        short amount = vector[0];
+        if (amount < filter.AmountMin || amount > filter.AmountMax)
+            return false;
+
+        short installments = vector[1];
+        if (installments < filter.InstallmentsMin || installments > filter.InstallmentsMax)
+            return false;
+
+        if (vector[2] < filter.RatioMin)
+            return false;
+
+        short kmHome = vector[7];
+        if (kmHome < filter.KmHomeMin || kmHome > filter.KmHomeMax)
+            return false;
+
+        short tx24h = vector[8];
+        if (tx24h < filter.Tx24hMin || tx24h > filter.Tx24hMax)
+            return false;
+
+        short merchantAverage = vector[13];
+        return merchantAverage >= filter.MerchantAverageMin && merchantAverage <= filter.MerchantAverageMax;
+    }
+
+    private static int RiskyFineBucketKey(short* vector, int scale)
+    {
+        int coarseKey = BucketKey(vector, scale);
+        int extra = vector[9] > 0 ? 1 : 0;
+        extra |= (vector[10] > 0 ? 1 : 0) << 1;
+        extra |= (vector[11] > 0 ? 1 : 0) << 2;
+        return (coarseKey << RiskyFineExtraBits) | extra;
+    }
+
+    private static int BucketKey(short* vector, int scale)
+    {
+        int amount = Bucket8(vector[0], scale);
+        int ratio = Bucket8(vector[2], scale);
+        int kmHome = Bucket8(vector[7], scale);
+        int hour = Bucket4(vector[3], scale);
+        int noLast = vector[5] < 0 ? 1 : 0;
+        return amount | (ratio << 3) | (kmHome << 6) | (hour << 9) | (noLast << 11);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private long RiskyBucketLowerBound(int key, ReadOnlySpan<short> query)
+    {
+        int amount = key & 7;
+        int ratio = (key >> 3) & 7;
+        int kmHome = (key >> 6) & 7;
+        int hour = (key >> 9) & 3;
+        int noLast = (key >> 11) & 1;
+
+        long sum = 0;
+        sum += BucketDistanceSquared(query[0], amount, 8, scale);
+        sum += BucketDistanceSquared(query[2], ratio, 8, scale);
+        sum += BucketDistanceSquared(query[7], kmHome, 8, scale);
+        sum += BucketDistanceSquared(query[3], hour, 4, scale);
+        sum += noLast == 0
+            ? RangeDistanceSquared(query[5], 0, scale)
+            : RangeDistanceSquared(query[5], -scale, -scale);
+        return sum;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private long RiskyFineBucketLowerBound(int fineKey, ReadOnlySpan<short> query)
+    {
+        int coarseKey = fineKey >> RiskyFineExtraBits;
+        int extra = fineKey & ((1 << RiskyFineExtraBits) - 1);
+
+        long sum = RiskyBucketLowerBound(coarseKey, query);
+        sum += BinaryDistanceSquared(query[9], extra & 1, scale);
+        sum += BinaryDistanceSquared(query[10], (extra >> 1) & 1, scale);
+        sum += BinaryDistanceSquared(query[11], (extra >> 2) & 1, scale);
+        return sum;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static long BinaryDistanceSquared(short value, int bit, int scale) =>
+        RangeDistanceSquared(value, bit == 0 ? 0 : scale, bit == 0 ? 0 : scale);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static long BucketDistanceSquared(short value, int bucket, int divisions, int scale)
+    {
+        int min = bucket == 0 ? 0 : (bucket * (scale + 1) + divisions - 1) / divisions;
+        int max = bucket == divisions - 1 ? scale : (((bucket + 1) * (scale + 1)) - 1) / divisions;
+        return RangeDistanceSquared(value, min, max);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static long RangeDistanceSquared(short value, int min, int max)
+    {
+        if (value < min)
+        {
+            long diff = (long)min - value;
+            return diff * diff;
+        }
+
+        if (value > max)
+        {
+            long diff = (long)value - max;
+            return diff * diff;
+        }
+
+        return 0;
+    }
+
+    private static int Bucket4(short value, int scale) => value <= 0 ? 0 : Math.Clamp(value * 4 / (scale + 1), 0, 3);
+
+    private static int Bucket8(short value, int scale) => value <= 0 ? 0 : Math.Clamp(value * 8 / (scale + 1), 0, 7);
+
+    private static bool IsRiskyFallbackEnabled()
+    {
+        string? fallback = Environment.GetEnvironmentVariable("BUCKET_EXACT_FALLBACK");
+        if (string.Equals(fallback, "risky", StringComparison.OrdinalIgnoreCase) || fallback == "2")
+            return true;
+
+        string? enabled = Environment.GetEnvironmentVariable("BUCKET_RISKY_FALLBACK");
+        return string.Equals(enabled, "1", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(enabled, "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private readonly struct RiskyFallbackFilter
+    {
+        public readonly int AmountMin;
+        public readonly int AmountMax;
+        public readonly int InstallmentsMin;
+        public readonly int InstallmentsMax;
+        public readonly int RatioMin;
+        public readonly int KmHomeMin;
+        public readonly int KmHomeMax;
+        public readonly int Tx24hMin;
+        public readonly int Tx24hMax;
+        public readonly int MerchantAverageMin;
+        public readonly int MerchantAverageMax;
+
+        private RiskyFallbackFilter(
+            int amountMin,
+            int amountMax,
+            int installmentsMin,
+            int installmentsMax,
+            int ratioMin,
+            int kmHomeMin,
+            int kmHomeMax,
+            int tx24hMin,
+            int tx24hMax,
+            int merchantAverageMin,
+            int merchantAverageMax)
+        {
+            AmountMin = amountMin;
+            AmountMax = amountMax;
+            InstallmentsMin = installmentsMin;
+            InstallmentsMax = installmentsMax;
+            RatioMin = ratioMin;
+            KmHomeMin = kmHomeMin;
+            KmHomeMax = kmHomeMax;
+            Tx24hMin = tx24hMin;
+            Tx24hMax = tx24hMax;
+            MerchantAverageMin = merchantAverageMin;
+            MerchantAverageMax = merchantAverageMax;
+        }
+
+        public static RiskyFallbackFilter FromEnvironment() => new(
+            EnvInt("BUCKET_RISKY_AMOUNT_MIN", "RISKY_AMOUNT_MIN", 400),
+            EnvInt("BUCKET_RISKY_AMOUNT_MAX", "RISKY_AMOUNT_MAX", 3000),
+            EnvInt("BUCKET_RISKY_INSTALLMENTS_MIN", "RISKY_INSTALLMENTS_MIN", 2200),
+            EnvInt("BUCKET_RISKY_INSTALLMENTS_MAX", "RISKY_INSTALLMENTS_MAX", 6200),
+            EnvInt("BUCKET_RISKY_RATIO_MIN", "RISKY_RATIO_MIN", 850),
+            EnvInt("BUCKET_RISKY_KM_HOME_MIN", "RISKY_KM_HOME_MIN", 250),
+            EnvInt("BUCKET_RISKY_KM_HOME_MAX", "RISKY_KM_HOME_MAX", 4000),
+            EnvInt("BUCKET_RISKY_TX24H_MIN", "RISKY_TX24H_MIN", 1500),
+            EnvInt("BUCKET_RISKY_TX24H_MAX", "RISKY_TX24H_MAX", 5800),
+            EnvInt("BUCKET_RISKY_MERCHANT_AVG_MIN", "RISKY_MERCHANT_AVG_MIN", 0),
+            EnvInt("BUCKET_RISKY_MERCHANT_AVG_MAX", "RISKY_MERCHANT_AVG_MAX", 420));
+
+        private static int EnvInt(string name, string fallbackName, int fallback)
+        {
+            string? value = Environment.GetEnvironmentVariable(name) ?? Environment.GetEnvironmentVariable(fallbackName);
+            return int.TryParse(value, CultureInfo.InvariantCulture, out int parsed) ? parsed : fallback;
+        }
     }
 
     public void Dispose()

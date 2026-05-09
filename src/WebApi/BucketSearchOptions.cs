@@ -8,7 +8,8 @@ internal readonly record struct BucketSearchOptions(
     bool ProfileFastPath,
     int ProfileLegitMinCount,
     int ProfileFraudMinCount,
-    bool ExactFallback)
+    bool ExactFallback,
+    bool RiskyFallback)
 {
     public static BucketSearchOptions FromEnvironment()
     {
@@ -24,7 +25,8 @@ internal readonly record struct BucketSearchOptions(
             EnvBool("BUCKET_PROFILE_FASTPATH", true),
             EnvPositiveInt("BUCKET_PROFILE_LEGIT_MIN_COUNT", 5),
             EnvPositiveInt("BUCKET_PROFILE_FRAUD_MIN_COUNT", profileMinCount),
-            EnvBool("BUCKET_EXACT_FALLBACK", false));
+            ExactFallbackMode() != 0,
+            ExactFallbackMode() == 2);
     }
 
     private static int EnvPositiveInt(string name, int fallback)
@@ -41,5 +43,16 @@ internal readonly record struct BucketSearchOptions(
 
         return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static int ExactFallbackMode()
+    {
+        string? value = Environment.GetEnvironmentVariable("BUCKET_EXACT_FALLBACK");
+        return value?.ToLowerInvariant() switch
+        {
+            "1" or "true" or "uncertain" or "exact" => 1,
+            "2" or "risky" => 2,
+            _ => 0
+        };
     }
 }
