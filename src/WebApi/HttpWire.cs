@@ -42,18 +42,8 @@ internal static class HttpWire
     /// </summary>
     public static int FindHeaderEnd(byte[] buffer, int start, int end)
     {
-        for (int i = start; i <= end - 4; i++)
-        {
-            if (buffer[i] == (byte)'\r' &&
-                buffer[i + 1] == (byte)'\n' &&
-                buffer[i + 2] == (byte)'\r' &&
-                buffer[i + 3] == (byte)'\n')
-            {
-                return i;
-            }
-        }
-
-        return -1;
+        int relative = buffer.AsSpan(start, end - start).IndexOf("\r\n\r\n"u8);
+        return relative < 0 ? -1 : start + relative;
     }
 
     /// <summary>
@@ -62,6 +52,27 @@ internal static class HttpWire
     /// </summary>
     public static int GetContentLength(ReadOnlySpan<byte> header)
     {
+        int fast = header.IndexOf("Content-Length: "u8);
+        if (fast >= 0)
+        {
+            int pos = fast + "Content-Length: "u8.Length;
+            int value = 0;
+            while (pos < header.Length)
+            {
+                byte digit = (byte)(header[pos] - (byte)'0');
+                if (digit <= 9)
+                {
+                    value = value * 10 + digit;
+                    pos++;
+                    continue;
+                }
+
+                return header[pos] == (byte)'\r' ? value : -1;
+            }
+
+            return value;
+        }
+
         int lineStart = 0;
         while (lineStart < header.Length)
         {

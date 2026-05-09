@@ -16,7 +16,8 @@ internal static class FraudRequestParser
     /// <exception cref="JsonException">Thrown when the request shape or token type is invalid.</exception>
     public static FraudInput Parse(ReadOnlySpan<byte> body)
     {
-        if (TryParseFast(body, out FraudInput fastInput))
+        if (TryParseSinglePassFast(body, out FraudInput fastInput) ||
+            TryParseFast(body, out fastInput))
             return fastInput;
 
         var reader = new Utf8JsonReader(body);
@@ -72,6 +73,502 @@ internal static class FraudRequestParser
 
         input.UnknownMerchant = !MerchantIsKnown(merchantHash, merchantLength, hasMerchant, knownHashes, knownLengths, knownCount, knownExtra);
         return input;
+    }
+
+    private static bool TryParseSinglePassFast(ReadOnlySpan<byte> body, out FraudInput input)
+    {
+        input = default;
+        int pos = 0;
+        if (!TryStartObject(body, ref pos))
+            return false;
+
+        Span<ulong> knownHashes = stackalloc ulong[32];
+        Span<int> knownLengths = stackalloc int[32];
+        int knownCount = 0;
+        ulong merchantHash = 0;
+        int merchantLength = 0;
+        bool hasMerchant = false;
+        bool hasTransaction = false;
+        bool hasCustomer = false;
+        bool hasMerchantObject = false;
+        bool hasTerminal = false;
+        bool hasLastTransaction = false;
+        bool first = true;
+
+        while (TryReadNextProperty(body, ref pos, ref first, out ReadOnlySpan<byte> property, out bool done))
+        {
+            if (done)
+            {
+                input.UnknownMerchant = !MerchantIsKnown(merchantHash, merchantLength, hasMerchant, knownHashes, knownLengths, knownCount, null);
+                return hasTransaction && hasCustomer && hasMerchantObject && hasTerminal && hasLastTransaction;
+            }
+
+            if (property.SequenceEqual("transaction"u8))
+            {
+                if (!TryReadTransactionFast(body, ref pos, ref input))
+                    return false;
+                hasTransaction = true;
+            }
+            else if (property.SequenceEqual("customer"u8))
+            {
+                if (!TryReadCustomerFast(body, ref pos, ref input, knownHashes, knownLengths, ref knownCount))
+                    return false;
+                hasCustomer = true;
+            }
+            else if (property.SequenceEqual("merchant"u8))
+            {
+                if (!TryReadMerchantFast(body, ref pos, ref input, out merchantHash, out merchantLength, out hasMerchant))
+                    return false;
+                hasMerchantObject = true;
+            }
+            else if (property.SequenceEqual("terminal"u8))
+            {
+                if (!TryReadTerminalFast(body, ref pos, ref input))
+                    return false;
+                hasTerminal = true;
+            }
+            else if (property.SequenceEqual("last_transaction"u8))
+            {
+                if (!TryReadLastTransactionFast(body, ref pos, ref input))
+                    return false;
+                hasLastTransaction = true;
+            }
+            else if (!TrySkipValue(body, ref pos))
+            {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryReadTransactionFast(ReadOnlySpan<byte> source, ref int pos, ref FraudInput input)
+    {
+        if (!TryStartObject(source, ref pos))
+            return false;
+
+        bool hasAmount = false;
+        bool hasInstallments = false;
+        bool hasRequestedAt = false;
+        bool first = true;
+        while (TryReadNextProperty(source, ref pos, ref first, out ReadOnlySpan<byte> property, out bool done))
+        {
+            if (done)
+                return hasAmount && hasInstallments && hasRequestedAt;
+
+            if (property.SequenceEqual("amount"u8))
+            {
+                if (!TryReadDoubleValue(source, ref pos, out input.Amount)) return false;
+                hasAmount = true;
+            }
+            else if (property.SequenceEqual("installments"u8))
+            {
+                if (!TryReadIntValue(source, ref pos, out input.Installments)) return false;
+                hasInstallments = true;
+            }
+            else if (property.SequenceEqual("requested_at"u8))
+            {
+                if (!TryReadStringValue(source, ref pos, out ReadOnlySpan<byte> timestamp)) return false;
+                FraudVectorizer.ParseIsoUtc(timestamp, out input.Hour, out input.DayOfWeek, out input.RequestedSecondStamp);
+                hasRequestedAt = true;
+            }
+            else if (!TrySkipValue(source, ref pos))
+            {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryReadCustomerFast(ReadOnlySpan<byte> source, ref int pos, ref FraudInput input, Span<ulong> knownHashes, Span<int> knownLengths, ref int knownCount)
+    {
+        if (!TryStartObject(source, ref pos))
+            return false;
+
+        bool hasAvgAmount = false;
+        bool hasTxCount = false;
+        bool hasKnownMerchants = false;
+        bool first = true;
+        while (TryReadNextProperty(source, ref pos, ref first, out ReadOnlySpan<byte> property, out bool done))
+        {
+            if (done)
+                return hasAvgAmount && hasTxCount && hasKnownMerchants;
+
+            if (property.SequenceEqual("avg_amount"u8))
+            {
+                if (!TryReadDoubleValue(source, ref pos, out input.CustomerAvgAmount)) return false;
+                hasAvgAmount = true;
+            }
+            else if (property.SequenceEqual("tx_count_24h"u8))
+            {
+                if (!TryReadIntValue(source, ref pos, out input.TxCount24h)) return false;
+                hasTxCount = true;
+            }
+            else if (property.SequenceEqual("known_merchants"u8))
+            {
+                if (!TryReadKnownMerchantsFast(source, ref pos, knownHashes, knownLengths, ref knownCount)) return false;
+                hasKnownMerchants = true;
+            }
+            else if (!TrySkipValue(source, ref pos))
+            {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryReadMerchantFast(ReadOnlySpan<byte> source, ref int pos, ref FraudInput input, out ulong merchantHash, out int merchantLength, out bool hasMerchant)
+    {
+        merchantHash = 0;
+        merchantLength = 0;
+        hasMerchant = false;
+        if (!TryStartObject(source, ref pos))
+            return false;
+
+        bool hasMcc = false;
+        bool hasAvgAmount = false;
+        bool first = true;
+        while (TryReadNextProperty(source, ref pos, ref first, out ReadOnlySpan<byte> property, out bool done))
+        {
+            if (done)
+                return hasMerchant && hasMcc && hasAvgAmount;
+
+            if (property.SequenceEqual("id"u8))
+            {
+                if (!TryReadStringValue(source, ref pos, out ReadOnlySpan<byte> id)) return false;
+                merchantHash = Fnv1A(id);
+                merchantLength = id.Length;
+                hasMerchant = true;
+            }
+            else if (property.SequenceEqual("mcc"u8))
+            {
+                if (!TryReadMccValue(source, ref pos, out input.MccCode)) return false;
+                hasMcc = true;
+            }
+            else if (property.SequenceEqual("avg_amount"u8))
+            {
+                if (!TryReadDoubleValue(source, ref pos, out input.MerchantAvgAmount)) return false;
+                hasAvgAmount = true;
+            }
+            else if (!TrySkipValue(source, ref pos))
+            {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryReadTerminalFast(ReadOnlySpan<byte> source, ref int pos, ref FraudInput input)
+    {
+        if (!TryStartObject(source, ref pos))
+            return false;
+
+        bool hasIsOnline = false;
+        bool hasCardPresent = false;
+        bool hasKmFromHome = false;
+        bool first = true;
+        while (TryReadNextProperty(source, ref pos, ref first, out ReadOnlySpan<byte> property, out bool done))
+        {
+            if (done)
+                return hasIsOnline && hasCardPresent && hasKmFromHome;
+
+            if (property.SequenceEqual("is_online"u8))
+            {
+                if (!TryReadBoolValue(source, ref pos, out input.IsOnline)) return false;
+                hasIsOnline = true;
+            }
+            else if (property.SequenceEqual("card_present"u8))
+            {
+                if (!TryReadBoolValue(source, ref pos, out input.CardPresent)) return false;
+                hasCardPresent = true;
+            }
+            else if (property.SequenceEqual("km_from_home"u8))
+            {
+                if (!TryReadDoubleValue(source, ref pos, out input.KmFromHome)) return false;
+                hasKmFromHome = true;
+            }
+            else if (!TrySkipValue(source, ref pos))
+            {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryReadLastTransactionFast(ReadOnlySpan<byte> source, ref int pos, ref FraudInput input)
+    {
+        pos = SkipWhitespace(source, pos);
+        if (pos + 4 <= source.Length && source.Slice(pos, 4).SequenceEqual("null"u8))
+        {
+            pos += 4;
+            return true;
+        }
+
+        if (!TryStartObject(source, ref pos))
+            return false;
+
+        input.HasLastTransaction = true;
+        bool hasTimestamp = false;
+        bool hasKmFromCurrent = false;
+        bool first = true;
+        while (TryReadNextProperty(source, ref pos, ref first, out ReadOnlySpan<byte> property, out bool done))
+        {
+            if (done)
+                return hasTimestamp && hasKmFromCurrent;
+
+            if (property.SequenceEqual("timestamp"u8))
+            {
+                if (!TryReadStringValue(source, ref pos, out ReadOnlySpan<byte> timestamp)) return false;
+                FraudVectorizer.ParseIsoUtc(timestamp, out _, out _, out input.LastSecondStamp);
+                hasTimestamp = true;
+            }
+            else if (property.SequenceEqual("km_from_current"u8))
+            {
+                if (!TryReadDoubleValue(source, ref pos, out input.KmFromCurrent)) return false;
+                hasKmFromCurrent = true;
+            }
+            else if (!TrySkipValue(source, ref pos))
+            {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryReadKnownMerchantsFast(ReadOnlySpan<byte> source, ref int pos, Span<ulong> knownHashes, Span<int> knownLengths, ref int knownCount)
+    {
+        pos = SkipWhitespace(source, pos);
+        if (pos >= source.Length || source[pos++] != (byte)'[')
+            return false;
+
+        bool first = true;
+        while (true)
+        {
+            pos = SkipWhitespace(source, pos);
+            if (!first)
+            {
+                if (pos < source.Length && source[pos] == (byte)',')
+                {
+                    pos++;
+                    pos = SkipWhitespace(source, pos);
+                }
+                else if (pos < source.Length && source[pos] == (byte)']')
+                {
+                    pos++;
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else if (pos < source.Length && source[pos] == (byte)']')
+            {
+                pos++;
+                return true;
+            }
+
+            first = false;
+            if (!TryReadStringValue(source, ref pos, out ReadOnlySpan<byte> id))
+                return false;
+            if (knownCount >= knownHashes.Length)
+                return false;
+
+            knownHashes[knownCount] = Fnv1A(id);
+            knownLengths[knownCount] = id.Length;
+            knownCount++;
+        }
+    }
+
+    private static bool TryStartObject(ReadOnlySpan<byte> source, ref int pos)
+    {
+        pos = SkipWhitespace(source, pos);
+        if (pos >= source.Length || source[pos] != (byte)'{')
+            return false;
+
+        pos++;
+        return true;
+    }
+
+    private static bool TryReadNextProperty(ReadOnlySpan<byte> source, ref int pos, ref bool first, out ReadOnlySpan<byte> property, out bool done)
+    {
+        property = default;
+        done = false;
+        pos = SkipWhitespace(source, pos);
+        if (!first)
+        {
+            if (pos < source.Length && source[pos] == (byte)',')
+            {
+                pos++;
+                pos = SkipWhitespace(source, pos);
+            }
+            else if (pos < source.Length && source[pos] == (byte)'}')
+            {
+                pos++;
+                done = true;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else if (pos < source.Length && source[pos] == (byte)'}')
+        {
+            pos++;
+            done = true;
+            return true;
+        }
+
+        first = false;
+        if (!TryReadStringValue(source, ref pos, out property))
+            return false;
+
+        pos = SkipWhitespace(source, pos);
+        if (pos >= source.Length || source[pos] != (byte)':')
+            return false;
+
+        pos++;
+        return true;
+    }
+
+    private static bool TryReadStringValue(ReadOnlySpan<byte> source, ref int pos, out ReadOnlySpan<byte> value)
+    {
+        value = default;
+        pos = SkipWhitespace(source, pos);
+        if (pos >= source.Length || source[pos] != (byte)'"')
+            return false;
+
+        int start = ++pos;
+        while (pos < source.Length)
+        {
+            byte current = source[pos];
+            if (current == (byte)'\\')
+                return false;
+            if (current == (byte)'"')
+            {
+                value = source.Slice(start, pos - start);
+                pos++;
+                return true;
+            }
+
+            pos++;
+        }
+
+        return false;
+    }
+
+    private static bool TryReadDoubleValue(ReadOnlySpan<byte> source, ref int pos, out double value)
+    {
+        pos = SkipWhitespace(source, pos);
+        if (!Utf8Parser.TryParse(source[pos..], out value, out int consumed) || consumed <= 0)
+            return false;
+
+        pos += consumed;
+        return true;
+    }
+
+    private static bool TryReadIntValue(ReadOnlySpan<byte> source, ref int pos, out int value)
+    {
+        pos = SkipWhitespace(source, pos);
+        if (!Utf8Parser.TryParse(source[pos..], out value, out int consumed) || consumed <= 0)
+            return false;
+
+        pos += consumed;
+        return true;
+    }
+
+    private static bool TryReadBoolValue(ReadOnlySpan<byte> source, ref int pos, out bool value)
+    {
+        value = false;
+        pos = SkipWhitespace(source, pos);
+        if (pos + 4 <= source.Length && source.Slice(pos, 4).SequenceEqual("true"u8))
+        {
+            value = true;
+            pos += 4;
+            return true;
+        }
+
+        if (pos + 5 <= source.Length && source.Slice(pos, 5).SequenceEqual("false"u8))
+        {
+            pos += 5;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryReadMccValue(ReadOnlySpan<byte> source, ref int pos, out int code)
+    {
+        pos = SkipWhitespace(source, pos);
+        if (pos < source.Length && source[pos] == (byte)'"')
+        {
+            if (!TryReadStringValue(source, ref pos, out ReadOnlySpan<byte> text))
+            {
+                code = -1;
+                return false;
+            }
+
+            return TryParseDigits(text, out code);
+        }
+
+        return TryReadIntValue(source, ref pos, out code);
+    }
+
+    private static bool TrySkipValue(ReadOnlySpan<byte> source, ref int pos)
+    {
+        pos = SkipWhitespace(source, pos);
+        if (pos >= source.Length)
+            return false;
+
+        byte current = source[pos];
+        if (current == (byte)'"')
+            return TryReadStringValue(source, ref pos, out _);
+        if (current == (byte)'{')
+            return TrySkipComposite(source, ref pos, (byte)'{', (byte)'}');
+        if (current == (byte)'[')
+            return TrySkipComposite(source, ref pos, (byte)'[', (byte)']');
+        if (pos + 4 <= source.Length && source.Slice(pos, 4).SequenceEqual("true"u8)) { pos += 4; return true; }
+        if (pos + 5 <= source.Length && source.Slice(pos, 5).SequenceEqual("false"u8)) { pos += 5; return true; }
+        if (pos + 4 <= source.Length && source.Slice(pos, 4).SequenceEqual("null"u8)) { pos += 4; return true; }
+
+        while (pos < source.Length)
+        {
+            current = source[pos];
+            if (current == (byte)',' || current == (byte)'}' || current == (byte)']' || current == (byte)' ' || current == (byte)'\n' || current == (byte)'\r' || current == (byte)'\t')
+                return true;
+            pos++;
+        }
+
+        return true;
+    }
+
+    private static bool TrySkipComposite(ReadOnlySpan<byte> source, ref int pos, byte open, byte close)
+    {
+        int depth = 0;
+        while (pos < source.Length)
+        {
+            byte current = source[pos++];
+            if (current == (byte)'"')
+            {
+                pos--;
+                if (!TryReadStringValue(source, ref pos, out _))
+                    return false;
+                continue;
+            }
+
+            if (current == open)
+                depth++;
+            else if (current == close && --depth == 0)
+                return true;
+        }
+
+        return false;
     }
 
     private static bool TryParseFast(ReadOnlySpan<byte> body, out FraudInput input)
