@@ -1,14 +1,14 @@
 {
   "metadata": {
-    "timestamp": "2026-05-08T21:39:34-03:00",
-    "sha": "0ea5bbc538fe05944b98e4618a5fbdb30601a0c0",
-    "short_sha": "0ea5bbc538fe",
-    "run_id": "25586528921",
-    "run_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25586528921",
-    "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-0ea5bbc538fe05944b98e4618a5fbdb30601a0c0",
+    "timestamp": "2026-05-08T21:53:46-03:00",
+    "sha": "2b84f6371aaaf44cc2ec059b55142eef5879136c",
+    "short_sha": "2b84f6371aaa",
+    "run_id": "25586891133",
+    "run_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25586891133",
+    "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-2b84f6371aaaf44cc2ec059b55142eef5879136c",
     "compose_file": "docker-compose.nginx.yml",
     "report_kind": "candidate",
-    "html_report": "rinha-benchmark-20260509003934-0ea5bbc538fe.html",
+    "html_report": "rinha-benchmark-20260509005346-2b84f6371aaa.html",
     "official_ref": "main",
     "k6_image": "grafana/k6:latest",
     "source": "zanfranceschi/rinha-de-backend-2026:test/test.js",
@@ -23,7 +23,7 @@
     "benchmark_proxy_memory": "",
     "benchmark_repetitions": "1",
     "benchmark_config": {
-      "ivf_clusters": "4096",
+      "ivf_clusters": "2048",
       "ivf_train_sample": "65536",
       "ivf_iterations": "6",
       "ivf_scale": "10000",
@@ -46,20 +46,20 @@
       "edge_case_count": 797,
       "edge_case_rate": 0.0147
     },
-    "p99": "1.93ms",
+    "p99": "1.79ms",
     "scoring": {
       "breakdown": {
         "false_positive_detections": 0,
         "false_negative_detections": 0,
-        "true_positive_detections": 24036,
-        "true_negative_detections": 30021,
+        "true_positive_detections": 24037,
+        "true_negative_detections": 30022,
         "http_errors": 0
       },
       "failure_rate": "0%",
       "weighted_errors_E": 0,
       "error_rate_epsilon": 0,
       "p99_score": {
-        "value": 2714.45,
+        "value": 2748.16,
         "cut_triggered": false
       },
       "detection_score": {
@@ -68,7 +68,7 @@
         "absolute_penalty": 0,
         "cut_triggered": false
       },
-      "final_score": 5714.45
+      "final_score": 5748.16
     }
   }
 }
