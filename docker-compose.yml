@@ -14,7 +14,7 @@ services:
       DOTNET_PROCESSOR_COUNT: "1"
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
-      ACCEPT_LOOPS: "2"
+      ACCEPT_LOOPS: "1"
       MIN_WORKER_THREADS: "128"
       SCORER_MODE: ivf
       IVF_FAST_NPROBE: "1"
@@ -42,7 +42,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.45"
+          cpus: "0.40"
           memory: "165MB"
     ulimits:
       nofile:
@@ -58,7 +58,7 @@ services:
       DOTNET_PROCESSOR_COUNT: "1"
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
-      ACCEPT_LOOPS: "2"
+      ACCEPT_LOOPS: "1"
       MIN_WORKER_THREADS: "128"
       SCORER_MODE: ivf
       IVF_FAST_NPROBE: "1"
@@ -92,7 +92,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.10"
+          cpus: "0.20"
           memory: "20MB"
     ulimits:
       nofile:
