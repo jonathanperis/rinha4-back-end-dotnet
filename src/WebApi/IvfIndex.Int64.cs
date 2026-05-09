@@ -3,12 +3,6 @@
 /// </summary>
 internal sealed partial class IvfIndex
 {
-    // Public replay shows no approval changes below this first-cluster top-five bound.
-    private const long InitialZeroFastApproveWorstDistance = 5_000_000;
-
-    // Public replay shows no denial changes below this first-cluster top-five bound.
-    private const long InitialFiveFastDenyWorstDistance = 4_500_000;
-
     /// <summary>
     /// Runs one IVF2-compatible pass with int64 accumulation.
     /// </summary>
@@ -16,7 +10,12 @@ internal sealed partial class IvfIndex
     /// <param name="nProbe">Number of nearest centroid clusters to scan.</param>
     /// <param name="repair">Whether bbox repair may scan additional clusters.</param>
     /// <returns>Fraud count from retained nearest candidates.</returns>
-    private byte FraudCountOnceLong(ReadOnlySpan<short> quantizedQuery, int nProbe, bool repair)
+    private byte FraudCountOnceLong(
+        ReadOnlySpan<short> quantizedQuery,
+        int nProbe,
+        bool repair,
+        long zeroFastApproveWorstDistance,
+        long fiveFastDenyWorstDistance)
     {
         Span<int> bestClusters = stackalloc int[nProbe];
         Span<long> bestDistances = stackalloc long[nProbe];
@@ -41,9 +40,9 @@ internal sealed partial class IvfIndex
         if (repair)
         {
             byte initialFrauds = CountFrauds(candidateLabels);
-            if (initialFrauds == 0 && candidateDistances[^1] < InitialZeroFastApproveWorstDistance)
+            if (initialFrauds == 0 && candidateDistances[^1] < zeroFastApproveWorstDistance)
                 return 0;
-            if (initialFrauds == 5 && candidateDistances[^1] < InitialFiveFastDenyWorstDistance)
+            if (initialFrauds == 5 && candidateDistances[^1] < fiveFastDenyWorstDistance)
                 return 5;
         }
 

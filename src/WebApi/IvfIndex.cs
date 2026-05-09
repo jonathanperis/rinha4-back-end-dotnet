@@ -155,7 +155,12 @@ internal sealed partial class IvfIndex
         int fastNProbe = Math.Clamp(options.FastNProbe, 1, clusters);
         bool repairsAllCounts = options.BoundaryFull && options.RepairMinFrauds == 0 && options.RepairMaxFrauds == 5;
         bool fastRepair = options.BboxRepair && (!options.BoundaryFull || repairsAllCounts);
-        byte frauds = FraudCountOnceLong(quantizedQuery, fastNProbe, fastRepair);
+        byte frauds = FraudCountOnceLong(
+            quantizedQuery,
+            fastNProbe,
+            fastRepair,
+            options.ZeroFastApproveWorstDistance,
+            options.FiveFastDenyWorstDistance);
 
         if (options.BoundaryFull &&
             !repairsAllCounts &&
@@ -163,7 +168,12 @@ internal sealed partial class IvfIndex
             frauds <= options.RepairMaxFrauds)
         {
             int fullNProbe = Math.Clamp(Math.Max(options.FullNProbe, fastNProbe), 1, clusters);
-            frauds = FraudCountOnceLong(quantizedQuery, fullNProbe, options.BboxRepair);
+            frauds = FraudCountOnceLong(
+                quantizedQuery,
+                fullNProbe,
+                options.BboxRepair,
+                options.ZeroFastApproveWorstDistance,
+                options.FiveFastDenyWorstDistance);
         }
 
         return frauds;

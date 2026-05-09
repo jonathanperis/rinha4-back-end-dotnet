@@ -89,10 +89,14 @@ on:
         description: Inclusive repair fraud-count maximum
         required: true
         default: "5"
-      benchmark_stack_cpuset:
-        description: Optional Docker cpuset for WebApi/LB containers; set 0 for one-core contention probe
-        required: false
-        default: ""
+      ivf_zero_fast_approve_worst_distance:
+        description: Zero-fraud top-five distance threshold that skips repair
+        required: true
+        default: "5000000"
+      ivf_five_fast_deny_worst_distance:
+        description: Five-fraud top-five distance threshold that skips repair
+        required: true
+        default: "4500000"
       benchmark_api_cpuset:
         description: Optional Docker cpuset for WebApi containers; overrides stack cpuset for API only
         required: false
@@ -107,10 +111,6 @@ on:
         default: ""
       benchmark_proxy_cpus:
         description: Optional calibrated CPU quota for proxy container, e.g. 0.10
-        required: false
-        default: ""
-      benchmark_api_memory:
-        description: Optional calibrated memory limit for each WebApi container, e.g. 165MB
         required: false
         default: ""
       accept_loops:
@@ -187,12 +187,12 @@ jobs:
           IVF_BBOX_REPAIR: ${{ inputs.ivf_bbox_repair }}
           IVF_REPAIR_MIN_FRAUDS: ${{ inputs.ivf_repair_min_frauds }}
           IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
-          BENCHMARK_STACK_CPUSET: ${{ inputs.benchmark_stack_cpuset }}
+          IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: ${{ inputs.ivf_zero_fast_approve_worst_distance }}
+          IVF_FIVE_FAST_DENY_WORST_DISTANCE: ${{ inputs.ivf_five_fast_deny_worst_distance }}
           BENCHMARK_API_CPUSET: ${{ inputs.benchmark_api_cpuset }}
           BENCHMARK_PROXY_CPUSET: ${{ inputs.benchmark_proxy_cpuset }}
           BENCHMARK_API_CPUS: ${{ inputs.benchmark_api_cpus }}
           BENCHMARK_PROXY_CPUS: ${{ inputs.benchmark_proxy_cpus }}
-          BENCHMARK_API_MEMORY: ${{ inputs.benchmark_api_memory }}
           ACCEPT_LOOPS: ${{ inputs.accept_loops }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
           MIN_WORKER_THREADS: ${{ inputs.min_worker_threads }}
@@ -267,12 +267,12 @@ jobs:
           IVF_BBOX_REPAIR: ${{ inputs.ivf_bbox_repair }}
           IVF_REPAIR_MIN_FRAUDS: ${{ inputs.ivf_repair_min_frauds }}
           IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
-          BENCHMARK_STACK_CPUSET: ${{ inputs.benchmark_stack_cpuset }}
+          IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: ${{ inputs.ivf_zero_fast_approve_worst_distance }}
+          IVF_FIVE_FAST_DENY_WORST_DISTANCE: ${{ inputs.ivf_five_fast_deny_worst_distance }}
           BENCHMARK_API_CPUSET: ${{ inputs.benchmark_api_cpuset }}
           BENCHMARK_PROXY_CPUSET: ${{ inputs.benchmark_proxy_cpuset }}
           BENCHMARK_API_CPUS: ${{ inputs.benchmark_api_cpus }}
           BENCHMARK_PROXY_CPUS: ${{ inputs.benchmark_proxy_cpus }}
-          BENCHMARK_API_MEMORY: ${{ inputs.benchmark_api_memory }}
           ACCEPT_LOOPS: ${{ inputs.accept_loops }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
           MIN_WORKER_THREADS: ${{ inputs.min_worker_threads }}

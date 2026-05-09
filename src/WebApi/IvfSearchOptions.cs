@@ -7,13 +7,17 @@
 /// <param name="BboxRepair">Whether bounding-box lower bounds may add non-probed clusters.</param>
 /// <param name="RepairMinFrauds">Inclusive lower fraud-count boundary for second-pass repair.</param>
 /// <param name="RepairMaxFrauds">Inclusive upper fraud-count boundary for second-pass repair.</param>
+/// <param name="ZeroFastApproveWorstDistance">Worst top-five distance under which zero-fraud candidates skip repair.</param>
+/// <param name="FiveFastDenyWorstDistance">Worst top-five distance under which five-fraud candidates skip repair.</param>
 internal readonly record struct IvfSearchOptions(
     int FastNProbe,
     int FullNProbe,
     bool BoundaryFull,
     bool BboxRepair,
     byte RepairMinFrauds,
-    byte RepairMaxFrauds)
+    byte RepairMaxFrauds,
+    long ZeroFastApproveWorstDistance,
+    long FiveFastDenyWorstDistance)
 {
     /// <summary>
     /// Reads IVF search controls from environment variables.
@@ -32,7 +36,9 @@ internal readonly record struct IvfSearchOptions(
             EnvBool("IVF_BOUNDARY_FULL", false),
             EnvBool("IVF_BBOX_REPAIR", true),
             repairMin,
-            repairMax);
+            repairMax,
+            EnvNonNegativeLong("IVF_ZERO_FAST_APPROVE_WORST_DISTANCE", 5_000_000),
+            EnvNonNegativeLong("IVF_FIVE_FAST_DENY_WORST_DISTANCE", 4_500_000));
     }
 
     /// <summary>
@@ -57,6 +63,12 @@ internal readonly record struct IvfSearchOptions(
     {
         string? value = Environment.GetEnvironmentVariable(name);
         return int.TryParse(value, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0 ? parsed : fallback;
+    }
+
+    private static long EnvNonNegativeLong(string name, long fallback)
+    {
+        string? value = Environment.GetEnvironmentVariable(name);
+        return long.TryParse(value, CultureInfo.InvariantCulture, out long parsed) && parsed >= 0 ? parsed : fallback;
     }
 
     /// <summary>
