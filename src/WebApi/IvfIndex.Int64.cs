@@ -3,6 +3,11 @@
 /// </summary>
 internal sealed partial class IvfIndex
 {
+    private const long OneFastApproveWorstDistance = 3_199_336;
+    private const long TwoFastApproveWorstDistance = 2_802_245;
+    private const long ThreeFastDenyWorstDistance = 2_231_592;
+    private const long FourFastDenyWorstDistance = 3_844_272;
+
     /// <summary>
     /// Runs one IVF2-compatible pass with int64 accumulation.
     /// </summary>
@@ -15,6 +20,7 @@ internal sealed partial class IvfIndex
         ReadOnlySpan<short> quantizedQuery,
         int nProbe,
         bool repair,
+        bool allowFastDecision,
         long zeroFastApproveWorstDistance,
         long fiveFastDenyWorstDistance)
     {
@@ -38,13 +44,19 @@ internal sealed partial class IvfIndex
             ScanBlocksLong(candidateDistances, candidateIds, candidateLabels, offsets[cluster], offsets[cluster + 1], quantizedQuery, queryVectors);
         }
 
-        if (repair)
+        if (repair && allowFastDecision)
         {
             byte initialFrauds = CountFrauds(candidateLabels);
-            if (initialFrauds == 0 && candidateDistances[^1] < zeroFastApproveWorstDistance)
-                return 0;
-            if (initialFrauds == 5 && candidateDistances[^1] < fiveFastDenyWorstDistance)
-                return 5;
+            long initialWorstDistance = candidateDistances[^1];
+            if ((initialFrauds == 0 && initialWorstDistance < zeroFastApproveWorstDistance) ||
+                (initialFrauds == 1 && initialWorstDistance < OneFastApproveWorstDistance) ||
+                (initialFrauds == 2 && initialWorstDistance < TwoFastApproveWorstDistance) ||
+                (initialFrauds == 3 && initialWorstDistance < ThreeFastDenyWorstDistance) ||
+                (initialFrauds == 4 && initialWorstDistance < FourFastDenyWorstDistance) ||
+                (initialFrauds == 5 && initialWorstDistance < fiveFastDenyWorstDistance))
+            {
+                return initialFrauds;
+            }
         }
 
         if (repair)

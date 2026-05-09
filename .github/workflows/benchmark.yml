@@ -94,11 +94,11 @@ on:
       ivf_zero_fast_approve_worst_distance:
         description: Zero-fraud top-five distance threshold that skips repair
         required: true
-        default: "5000000"
+        default: "5071071"
       ivf_five_fast_deny_worst_distance:
         description: Five-fraud top-five distance threshold that skips repair
         required: true
-        default: "4500000"
+        default: "4515410"
       benchmark_api_cpuset:
         description: Optional Docker cpuset for WebApi containers; overrides stack cpuset for API only
         required: false
