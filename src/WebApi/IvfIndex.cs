@@ -159,7 +159,6 @@ internal sealed partial class IvfIndex
             quantizedQuery,
             fastNProbe,
             fastRepair,
-            fastRepair && !options.BoundaryFull,
             options.ZeroFastApproveWorstDistance,
             options.FiveFastDenyWorstDistance);
 
@@ -173,7 +172,6 @@ internal sealed partial class IvfIndex
                 quantizedQuery,
                 fullNProbe,
                 options.BboxRepair,
-                false,
                 options.ZeroFastApproveWorstDistance,
                 options.FiveFastDenyWorstDistance);
         }
