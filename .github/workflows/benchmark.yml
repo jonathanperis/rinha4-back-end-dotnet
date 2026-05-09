@@ -93,10 +93,6 @@ on:
         description: Optional Docker cpuset for WebApi/LB containers; set 0 for one-core contention probe
         required: false
         default: ""
-      benchmark_k6_cpuset:
-        description: Optional Docker cpuset for k6 container; usually empty, set 0 only for full host-contention probes
-        required: false
-        default: ""
       benchmark_api_cpuset:
         description: Optional Docker cpuset for WebApi containers; overrides stack cpuset for API only
         required: false
@@ -192,7 +188,6 @@ jobs:
           IVF_REPAIR_MIN_FRAUDS: ${{ inputs.ivf_repair_min_frauds }}
           IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
           BENCHMARK_STACK_CPUSET: ${{ inputs.benchmark_stack_cpuset }}
-          BENCHMARK_K6_CPUSET: ${{ inputs.benchmark_k6_cpuset }}
           BENCHMARK_API_CPUSET: ${{ inputs.benchmark_api_cpuset }}
           BENCHMARK_PROXY_CPUSET: ${{ inputs.benchmark_proxy_cpuset }}
           BENCHMARK_API_CPUS: ${{ inputs.benchmark_api_cpus }}
@@ -273,7 +268,6 @@ jobs:
           IVF_REPAIR_MIN_FRAUDS: ${{ inputs.ivf_repair_min_frauds }}
           IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
           BENCHMARK_STACK_CPUSET: ${{ inputs.benchmark_stack_cpuset }}
-          BENCHMARK_K6_CPUSET: ${{ inputs.benchmark_k6_cpuset }}
           BENCHMARK_API_CPUSET: ${{ inputs.benchmark_api_cpuset }}
           BENCHMARK_PROXY_CPUSET: ${{ inputs.benchmark_proxy_cpuset }}
           BENCHMARK_API_CPUS: ${{ inputs.benchmark_api_cpus }}
