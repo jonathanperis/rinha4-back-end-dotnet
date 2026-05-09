@@ -27,7 +27,7 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "1"
       MIN_WORKER_THREADS: "${MIN_WORKER_THREADS:-128}"
-      SCORER_MODE: ivf
+      SCORER_MODE: "${SCORER_MODE:-ivf}"
       SOCKET_PATH: /sockets/api1.sock
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
@@ -65,7 +65,7 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "1"
       MIN_WORKER_THREADS: "${MIN_WORKER_THREADS:-128}"
-      SCORER_MODE: ivf
+      SCORER_MODE: "${SCORER_MODE:-ivf}"
       SOCKET_PATH: /sockets/api2.sock
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin

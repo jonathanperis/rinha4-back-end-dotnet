@@ -23,6 +23,15 @@ on:
         description: Optional prebuilt WebApi image; empty means build from checkout
         required: false
         default: ""
+      scorer_mode:
+        description: Runtime scorer mode
+        required: true
+        default: ivf
+        type: choice
+        options:
+          - ivf
+          - bucket
+          - exact
       report_kind:
         description: Report lane used by GitHub Pages archive
         required: true
@@ -192,6 +201,7 @@ jobs:
           BENCHMARK_PROXY_MEMORY: ${{ inputs.benchmark_proxy_memory }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
           MIN_WORKER_THREADS: ${{ inputs.min_worker_threads }}
+          SCORER_MODE: ${{ inputs.scorer_mode }}
         run: bash scripts/ci-official-benchmark.sh
 
       - name: Write benchmark metadata
@@ -272,6 +282,7 @@ jobs:
           BENCHMARK_PROXY_MEMORY: ${{ inputs.benchmark_proxy_memory }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
           MIN_WORKER_THREADS: ${{ inputs.min_worker_threads }}
+          SCORER_MODE: ${{ inputs.scorer_mode }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

@@ -18,6 +18,7 @@ BENCHMARK_PROXY_CPUS="${BENCHMARK_PROXY_CPUS:-}"
 BENCHMARK_API_MEMORY="${BENCHMARK_API_MEMORY:-}"
 BENCHMARK_PROXY_MEMORY="${BENCHMARK_PROXY_MEMORY:-}"
 BENCHMARK_REPETITIONS="${BENCHMARK_REPETITIONS:-1}"
+SCORER_MODE="${SCORER_MODE:-ivf}"
 
 cd "$ROOT_DIR"
 
@@ -105,6 +106,7 @@ capture_docker_state() {
         echo "benchmark_api_memory=$BENCHMARK_API_MEMORY"
         echo "benchmark_proxy_memory=$BENCHMARK_PROXY_MEMORY"
         echo "benchmark_repetitions=$BENCHMARK_REPETITIONS"
+        echo "scorer_mode=$SCORER_MODE"
         echo
         echo "host_uname=$(uname -a)"
         echo "host_nproc=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || true)"
@@ -267,6 +269,7 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
             echo "- k6 cpuset: \`$BENCHMARK_K6_CPUSET\`"
         fi
         echo "- Repetitions: \`$BENCHMARK_REPETITIONS\`"
+        echo "- Scorer mode: \`$SCORER_MODE\`"
         echo
         echo '```json'
         jq . "$RESULTS_DIR/results.json"
