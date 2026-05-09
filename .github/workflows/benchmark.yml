@@ -11,6 +11,8 @@ on:
         options:
           - docker-compose.nginx.yml
           - docker-compose.haproxy.yml
+          - docker-compose.envoy.yml
+          - docker-compose.yarp.yml
       official_ref:
         description: Rinha official repo ref to clone for test/test.js and test-data.json
         required: true
@@ -143,6 +145,10 @@ jobs:
             compose_file: docker-compose.nginx.yml
           - name: haproxy
             compose_file: docker-compose.haproxy.yml
+          - name: envoy
+            compose_file: docker-compose.envoy.yml
+          - name: yarp
+            compose_file: docker-compose.yarp.yml
     concurrency:
       group: benchmark-${{ github.run_id }}-${{ matrix.lb.name }}
       cancel-in-progress: false
