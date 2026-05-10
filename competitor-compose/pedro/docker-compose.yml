@@ -1,0 +1,76 @@
+name: rinha-2026-pedro
+
+services:
+  lb:
+    image: jrblatt/so-no-forevis:v0.0.2
+    platform: linux/amd64
+    ports:
+      - "9999:9999"
+    volumes:
+      - uds:/run/uds
+    depends_on:
+      - api1
+      - api2
+    deploy:
+      resources:
+        limits:
+          cpus: "0.20"
+          memory: "30MB"
+
+  api1: &api
+    image: ghcr.io/pedrosakuma/rinha-backend-2026-api:latest
+    platform: linux/amd64
+    environment:
+      UDS_PATH: /run/uds/api1.sock
+      DOTNET_GCHeapCount: "1"
+      DOTNET_gcServer: "0"
+      DOTNET_GCConserveMemory: "9"
+      DOTNET_PROCESSOR_COUNT: "1"
+      TP_MIN_WORKERS: "1"
+      TP_MAX_WORKERS: "1"
+      SCORER: ivf
+      IVF_NPROBE: "2"
+      IVF_RERANK: "24"
+      IVF_EARLY_STOP: "1"
+      IVF_EARLY_STOP_PCT: "40"
+      IVF_EARLY_STOP_PCT_EARLY: "0"
+      IVF_BBOX_REPAIR: "0"
+      IVF_BBOX_GUIDED: "0"
+      IO_URING_ENABLED: "0"
+    volumes:
+      - uds:/run/uds
+    ulimits:
+      memlock: -1
+    deploy:
+      resources:
+        limits:
+          cpus: "0.40"
+          memory: "150MB"
+
+  api2:
+    <<: *api
+    environment:
+      UDS_PATH: /run/uds/api2.sock
+      DOTNET_GCHeapCount: "1"
+      DOTNET_gcServer: "0"
+      DOTNET_GCConserveMemory: "9"
+      DOTNET_PROCESSOR_COUNT: "1"
+      TP_MIN_WORKERS: "1"
+      TP_MAX_WORKERS: "1"
+      SCORER: ivf
+      IVF_NPROBE: "2"
+      IVF_RERANK: "24"
+      IVF_EARLY_STOP: "1"
+      IVF_EARLY_STOP_PCT: "40"
+      IVF_EARLY_STOP_PCT_EARLY: "0"
+      IVF_BBOX_REPAIR: "0"
+      IVF_BBOX_GUIDED: "0"
+      IO_URING_ENABLED: "0"
+
+volumes:
+  uds:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: mode=0777
