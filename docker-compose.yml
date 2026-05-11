@@ -2,7 +2,7 @@ name: 'rinha-2026-dotnet'
 
 services:
   webapi1: &webapi
-    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-363fb7852a782a5e43654c6a96fca760882ea338
+    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-1408179ddd8da853bbb22b87c3093d710bf5baab
     pull_policy: always
     container_name: webapi-1
     user: root
@@ -14,25 +14,23 @@ services:
       DOTNET_PROCESSOR_COUNT: "1"
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
-      ACCEPT_LOOPS: "1"
+      ACCEPT_LOOPS: "2"
       MIN_WORKER_THREADS: "128"
-      SCORER_MODE: ivf
-      IVF_FAST_NPROBE: "1"
-      IVF_FULL_NPROBE: "1"
-      IVF_BOUNDARY_FULL: "false"
-      IVF_BBOX_REPAIR: "true"
-      IVF_REPAIR_MIN_FRAUDS: "0"
-      IVF_REPAIR_MAX_FRAUDS: "5"
-      IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "5000000"
-      IVF_FIVE_FAST_DENY_WORST_DISTANCE: "4500000"
+      SCORER_MODE: bucket
       SOCKET_PATH: /sockets/api1.sock
       DATA_DIR: /data
-      IVF_PATH: /data/references.ivf.bin
+      BUCKET_PATH: /data/references.bucket.bin
+      BUCKET_EARLY_CANDIDATES: "9800"
+      BUCKET_MIN_CANDIDATES: "16150"
+      BUCKET_MAX_CANDIDATES: "24200"
+      BUCKET_PROFILE_FASTPATH: "true"
+      BUCKET_PROFILE_LEGIT_MIN_COUNT: "5"
+      BUCKET_PROFILE_FRAUD_MIN_COUNT: "15"
+      BUCKET_EXACT_FALLBACK: risky
     tmpfs:
       - /tmp
     volumes:
       - sockets:/sockets
-    cpuset: "1,2"
     healthcheck:
       test: ["CMD-SHELL", "test -S \"$${SOCKET_PATH}\""]
       interval: 100ms
@@ -58,28 +56,26 @@ services:
       DOTNET_PROCESSOR_COUNT: "1"
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
-      ACCEPT_LOOPS: "1"
+      ACCEPT_LOOPS: "2"
       MIN_WORKER_THREADS: "128"
-      SCORER_MODE: ivf
-      IVF_FAST_NPROBE: "1"
-      IVF_FULL_NPROBE: "1"
-      IVF_BOUNDARY_FULL: "false"
-      IVF_BBOX_REPAIR: "true"
-      IVF_REPAIR_MIN_FRAUDS: "0"
-      IVF_REPAIR_MAX_FRAUDS: "5"
-      IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "5000000"
-      IVF_FIVE_FAST_DENY_WORST_DISTANCE: "4500000"
+      SCORER_MODE: bucket
       SOCKET_PATH: /sockets/api2.sock
       DATA_DIR: /data
-      IVF_PATH: /data/references.ivf.bin
-    cpuset: "2,3"
+      BUCKET_PATH: /data/references.bucket.bin
+      BUCKET_EARLY_CANDIDATES: "9800"
+      BUCKET_MIN_CANDIDATES: "16150"
+      BUCKET_MAX_CANDIDATES: "24200"
+      BUCKET_PROFILE_FASTPATH: "true"
+      BUCKET_PROFILE_LEGIT_MIN_COUNT: "5"
+      BUCKET_PROFILE_FRAUD_MIN_COUNT: "15"
+      BUCKET_EXACT_FALLBACK: risky
 
-  nginx:
-    image: nginx:latest
-    container_name: nginx-lb
+  haproxy:
+    image: haproxy:3.1-alpine
+    container_name: haproxy-lb
     user: root
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
       - sockets:/sockets
     depends_on:
       webapi1:
@@ -88,12 +84,11 @@ services:
         condition: service_healthy
     ports:
       - "9999:9999"
-    cpuset: "0"
     deploy:
       resources:
         limits:
           cpus: "0.20"
-          memory: "20MB"
+          memory: "16MB"
     ulimits:
       nofile:
         soft: 65535
