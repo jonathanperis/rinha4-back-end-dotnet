@@ -1,14 +1,14 @@
 {
   "metadata": {
-    "timestamp": "2026-05-09T09:21:53-03:00",
-    "sha": "183d6006db048acda20082d1c944dbe77a6cd269",
-    "short_sha": "183d6006db04",
-    "run_id": "25601001938",
-    "run_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25601001938",
-    "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-183d6006db048acda20082d1c944dbe77a6cd269",
+    "timestamp": "2026-05-11T18:13:56-03:00",
+    "sha": "ae640826273dae3791b04283eb4293e17ec9973e",
+    "short_sha": "ae640826273d",
+    "run_id": "25697714030",
+    "run_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25697714030",
+    "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-ae640826273dae3791b04283eb4293e17ec9973e",
     "compose_file": "docker-compose.nginx.yml",
     "report_kind": "candidate",
-    "html_report": "rinha-benchmark-20260509122153-183d6006db04.html",
+    "html_report": "rinha-benchmark-20260511211356-ae640826273d.html",
     "official_ref": "main",
     "k6_image": "grafana/k6:latest",
     "source": "zanfranceschi/rinha-de-backend-2026:test/test.js",
@@ -50,20 +50,20 @@
       "edge_case_count": 797,
       "edge_case_rate": 0.0147
     },
-    "p99": "1.74ms",
+    "p99": "1.45ms",
     "scoring": {
       "breakdown": {
         "false_positive_detections": 0,
         "false_negative_detections": 0,
         "true_positive_detections": 24037,
-        "true_negative_detections": 30022,
+        "true_negative_detections": 30021,
         "http_errors": 0
       },
       "failure_rate": "0%",
       "weighted_errors_E": 0,
       "error_rate_epsilon": 0,
       "p99_score": {
-        "value": 2759.65,
+        "value": 2839.64,
         "cut_triggered": false
       },
       "detection_score": {
@@ -72,7 +72,7 @@
         "absolute_penalty": 0,
         "cut_triggered": false
       },
-      "final_score": 5759.65
+      "final_score": 5839.64
     }
   }
 }
