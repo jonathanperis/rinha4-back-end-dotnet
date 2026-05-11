@@ -16,7 +16,7 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "2"
       MIN_WORKER_THREADS: "128"
-      SCORER_MODE: ivf
+      SCORER_MODE: bucket
       SOCKET_PATH: /sockets/api1.sock
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
@@ -29,6 +29,14 @@ services:
       IVF_REPAIR_MAX_FRAUDS: "5"
       IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "5000000"
       IVF_FIVE_FAST_DENY_WORST_DISTANCE: "4500000"
+      BUCKET_PATH: /data/references.bucket.bin
+      BUCKET_EARLY_CANDIDATES: "9800"
+      BUCKET_MIN_CANDIDATES: "16150"
+      BUCKET_MAX_CANDIDATES: "24200"
+      BUCKET_PROFILE_FASTPATH: "true"
+      BUCKET_PROFILE_LEGIT_MIN_COUNT: "5"
+      BUCKET_PROFILE_FRAUD_MIN_COUNT: "15"
+      BUCKET_EXACT_FALLBACK: "false"
     tmpfs:
       - /tmp
     volumes:
@@ -43,7 +51,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.40"
+          cpus: "0.45"
           memory: "165MB"
     ulimits:
       nofile:
@@ -60,7 +68,7 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "2"
       MIN_WORKER_THREADS: "128"
-      SCORER_MODE: ivf
+      SCORER_MODE: bucket
       SOCKET_PATH: /sockets/api2.sock
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
@@ -73,6 +81,14 @@ services:
       IVF_REPAIR_MAX_FRAUDS: "5"
       IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "5000000"
       IVF_FIVE_FAST_DENY_WORST_DISTANCE: "4500000"
+      BUCKET_PATH: /data/references.bucket.bin
+      BUCKET_EARLY_CANDIDATES: "9800"
+      BUCKET_MIN_CANDIDATES: "16150"
+      BUCKET_MAX_CANDIDATES: "24200"
+      BUCKET_PROFILE_FASTPATH: "true"
+      BUCKET_PROFILE_LEGIT_MIN_COUNT: "5"
+      BUCKET_PROFILE_FRAUD_MIN_COUNT: "15"
+      BUCKET_EXACT_FALLBACK: "false"
     cpuset: "2,3"
 
   nginx:
@@ -93,7 +109,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.20"
+          cpus: "0.10"
           memory: "20MB"
     ulimits:
       nofile:
