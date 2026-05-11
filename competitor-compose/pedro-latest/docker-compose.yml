@@ -1,0 +1,66 @@
+name: rinha-backend-2026-pedro-latest
+
+# Pedro latest main stack as of f293b69e766700287950f8d56984ede8f178cbcb.
+# Uses mutable GHCR :latest because no immutable tag/digest is exposed in repo metadata.
+
+services:
+  api1: &api
+    image: ghcr.io/pedrosakuma/rinha-backend-2026-api:latest
+    pull_policy: always
+    platform: linux/amd64
+    cpuset: "0,1"
+    environment:
+      PORT: "9999"
+      DOTNET_GCHeapCount: "1"
+      DOTNET_gcServer: "0"
+      DOTNET_GCConserveMemory: "9"
+      DOTNET_PROCESSOR_COUNT: "1"
+      TP_MIN_WORKERS: "1"
+      TP_MAX_WORKERS: "1"
+      SCORER: "ivf"
+      IVF_NPROBE: "2"
+      IVF_RERANK: "24"
+      IVF_EARLY_STOP: "1"
+      IVF_EARLY_STOP_PCT: "40"
+      IVF_EARLY_STOP_PCT_EARLY: "0"
+      IVF_BBOX_REPAIR: "0"
+      IVF_BBOX_GUIDED: "0"
+      IO_URING_ENABLED: "0"
+      IO_URING_SIZE: "256"
+      IO_URING_MAX_CONN: "1024"
+    networks: [app]
+    ulimits:
+      memlock: -1
+    deploy:
+      resources:
+        limits:
+          cpus: "0.37"
+          memory: "150MB"
+
+  api2:
+    <<: *api
+    cpuset: "2,3"
+    depends_on:
+      - api1
+
+  lb:
+    image: nginx:1.27-alpine
+    platform: linux/amd64
+    cpuset: "0,2"
+    ports:
+      - "9999:9999"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api1
+      - api2
+    networks: [app]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.26"
+          memory: "50MB"
+
+networks:
+  app:
+    driver: bridge

@@ -14,6 +14,7 @@ on:
           - competitor-compose/zan/docker-compose.yml
           - competitor-compose/danilo/docker-compose.yml
           - competitor-compose/pedro/docker-compose.yml
+          - competitor-compose/pedro-latest/docker-compose.yml
           - competitor-compose/jordao/docker-compose.yml
           - competitor-compose/hanake0/docker-compose.yml
       official_ref:
@@ -54,6 +55,8 @@ jobs:
             compose_file: competitor-compose/danilo/docker-compose.yml
           - name: pedro
             compose_file: competitor-compose/pedro/docker-compose.yml
+          - name: pedro-latest
+            compose_file: competitor-compose/pedro-latest/docker-compose.yml
           - name: jordao
             compose_file: competitor-compose/jordao/docker-compose.yml
           - name: hanake0
