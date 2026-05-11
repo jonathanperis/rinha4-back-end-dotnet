@@ -2,7 +2,7 @@ name: 'rinha-2026-dotnet'
 
 services:
   webapi1: &webapi
-    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-1408179ddd8da853bbb22b87c3093d710bf5baab
+    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-32cb01a5d924ec00f2a6f4ab8b30c4bdfe9737f6
     pull_policy: always
     container_name: webapi-1
     user: root
@@ -14,7 +14,7 @@ services:
       DOTNET_PROCESSOR_COUNT: "1"
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
-      ACCEPT_LOOPS: "1"
+      ACCEPT_LOOPS: "2"
       MIN_WORKER_THREADS: "128"
       SCORER_MODE: bucket
       SOCKET_PATH: /sockets/api1.sock
@@ -56,7 +56,7 @@ services:
       DOTNET_PROCESSOR_COUNT: "1"
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
-      ACCEPT_LOOPS: "1"
+      ACCEPT_LOOPS: "2"
       MIN_WORKER_THREADS: "128"
       SCORER_MODE: bucket
       SOCKET_PATH: /sockets/api2.sock
