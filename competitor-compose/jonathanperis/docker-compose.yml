@@ -36,7 +36,7 @@ services:
       BUCKET_PROFILE_FASTPATH: "true"
       BUCKET_PROFILE_LEGIT_MIN_COUNT: "5"
       BUCKET_PROFILE_FRAUD_MIN_COUNT: "15"
-      BUCKET_EXACT_FALLBACK: "false"
+      BUCKET_EXACT_FALLBACK: "risky"
     tmpfs:
       - /tmp
     volumes:
@@ -51,7 +51,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.45"
+          cpus: "0.40"
           memory: "165MB"
     ulimits:
       nofile:
@@ -88,7 +88,7 @@ services:
       BUCKET_PROFILE_FASTPATH: "true"
       BUCKET_PROFILE_LEGIT_MIN_COUNT: "5"
       BUCKET_PROFILE_FRAUD_MIN_COUNT: "15"
-      BUCKET_EXACT_FALLBACK: "false"
+      BUCKET_EXACT_FALLBACK: "risky"
     cpuset: "2,3"
 
   nginx:
@@ -109,7 +109,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.10"
+          cpus: "0.20"
           memory: "20MB"
     ulimits:
       nofile:
