@@ -1,59 +1,70 @@
 services:
-  haproxy:
-    image: haproxy:3.1-alpine
+  lb:
+    image: jrblatt/so-no-forevis:v0.0.2
+    pull_policy: always
     platform: linux/amd64
+    restart: always
+    depends_on:
+      - api1
+      - api2
+    environment:
+      - UPSTREAMS=/run/sock/api1.sock,/run/sock/api2.sock
+      - PORT=9999
+      - BUF_SIZE=4096
+      - WORKERS=1
     ports:
       - "9999:9999"
     volumes:
-      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
       - sock:/run/sock
     cpuset: "0"
     deploy:
       resources:
         limits:
-          cpus: "0.20"
-          memory: "16MB"
-    depends_on:
-      - api1
-      - api2
+          cpus: "0.15"
+          memory: "40MB"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    security_opt:
+      - seccomp=unconfined
     networks:
       - rinha
 
-  api1:
+  api1: &api
     image: ghcr.io/jordaogustavo/rinha-api:latest
+    pull_policy: always
     platform: linux/amd64
     environment:
       - SOCKET_PATH=/run/sock/api1.sock
       - NPROBE_FULL=5
-      - CUSTOM_HTTP=1
+      - IO_URING_ENABLED=1
+      - UNANIMITY_SKIP=1
+      - EARLY_EXIT_DIMS=3
+      - PROFILE_MIN_COUNT=15
     volumes:
       - sock:/run/sock
     cpuset: "1,2"
     deploy:
       resources:
         limits:
-          cpus: "0.40"
-          memory: "162MB"
+          cpus: "0.425"
+          memory: "155MB"
+    security_opt:
+      - seccomp=unconfined
     networks:
       - rinha
 
   api2:
-    image: ghcr.io/jordaogustavo/rinha-api:latest
-    platform: linux/amd64
+    <<: *api
     environment:
       - SOCKET_PATH=/run/sock/api2.sock
       - NPROBE_FULL=5
-      - CUSTOM_HTTP=1
-    volumes:
-      - sock:/run/sock
+      - IO_URING_ENABLED=1
+      - UNANIMITY_SKIP=1
+      - EARLY_EXIT_DIMS=3
+      - PROFILE_MIN_COUNT=15
     cpuset: "2,3"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.40"
-          memory: "162MB"
-    networks:
-      - rinha
 
 volumes:
   sock:
