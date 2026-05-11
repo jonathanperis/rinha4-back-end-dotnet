@@ -111,6 +111,7 @@ capture_docker_state() {
         echo "benchmark_repetitions=$BENCHMARK_REPETITIONS"
         echo "scorer_mode=$SCORER_MODE"
         echo "accept_loops=$ACCEPT_LOOPS"
+        echo "bucket_avx_cutoff_dims=${BUCKET_AVX_CUTOFF_DIMS:-}"
         echo "ivf_zero_fast_approve_worst_distance=$IVF_ZERO_FAST_APPROVE_WORST_DISTANCE"
         echo "ivf_five_fast_deny_worst_distance=$IVF_FIVE_FAST_DENY_WORST_DISTANCE"
         echo

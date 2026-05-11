@@ -128,6 +128,10 @@ on:
         description: WebApi MIN_WORKER_THREADS value
         required: true
         default: "128"
+      bucket_avx_cutoff_dims:
+        description: Bucket AVX cutoff dimension count
+        required: true
+        default: "6"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -206,6 +210,7 @@ jobs:
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
           MIN_WORKER_THREADS: ${{ inputs.min_worker_threads }}
           SCORER_MODE: ${{ inputs.scorer_mode }}
+          BUCKET_AVX_CUTOFF_DIMS: ${{ inputs.bucket_avx_cutoff_dims }}
         run: bash scripts/ci-official-benchmark.sh
 
       - name: Write benchmark metadata
