@@ -124,10 +124,6 @@ on:
         description: Number of k6 repetitions; median p99 is archived when >1
         required: true
         default: "1"
-      min_worker_threads:
-        description: WebApi MIN_WORKER_THREADS value
-        required: true
-        default: "128"
       bucket_avx_cutoff_dims:
         description: Bucket AVX cutoff dimension count
         required: true
@@ -208,7 +204,6 @@ jobs:
           BENCHMARK_PROXY_CPUS: ${{ inputs.benchmark_proxy_cpus }}
           ACCEPT_LOOPS: ${{ inputs.accept_loops }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
-          MIN_WORKER_THREADS: ${{ inputs.min_worker_threads }}
           SCORER_MODE: ${{ inputs.scorer_mode }}
           BUCKET_AVX_CUTOFF_DIMS: ${{ inputs.bucket_avx_cutoff_dims }}
         run: bash scripts/ci-official-benchmark.sh
