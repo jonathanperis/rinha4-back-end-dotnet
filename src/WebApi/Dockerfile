@@ -37,6 +37,7 @@ COPY ["src/DataConverter/Usings.cs", "DataConverter/"]
 COPY ["src/DataConverter/ExactIndexBuilder.cs", "DataConverter/"]
 COPY ["src/DataConverter/IvfIndexBuilder.cs", "DataConverter/"]
 COPY ["src/DataConverter/BucketIndexBuilder.cs", "DataConverter/"]
+COPY ["src/Lb/rinha-lb.c", "Lb/"]
 
 # Copy dataset files
 COPY ["data/references.json.gz", "data/"]
@@ -44,6 +45,7 @@ COPY ["data/mcc_risk.json", "data/"]
 COPY ["data/normalization.json", "data/"]
 
 RUN dotnet build "DataConverter/DataConverter.csproj" -c Release -o /app/build-converter
+RUN clang -O3 -flto -DNDEBUG -s -o /app/rinha-lb Lb/rinha-lb.c
 RUN EXACT_MAX_REFS=$EXACT_MAX_REFS IVF_CLUSTERS=$IVF_CLUSTERS IVF_TRAIN_SAMPLE=$IVF_TRAIN_SAMPLE IVF_ITERATIONS=$IVF_ITERATIONS IVF_SCALE=$IVF_SCALE \
     /app/build-converter/DataConverter data/
 
@@ -70,6 +72,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
 WORKDIR /app
 
 COPY --from=build /app/publish/WebApi /WebApi
+COPY --from=build /app/rinha-lb /rinha-lb
 COPY --from=build /src/data/references.bin /data/
 COPY --from=build /src/data/references.ivf.bin /data/
 COPY --from=build /src/data/references.bucket.bin /data/
@@ -80,7 +83,9 @@ ENV DATA_DIR=/data
 ENV EXACT_PATH=/data/references.bin
 ENV IVF_PATH=/data/references.ivf.bin
 ENV BUCKET_PATH=/data/references.bucket.bin
-ENV SCORER_MODE=ivf
+ENV SCORER_MODE=bucket
+ENV BUCKET_EXACT_FALLBACK=risky
+ENV BUCKET_AVX_CUTOFF_DIMS=6
 ENV DOTNET_PROCESSOR_COUNT=1
 ENV DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS=1
 ENV DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT=1

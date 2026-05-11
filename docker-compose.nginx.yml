@@ -13,11 +13,10 @@ services:
         condition: service_healthy
     ports:
       - "9999:9999"
-    cpuset: "0"
     deploy:
       resources:
         limits:
-          cpus: "0.10"
+          cpus: "0.20"
           memory: "20MB"
     ulimits:
       nofile:

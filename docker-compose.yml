@@ -27,7 +27,7 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "${ACCEPT_LOOPS:-2}"
       MIN_WORKER_THREADS: "${MIN_WORKER_THREADS:-128}"
-      SCORER_MODE: "${SCORER_MODE:-ivf}"
+      SCORER_MODE: "${SCORER_MODE:-bucket}"
       SOCKET_PATH: /sockets/api1.sock
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
@@ -47,12 +47,12 @@ services:
       BUCKET_PROFILE_FASTPATH: "${BUCKET_PROFILE_FASTPATH:-true}"
       BUCKET_PROFILE_LEGIT_MIN_COUNT: "${BUCKET_PROFILE_LEGIT_MIN_COUNT:-5}"
       BUCKET_PROFILE_FRAUD_MIN_COUNT: "${BUCKET_PROFILE_FRAUD_MIN_COUNT:-15}"
-      BUCKET_EXACT_FALLBACK: "${BUCKET_EXACT_FALLBACK:-false}"
+      BUCKET_EXACT_FALLBACK: "${BUCKET_EXACT_FALLBACK:-risky}"
+      BUCKET_AVX_CUTOFF_DIMS: "${BUCKET_AVX_CUTOFF_DIMS:-6}"
     tmpfs:
       - /tmp
     volumes:
       - sockets:/sockets
-    cpuset: "1,2"
     healthcheck:
       test: ["CMD-SHELL", "test -S \"$${SOCKET_PATH}\""]
       interval: 100ms
@@ -62,7 +62,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.45"
+          cpus: "0.40"
           memory: "165MB"
     ulimits:
       nofile:
@@ -80,7 +80,7 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "${ACCEPT_LOOPS:-2}"
       MIN_WORKER_THREADS: "${MIN_WORKER_THREADS:-128}"
-      SCORER_MODE: "${SCORER_MODE:-ivf}"
+      SCORER_MODE: "${SCORER_MODE:-bucket}"
       SOCKET_PATH: /sockets/api2.sock
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
@@ -100,12 +100,12 @@ services:
       BUCKET_PROFILE_FASTPATH: "${BUCKET_PROFILE_FASTPATH:-true}"
       BUCKET_PROFILE_LEGIT_MIN_COUNT: "${BUCKET_PROFILE_LEGIT_MIN_COUNT:-5}"
       BUCKET_PROFILE_FRAUD_MIN_COUNT: "${BUCKET_PROFILE_FRAUD_MIN_COUNT:-15}"
-      BUCKET_EXACT_FALLBACK: "${BUCKET_EXACT_FALLBACK:-false}"
+      BUCKET_EXACT_FALLBACK: "${BUCKET_EXACT_FALLBACK:-risky}"
+      BUCKET_AVX_CUTOFF_DIMS: "${BUCKET_AVX_CUTOFF_DIMS:-6}"
     tmpfs:
       - /tmp
     volumes:
       - sockets:/sockets
-    cpuset: "2,3"
 
 volumes:
   sockets:

@@ -13,6 +13,7 @@ on:
           - docker-compose.haproxy.yml
           - docker-compose.envoy.yml
           - docker-compose.yarp.yml
+          - docker-compose.clb.yml
       official_ref:
         description: Rinha official repo ref to clone for test/test.js and test-data.json
         required: true
@@ -28,7 +29,7 @@ on:
       scorer_mode:
         description: Runtime scorer mode
         required: true
-        default: ivf
+        default: bucket
         type: choice
         options:
           - ivf
@@ -149,6 +150,8 @@ jobs:
             compose_file: docker-compose.envoy.yml
           - name: yarp
             compose_file: docker-compose.yarp.yml
+          - name: clb
+            compose_file: docker-compose.clb.yml
     concurrency:
       group: benchmark-${{ github.run_id }}-${{ matrix.lb.name }}
       cancel-in-progress: false

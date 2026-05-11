@@ -34,7 +34,7 @@ jobs:
 
       - name: Semantic Version
         id: semver
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           latest=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           latest=${latest#v}
@@ -62,7 +62,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ steps.semver.outputs.version }},enable=${{ github.event_name != 'pull_request' }}
+            type=raw,value=${{ steps.semver.outputs.version }},enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
             type=raw,value=ci-${{ github.sha }},enable=${{ github.event_name != 'pull_request' }}
             type=sha
 
@@ -88,7 +88,7 @@ jobs:
         run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:ci-${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
       - name: Create Release
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.semver.outputs.version }}
@@ -98,7 +98,7 @@ jobs:
   build-arm64:
     name: Build arm64 (Local Testing)
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[arm64]')
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[arm64]')
     permissions:
       contents: read
       packages: write
@@ -240,8 +240,8 @@ jobs:
           IVF_BBOX_REPAIR: "true"
           IVF_REPAIR_MIN_FRAUDS: "0"
           IVF_REPAIR_MAX_FRAUDS: "5"
-          BENCHMARK_API_CPUS: "0.45"
-          BENCHMARK_PROXY_CPUS: "0.10"
+          BENCHMARK_API_CPUS: "0.40"
+          BENCHMARK_PROXY_CPUS: "0.20"
           BENCHMARK_REPETITIONS: "1"
         run: bash scripts/ci-official-benchmark.sh
 
@@ -269,8 +269,8 @@ jobs:
           IVF_BBOX_REPAIR: "true"
           IVF_REPAIR_MIN_FRAUDS: "0"
           IVF_REPAIR_MAX_FRAUDS: "5"
-          BENCHMARK_API_CPUS: "0.45"
-          BENCHMARK_PROXY_CPUS: "0.10"
+          BENCHMARK_API_CPUS: "0.40"
+          BENCHMARK_PROXY_CPUS: "0.20"
           BENCHMARK_REPETITIONS: "1"
         run: bash scripts/archive-benchmark-result.sh
 

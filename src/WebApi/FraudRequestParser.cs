@@ -82,10 +82,9 @@ internal static class FraudRequestParser
         if (!TryStartObject(body, ref pos))
             return false;
 
-        Span<ulong> knownHashes = stackalloc ulong[32];
-        Span<int> knownLengths = stackalloc int[32];
-        int knownCount = 0;
-        ulong merchantHash = 0;
+        int knownMerchantsStart = 0;
+        int knownMerchantsLength = 0;
+        int merchantStart = 0;
         int merchantLength = 0;
         bool hasMerchant = false;
         bool hasTransaction = false;
@@ -99,7 +98,10 @@ internal static class FraudRequestParser
         {
             if (done)
             {
-                input.UnknownMerchant = !MerchantIsKnown(merchantHash, merchantLength, hasMerchant, knownHashes, knownLengths, knownCount, null);
+                input.UnknownMerchant = !hasMerchant ||
+                                        !KnownMerchantArrayContains(
+                                            body.Slice(knownMerchantsStart, knownMerchantsLength),
+                                            body.Slice(merchantStart, merchantLength));
                 return hasTransaction && hasCustomer && hasMerchantObject && hasTerminal && hasLastTransaction;
             }
 
@@ -111,13 +113,13 @@ internal static class FraudRequestParser
             }
             else if (property.SequenceEqual("customer"u8))
             {
-                if (!TryReadCustomerFast(body, ref pos, ref input, knownHashes, knownLengths, ref knownCount))
+                if (!TryReadCustomerFast(body, ref pos, ref input, out knownMerchantsStart, out knownMerchantsLength))
                     return false;
                 hasCustomer = true;
             }
             else if (property.SequenceEqual("merchant"u8))
             {
-                if (!TryReadMerchantFast(body, ref pos, ref input, out merchantHash, out merchantLength, out hasMerchant))
+                if (!TryReadMerchantFast(body, ref pos, ref input, out merchantStart, out merchantLength, out hasMerchant))
                     return false;
                 hasMerchantObject = true;
             }
@@ -181,8 +183,10 @@ internal static class FraudRequestParser
         return false;
     }
 
-    private static bool TryReadCustomerFast(ReadOnlySpan<byte> source, ref int pos, ref FraudInput input, Span<ulong> knownHashes, Span<int> knownLengths, ref int knownCount)
+    private static bool TryReadCustomerFast(ReadOnlySpan<byte> source, ref int pos, ref FraudInput input, out int knownMerchantsStart, out int knownMerchantsLength)
     {
+        knownMerchantsStart = 0;
+        knownMerchantsLength = 0;
         if (!TryStartObject(source, ref pos))
             return false;
 
@@ -207,7 +211,7 @@ internal static class FraudRequestParser
             }
             else if (property.SequenceEqual("known_merchants"u8))
             {
-                if (!TryReadKnownMerchantsFast(source, ref pos, knownHashes, knownLengths, ref knownCount)) return false;
+                if (!TryReadArrayBounds(source, ref pos, out knownMerchantsStart, out knownMerchantsLength)) return false;
                 hasKnownMerchants = true;
             }
             else if (!TrySkipValue(source, ref pos))
@@ -219,9 +223,9 @@ internal static class FraudRequestParser
         return false;
     }
 
-    private static bool TryReadMerchantFast(ReadOnlySpan<byte> source, ref int pos, ref FraudInput input, out ulong merchantHash, out int merchantLength, out bool hasMerchant)
+    private static bool TryReadMerchantFast(ReadOnlySpan<byte> source, ref int pos, ref FraudInput input, out int merchantStart, out int merchantLength, out bool hasMerchant)
     {
-        merchantHash = 0;
+        merchantStart = 0;
         merchantLength = 0;
         hasMerchant = false;
         if (!TryStartObject(source, ref pos))
@@ -237,9 +241,7 @@ internal static class FraudRequestParser
 
             if (property.SequenceEqual("id"u8))
             {
-                if (!TryReadStringValue(source, ref pos, out ReadOnlySpan<byte> id)) return false;
-                merchantHash = Fnv1A(id);
-                merchantLength = id.Length;
+                if (!TryReadStringBounds(source, ref pos, out merchantStart, out merchantLength)) return false;
                 hasMerchant = true;
             }
             else if (property.SequenceEqual("mcc"u8))
@@ -340,49 +342,34 @@ internal static class FraudRequestParser
         return false;
     }
 
-    private static bool TryReadKnownMerchantsFast(ReadOnlySpan<byte> source, ref int pos, Span<ulong> knownHashes, Span<int> knownLengths, ref int knownCount)
+    private static bool TryReadArrayBounds(ReadOnlySpan<byte> source, ref int pos, out int start, out int length)
     {
+        start = 0;
+        length = 0;
         pos = SkipWhitespace(source, pos);
-        if (pos >= source.Length || source[pos++] != (byte)'[')
+        if (pos >= source.Length || source[pos] != (byte)'[')
             return false;
 
-        bool first = true;
-        while (true)
-        {
-            pos = SkipWhitespace(source, pos);
-            if (!first)
-            {
-                if (pos < source.Length && source[pos] == (byte)',')
-                {
-                    pos++;
-                    pos = SkipWhitespace(source, pos);
-                }
-                else if (pos < source.Length && source[pos] == (byte)']')
-                {
-                    pos++;
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            else if (pos < source.Length && source[pos] == (byte)']')
-            {
-                pos++;
-                return true;
-            }
+        start = pos;
+        if (!TrySkipComposite(source, ref pos, (byte)'[', (byte)']'))
+            return false;
 
-            first = false;
-            if (!TryReadStringValue(source, ref pos, out ReadOnlySpan<byte> id))
-                return false;
-            if (knownCount >= knownHashes.Length)
-                return false;
+        length = pos - start;
+        return true;
+    }
 
-            knownHashes[knownCount] = Fnv1A(id);
-            knownLengths[knownCount] = id.Length;
-            knownCount++;
-        }
+    private static bool TryReadStringBounds(ReadOnlySpan<byte> source, ref int pos, out int start, out int length)
+    {
+        start = 0;
+        length = 0;
+        if (!TryReadStringValue(source, ref pos, out ReadOnlySpan<byte> value))
+            return false;
+
+        start = (int)Unsafe.ByteOffset(
+            ref MemoryMarshal.GetReference(source),
+            ref MemoryMarshal.GetReference(value));
+        length = value.Length;
+        return true;
     }
 
     private static bool TryStartObject(ReadOnlySpan<byte> source, ref int pos)
@@ -759,6 +746,46 @@ internal static class FraudRequestParser
         }
 
         return false;
+    }
+
+    private static bool KnownMerchantArrayContains(ReadOnlySpan<byte> knownMerchants, ReadOnlySpan<byte> merchantId)
+    {
+        int pos = 0;
+        pos = SkipWhitespace(knownMerchants, pos);
+        if (pos >= knownMerchants.Length || knownMerchants[pos++] != (byte)'[')
+            return false;
+
+        bool first = true;
+        while (true)
+        {
+            pos = SkipWhitespace(knownMerchants, pos);
+            if (!first)
+            {
+                if (pos < knownMerchants.Length && knownMerchants[pos] == (byte)',')
+                {
+                    pos++;
+                    pos = SkipWhitespace(knownMerchants, pos);
+                }
+                else if (pos < knownMerchants.Length && knownMerchants[pos] == (byte)']')
+                {
+                    return false;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else if (pos < knownMerchants.Length && knownMerchants[pos] == (byte)']')
+            {
+                return false;
+            }
+
+            first = false;
+            if (!TryReadStringValue(knownMerchants, ref pos, out ReadOnlySpan<byte> knownMerchant))
+                return false;
+            if (knownMerchant.SequenceEqual(merchantId))
+                return true;
+        }
     }
 
     private static bool TryFindValue(ReadOnlySpan<byte> source, ReadOnlySpan<byte> propertyName, out int valueStart)

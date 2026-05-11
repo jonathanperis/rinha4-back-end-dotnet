@@ -8,7 +8,9 @@ internal readonly record struct BucketSearchOptions(
     bool ProfileFastPath,
     int ProfileLegitMinCount,
     int ProfileFraudMinCount,
-    bool ExactFallback)
+    bool ExactFallback,
+    bool RiskyFallback,
+    int AvxCutoffDims)
 {
     public static BucketSearchOptions FromEnvironment()
     {
@@ -16,6 +18,7 @@ internal readonly record struct BucketSearchOptions(
         int maxCandidates = Math.Max(EnvPositiveInt("BUCKET_MAX_CANDIDATES", 24_200), minCandidates);
         int earlyCandidates = Math.Clamp(EnvPositiveInt("BUCKET_EARLY_CANDIDATES", 9_800), 5, minCandidates);
         int profileMinCount = EnvPositiveInt("BUCKET_PROFILE_MIN_COUNT", 15);
+        int exactFallbackMode = ExactFallbackMode();
 
         return new BucketSearchOptions(
             earlyCandidates,
@@ -24,13 +27,21 @@ internal readonly record struct BucketSearchOptions(
             EnvBool("BUCKET_PROFILE_FASTPATH", true),
             EnvPositiveInt("BUCKET_PROFILE_LEGIT_MIN_COUNT", 5),
             EnvPositiveInt("BUCKET_PROFILE_FRAUD_MIN_COUNT", profileMinCount),
-            EnvBool("BUCKET_EXACT_FALLBACK", false));
+            exactFallbackMode != 0,
+            exactFallbackMode == 2,
+            Math.Clamp(EnvNonNegativeInt("BUCKET_AVX_CUTOFF_DIMS", 6), 0, 8));
     }
 
     private static int EnvPositiveInt(string name, int fallback)
     {
         string? value = Environment.GetEnvironmentVariable(name);
         return int.TryParse(value, CultureInfo.InvariantCulture, out int parsed) && parsed > 0 ? parsed : fallback;
+    }
+
+    private static int EnvNonNegativeInt(string name, int fallback)
+    {
+        string? value = Environment.GetEnvironmentVariable(name);
+        return int.TryParse(value, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0 ? parsed : fallback;
     }
 
     private static bool EnvBool(string name, bool fallback)
@@ -41,5 +52,16 @@ internal readonly record struct BucketSearchOptions(
 
         return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static int ExactFallbackMode()
+    {
+        string? value = Environment.GetEnvironmentVariable("BUCKET_EXACT_FALLBACK");
+        return value?.ToLowerInvariant() switch
+        {
+            "1" or "true" or "uncertain" or "exact" => 1,
+            "2" or "risky" => 2,
+            _ => 0
+        };
     }
 }

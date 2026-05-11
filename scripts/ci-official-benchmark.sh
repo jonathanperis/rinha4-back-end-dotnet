@@ -18,7 +18,7 @@ BENCHMARK_PROXY_CPUS="${BENCHMARK_PROXY_CPUS:-}"
 BENCHMARK_API_MEMORY="${BENCHMARK_API_MEMORY:-}"
 BENCHMARK_PROXY_MEMORY="${BENCHMARK_PROXY_MEMORY:-}"
 BENCHMARK_REPETITIONS="${BENCHMARK_REPETITIONS:-1}"
-SCORER_MODE="${SCORER_MODE:-ivf}"
+SCORER_MODE="${SCORER_MODE:-bucket}"
 ACCEPT_LOOPS="${ACCEPT_LOOPS:-2}"
 IVF_ZERO_FAST_APPROVE_WORST_DISTANCE="${IVF_ZERO_FAST_APPROVE_WORST_DISTANCE:-5000000}"
 IVF_FIVE_FAST_DENY_WORST_DISTANCE="${IVF_FIVE_FAST_DENY_WORST_DISTANCE:-4500000}"
@@ -234,7 +234,7 @@ if [[ "$BENCHMARK_REPETITIONS" -eq 1 ]]; then
 else
     selected_repetition="$(jq -s '
         to_entries
-        | sort_by((.value.p99 | sub("ms"; "") | tonumber))
+        | sort_by(.value.scoring.final_score)
         | .[((length - 1) / 2 | floor)].key + 1
     ' "${repeat_files[@]}")"
     cp "$RESULTS_DIR/results-repetition-$selected_repetition.json" "$RESULTS_DIR/results.json"
@@ -244,7 +244,7 @@ else
 
     jq -s --argjson selected_repetition "$selected_repetition" '{
         repetitions: length,
-        selected: "median_by_p99",
+        selected: "median_by_final_score",
         selected_repetition: $selected_repetition,
         p99_ms: (map(.p99 | sub("ms"; "") | tonumber) | sort | {min: .[0], median: .[((length - 1) / 2 | floor)], max: .[-1]}),
         final_score: (map(.scoring.final_score) | sort | {min: .[0], median: .[((length - 1) / 2 | floor)], max: .[-1]}),

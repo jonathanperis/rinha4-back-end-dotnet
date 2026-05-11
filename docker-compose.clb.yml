@@ -1,11 +1,10 @@
 services:
   lb:
-    image: ${ENVOY_IMAGE:-envoyproxy/envoy:v1.34-latest}
+    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:latest}
     container_name: rinha-lb
     user: root
-    command: ["envoy", "-c", "/etc/envoy/envoy.yaml", "--log-level", "critical"]
+    entrypoint: ["/rinha-lb"]
     volumes:
-      - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
       - sockets:/sockets
     depends_on:
       webapi1:
@@ -17,8 +16,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.20"
-          memory: "20MB"
+          cpus: "0.24"
+          memory: "32MB"
     ulimits:
       nofile:
         soft: 65535

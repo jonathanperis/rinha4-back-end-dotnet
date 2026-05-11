@@ -25,3 +25,5 @@ LICENSE
 
 # Generated data (will be generated inside Docker)
 data/references.bin
+data/references.ivf.bin
+data/references.bucket.bin
