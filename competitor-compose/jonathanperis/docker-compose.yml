@@ -2,7 +2,7 @@ name: rinha-2026-jonathanperis
 
 services:
   webapi1: &webapi
-    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-b14911040f6c7ae3e5077dcec3f03a0c273938b2}
+    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-dd44635b6bca9a6d50d8263e0fd3ffb0cb7df5b3}
     pull_policy: always
     platform: linux/amd64
     user: root
@@ -27,8 +27,8 @@ services:
       IVF_BBOX_REPAIR: "true"
       IVF_REPAIR_MIN_FRAUDS: "0"
       IVF_REPAIR_MAX_FRAUDS: "5"
-      IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "5000000"
-      IVF_FIVE_FAST_DENY_WORST_DISTANCE: "4500000"
+      IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "0"
+      IVF_FIVE_FAST_DENY_WORST_DISTANCE: "0"
       BUCKET_PATH: /data/references.bucket.bin
       BUCKET_EARLY_CANDIDATES: "9800"
       BUCKET_MIN_CANDIDATES: "16150"
@@ -37,6 +37,8 @@ services:
       BUCKET_REFERENCE_FASTPATH: "true"
       BUCKET_REFERENCE_FASTPATH_LEGIT: "false"
       BUCKET_REFERENCE_FASTPATH_FRAUD: "true"
+      BUCKET_REFERENCE_FASTPATH2_LEGIT: "false"
+      BUCKET_REFERENCE_FASTPATH2_FRAUD: "true"
       BUCKET_PROFILE_LEGIT_MIN_COUNT: "5"
       BUCKET_PROFILE_FRAUD_MIN_COUNT: "15"
       BUCKET_EXACT_FALLBACK: "risky"
@@ -83,8 +85,8 @@ services:
       IVF_BBOX_REPAIR: "true"
       IVF_REPAIR_MIN_FRAUDS: "0"
       IVF_REPAIR_MAX_FRAUDS: "5"
-      IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "5000000"
-      IVF_FIVE_FAST_DENY_WORST_DISTANCE: "4500000"
+      IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "0"
+      IVF_FIVE_FAST_DENY_WORST_DISTANCE: "0"
       BUCKET_PATH: /data/references.bucket.bin
       BUCKET_EARLY_CANDIDATES: "9800"
       BUCKET_MIN_CANDIDATES: "16150"
@@ -93,6 +95,8 @@ services:
       BUCKET_REFERENCE_FASTPATH: "true"
       BUCKET_REFERENCE_FASTPATH_LEGIT: "false"
       BUCKET_REFERENCE_FASTPATH_FRAUD: "true"
+      BUCKET_REFERENCE_FASTPATH2_LEGIT: "false"
+      BUCKET_REFERENCE_FASTPATH2_FRAUD: "true"
       BUCKET_PROFILE_LEGIT_MIN_COUNT: "5"
       BUCKET_PROFILE_FRAUD_MIN_COUNT: "15"
       BUCKET_EXACT_FALLBACK: "risky"
