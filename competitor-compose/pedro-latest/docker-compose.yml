@@ -2,7 +2,7 @@ name: rinha-backend-2026-pedro-latest
 
 services:
   api1: &api
-    image: ghcr.io/pedrosakuma/rinha-backend-2026-api:wave21-bits-2193e16
+    image: ghcr.io/pedrosakuma/rinha-backend-2026-api:wave29-fp2-a58980f
     pull_policy: always
     platform: linux/amd64
     cpuset: "0"
@@ -12,8 +12,8 @@ services:
       UDS_PATH: "/run/uds/api1.sock"
       DOTNET_GCHeapCount: "1"
       DOTNET_PROCESSOR_COUNT: "1"
-      TP_MIN_WORKERS: "64"
-      TP_MAX_WORKERS: "64"
+      TP_MIN_WORKERS: "16"
+      TP_MAX_WORKERS: "16"
       SCORER: "ivf-blocked"
       IVF_NPROBE: "1"
       IVF_BLOCKED_NPROBE: "1"
@@ -49,8 +49,8 @@ services:
       UDS_PATH: "/run/uds/api2.sock"
       DOTNET_GCHeapCount: "1"
       DOTNET_PROCESSOR_COUNT: "1"
-      TP_MIN_WORKERS: "64"
-      TP_MAX_WORKERS: "64"
+      TP_MIN_WORKERS: "16"
+      TP_MAX_WORKERS: "16"
       SCORER: "ivf-blocked"
       IVF_NPROBE: "1"
       IVF_BLOCKED_NPROBE: "1"

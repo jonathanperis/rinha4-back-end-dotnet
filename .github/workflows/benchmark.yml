@@ -11,12 +11,11 @@ on:
         options:
           - all-comparison
           - competitor-compose/jonathanperis/docker-compose.yml
-          - competitor-compose/zan/docker-compose.yml
-          - competitor-compose/danilo/docker-compose.yml
-          - competitor-compose/pedro/docker-compose.yml
+          - competitor-compose/zan-latest/docker-compose.yml
+          - competitor-compose/danilo-latest/docker-compose.yml
           - competitor-compose/pedro-latest/docker-compose.yml
-          - competitor-compose/jordao/docker-compose.yml
-          - competitor-compose/hanake0/docker-compose.yml
+          - competitor-compose/jordao-latest/docker-compose.yml
+          - competitor-compose/hanake0-latest/docker-compose.yml
       official_ref:
         description: Rinha official repo ref to clone for test/test.js and test-data.json
         required: true
@@ -49,18 +48,16 @@ jobs:
         participant:
           - name: jonathanperis
             compose_file: competitor-compose/jonathanperis/docker-compose.yml
-          - name: zan
-            compose_file: competitor-compose/zan/docker-compose.yml
-          - name: danilo
-            compose_file: competitor-compose/danilo/docker-compose.yml
-          - name: pedro
-            compose_file: competitor-compose/pedro/docker-compose.yml
+          - name: zan-latest
+            compose_file: competitor-compose/zan-latest/docker-compose.yml
+          - name: danilo-latest
+            compose_file: competitor-compose/danilo-latest/docker-compose.yml
           - name: pedro-latest
             compose_file: competitor-compose/pedro-latest/docker-compose.yml
-          - name: jordao
-            compose_file: competitor-compose/jordao/docker-compose.yml
-          - name: hanake0
-            compose_file: competitor-compose/hanake0/docker-compose.yml
+          - name: jordao-latest
+            compose_file: competitor-compose/jordao-latest/docker-compose.yml
+          - name: hanake0-latest
+            compose_file: competitor-compose/hanake0-latest/docker-compose.yml
 
     permissions:
       contents: read

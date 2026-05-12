@@ -1,3 +1,10 @@
+# Submission compose for the rinha-de-backend-2026 official engine.
+# Resources match the rinha rules: 1 CPU and 350 MB total; 1 LB + 2 API
+# replicas; bridge network; port 9999; no business logic on the LB.
+#
+# CPU split: LB 0.10 + API 0.45 × 2 = 1.00. so-no-forevis at TCP splice
+# uses ~0.027 CPU at 900 req/s. 0.10 has 3.7x headroom.
+
 services:
   lb:
     image: jrblatt/so-no-forevis:v0.0.2
@@ -20,8 +27,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.15"
-          memory: "40MB"
+          cpus: "0.10"
+          memory: "25MB"
     ulimits:
       nofile:
         soft: 65535
@@ -31,42 +38,51 @@ services:
     networks:
       - rinha
 
-  api1: &api
+  api1:
     image: ghcr.io/jordaogustavo/rinha-api:latest
     pull_policy: always
     platform: linux/amd64
     environment:
       - SOCKET_PATH=/run/sock/api1.sock
-      - NPROBE_FULL=5
       - CUSTOM_HTTP=1
-      - IO_URING_ENABLED=0
+      - NPROBE_FULL=5
+      - PROFILE_MIN_COUNT=8
       - UNANIMITY_SKIP=1
-      - EARLY_EXIT_DIMS=3
-      - PROFILE_MIN_COUNT=15
     volumes:
       - sock:/run/sock
     cpuset: "1,2"
     deploy:
       resources:
         limits:
-          cpus: "0.425"
-          memory: "155MB"
+          cpus: "0.45"
+          memory: "162.5MB"
     security_opt:
       - seccomp=unconfined
     networks:
       - rinha
 
   api2:
-    <<: *api
+    image: ghcr.io/jordaogustavo/rinha-api:latest
+    pull_policy: always
+    platform: linux/amd64
     environment:
       - SOCKET_PATH=/run/sock/api2.sock
-      - NPROBE_FULL=5
       - CUSTOM_HTTP=1
-      - IO_URING_ENABLED=0
+      - NPROBE_FULL=5
+      - PROFILE_MIN_COUNT=8
       - UNANIMITY_SKIP=1
-      - EARLY_EXIT_DIMS=3
-      - PROFILE_MIN_COUNT=15
+    volumes:
+      - sock:/run/sock
     cpuset: "2,3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.45"
+          memory: "162.5MB"
+    security_opt:
+      - seccomp=unconfined
+    networks:
+      - rinha
 
 volumes:
   sock:
