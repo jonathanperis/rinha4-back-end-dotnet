@@ -9,7 +9,6 @@
 /// <param name="RepairMaxFrauds">Inclusive upper fraud-count boundary for second-pass repair.</param>
 /// <param name="ZeroFastApproveWorstDistance">Worst top-five distance under which zero-fraud candidates skip repair.</param>
 /// <param name="FiveFastDenyWorstDistance">Worst top-five distance under which five-fraud candidates skip repair.</param>
-/// <param name="LabelBboxDecision">Whether label-specific bounding boxes may skip repair when the approval decision is already provably stable.</param>
 internal readonly record struct IvfSearchOptions(
     int FastNProbe,
     int FullNProbe,
@@ -18,8 +17,7 @@ internal readonly record struct IvfSearchOptions(
     byte RepairMinFrauds,
     byte RepairMaxFrauds,
     long ZeroFastApproveWorstDistance,
-    long FiveFastDenyWorstDistance,
-    bool LabelBboxDecision)
+    long FiveFastDenyWorstDistance)
 {
     /// <summary>
     /// Reads IVF search controls from environment variables.
@@ -40,8 +38,7 @@ internal readonly record struct IvfSearchOptions(
             repairMin,
             repairMax,
             EnvNonNegativeLong("IVF_ZERO_FAST_APPROVE_WORST_DISTANCE", 0),
-            EnvNonNegativeLong("IVF_FIVE_FAST_DENY_WORST_DISTANCE", 0),
-            EnvBool("IVF_LABEL_BBOX_DECISION", true));
+            EnvNonNegativeLong("IVF_FIVE_FAST_DENY_WORST_DISTANCE", 0));
     }
 
     /// <summary>

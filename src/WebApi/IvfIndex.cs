@@ -21,9 +21,6 @@ internal sealed partial class IvfIndex
     private readonly byte[] labels;
     private readonly int[] ids;
     private readonly short[] blocks;
-    private readonly short[] labelBboxMin;
-    private readonly short[] labelBboxMax;
-    private readonly ushort[] labelCounts;
     private readonly bool useFloatAvx2;
 
     /// <summary>
@@ -50,9 +47,6 @@ internal sealed partial class IvfIndex
         byte[] labels,
         int[] ids,
         short[] blocks,
-        short[] labelBboxMin,
-        short[] labelBboxMax,
-        ushort[] labelCounts,
         bool useFloatAvx2)
     {
         this.clusters = clusters;
@@ -65,9 +59,6 @@ internal sealed partial class IvfIndex
         this.labels = labels;
         this.ids = ids;
         this.blocks = blocks;
-        this.labelBboxMin = labelBboxMin;
-        this.labelBboxMax = labelBboxMax;
-        this.labelCounts = labelCounts;
         this.useFloatAvx2 = useFloatAvx2;
     }
 
@@ -146,8 +137,7 @@ internal sealed partial class IvfIndex
                 return false;
             }
 
-            BuildLabelBoundingBoxes(clusters, blockLanes, offsets, labels, ids, blocks, out short[] labelBboxMin, out short[] labelBboxMax, out ushort[] labelCounts);
-            index = new IvfIndex(clusters, scale, blockLanes, centroids, bboxMin, bboxMax, offsets, labels, ids, blocks, labelBboxMin, labelBboxMax, labelCounts, UseFloatAvx2());
+            index = new IvfIndex(clusters, scale, blockLanes, centroids, bboxMin, bboxMax, offsets, labels, ids, blocks, UseFloatAvx2());
             return true;
         }
         catch (Exception ex) when (ex is IOException or EndOfStreamException or ArgumentException or OverflowException)
@@ -173,8 +163,7 @@ internal sealed partial class IvfIndex
             fastNProbe,
             fastRepair,
             options.ZeroFastApproveWorstDistance,
-            options.FiveFastDenyWorstDistance,
-            options.LabelBboxDecision);
+            options.FiveFastDenyWorstDistance);
 
         if (options.BoundaryFull &&
             !repairsAllCounts &&
@@ -187,8 +176,7 @@ internal sealed partial class IvfIndex
                 fullNProbe,
                 options.BboxRepair,
                 options.ZeroFastApproveWorstDistance,
-                options.FiveFastDenyWorstDistance,
-                options.LabelBboxDecision);
+                options.FiveFastDenyWorstDistance);
         }
 
         return frauds;
@@ -202,55 +190,6 @@ internal sealed partial class IvfIndex
     /// <param name="values">Destination array.</param>
     private static void ReadArray<T>(Stream stream, T[] values) where T : unmanaged =>
         stream.ReadExactly(MemoryMarshal.AsBytes(values.AsSpan()));
-
-    private static void BuildLabelBoundingBoxes(
-        int clusters,
-        int blockLanes,
-        int[] offsets,
-        byte[] labels,
-        int[] ids,
-        short[] blocks,
-        out short[] labelBboxMin,
-        out short[] labelBboxMax,
-        out ushort[] labelCounts)
-    {
-        int labelStride = checked(clusters * Dims);
-        labelBboxMin = new short[checked(2 * labelStride)];
-        labelBboxMax = new short[checked(2 * labelStride)];
-        labelCounts = new ushort[checked(2 * clusters)];
-        Array.Fill(labelBboxMin, short.MaxValue);
-        Array.Fill(labelBboxMax, short.MinValue);
-
-        for (int cluster = 0; cluster < clusters; cluster++)
-        {
-            for (int block = offsets[cluster]; block < offsets[cluster + 1]; block++)
-            {
-                int blockBase = block * Dims * blockLanes;
-                int labelBase = block * blockLanes;
-                for (int lane = 0; lane < blockLanes; lane++)
-                {
-                    if (ids[labelBase + lane] < 0)
-                        continue;
-
-                    int label = labels[labelBase + lane] != 0 ? 1 : 0;
-                    int countOffset = label * clusters + cluster;
-                    if (labelCounts[countOffset] != ushort.MaxValue)
-                        labelCounts[countOffset]++;
-
-                    int bboxBase = label * labelStride + cluster;
-                    for (int dim = 0; dim < Dims; dim++)
-                    {
-                        short value = blocks[blockBase + dim * blockLanes + lane];
-                        int index = bboxBase + dim * clusters;
-                        if (value < labelBboxMin[index])
-                            labelBboxMin[index] = value;
-                        if (value > labelBboxMax[index])
-                            labelBboxMax[index] = value;
-                    }
-                }
-            }
-        }
-    }
 
     private static bool UseFloatAvx2()
     {
