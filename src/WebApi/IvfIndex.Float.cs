@@ -9,10 +9,6 @@ internal sealed partial class IvfIndex
         int nProbe,
         bool repair,
         long zeroFastApproveWorstDistance,
-        long oneFastApproveWorstDistance,
-        long twoFastApproveWorstDistance,
-        long threeFastDenyWorstDistance,
-        long fourFastDenyWorstDistance,
         long fiveFastDenyWorstDistance)
     {
         Span<int> bestClusters = stackalloc int[nProbe];
@@ -41,16 +37,10 @@ internal sealed partial class IvfIndex
         {
             byte initialFrauds = CountFrauds(candidateLabels);
             float worstDistance = candidateDistances[worstIndex];
-            if (ShouldSkipRepair(initialFrauds, (long)worstDistance,
-                    zeroFastApproveWorstDistance,
-                    oneFastApproveWorstDistance,
-                    twoFastApproveWorstDistance,
-                    threeFastDenyWorstDistance,
-                    fourFastDenyWorstDistance,
-                    fiveFastDenyWorstDistance))
-            {
-                return initialFrauds;
-            }
+            if (initialFrauds == 0 && worstDistance < zeroFastApproveWorstDistance)
+                return 0;
+            if (initialFrauds == 5 && worstDistance < fiveFastDenyWorstDistance)
+                return 5;
 
             RepairByBoundingBoxFloat(candidateDistances, candidateIds, candidateLabels, ref worstIndex, bestClusters, quantizedQuery, queryVectors);
         }

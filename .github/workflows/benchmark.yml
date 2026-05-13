@@ -201,10 +201,6 @@ jobs:
           IVF_REPAIR_MIN_FRAUDS: ${{ inputs.ivf_repair_min_frauds }}
           IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
           IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: ${{ inputs.ivf_zero_fast_approve_worst_distance }}
-          IVF_ONE_FAST_APPROVE_WORST_DISTANCE: "3000000"
-          IVF_TWO_FAST_APPROVE_WORST_DISTANCE: "2000000"
-          IVF_THREE_FAST_DENY_WORST_DISTANCE: "2000000"
-          IVF_FOUR_FAST_DENY_WORST_DISTANCE: "3000000"
           IVF_FIVE_FAST_DENY_WORST_DISTANCE: ${{ inputs.ivf_five_fast_deny_worst_distance }}
           BENCHMARK_API_CPUSET: ${{ inputs.benchmark_api_cpuset }}
           BENCHMARK_PROXY_CPUSET: ${{ inputs.benchmark_proxy_cpuset }}
@@ -291,10 +287,6 @@ jobs:
           IVF_REPAIR_MIN_FRAUDS: ${{ inputs.ivf_repair_min_frauds }}
           IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
           IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: ${{ inputs.ivf_zero_fast_approve_worst_distance }}
-          IVF_ONE_FAST_APPROVE_WORST_DISTANCE: "3000000"
-          IVF_TWO_FAST_APPROVE_WORST_DISTANCE: "2000000"
-          IVF_THREE_FAST_DENY_WORST_DISTANCE: "2000000"
-          IVF_FOUR_FAST_DENY_WORST_DISTANCE: "3000000"
           IVF_FIVE_FAST_DENY_WORST_DISTANCE: ${{ inputs.ivf_five_fast_deny_worst_distance }}
           BENCHMARK_API_CPUSET: ${{ inputs.benchmark_api_cpuset }}
           BENCHMARK_PROXY_CPUSET: ${{ inputs.benchmark_proxy_cpuset }}

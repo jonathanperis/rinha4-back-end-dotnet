@@ -163,10 +163,6 @@ internal sealed partial class IvfIndex
             fastNProbe,
             fastRepair,
             options.ZeroFastApproveWorstDistance,
-            options.OneFastApproveWorstDistance,
-            options.TwoFastApproveWorstDistance,
-            options.ThreeFastDenyWorstDistance,
-            options.FourFastDenyWorstDistance,
             options.FiveFastDenyWorstDistance);
 
         if (options.BoundaryFull &&
@@ -180,10 +176,6 @@ internal sealed partial class IvfIndex
                 fullNProbe,
                 options.BboxRepair,
                 options.ZeroFastApproveWorstDistance,
-                options.OneFastApproveWorstDistance,
-                options.TwoFastApproveWorstDistance,
-                options.ThreeFastDenyWorstDistance,
-                options.FourFastDenyWorstDistance,
                 options.FiveFastDenyWorstDistance);
         }
 

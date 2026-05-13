@@ -16,10 +16,6 @@ internal sealed partial class IvfIndex
         int nProbe,
         bool repair,
         long zeroFastApproveWorstDistance,
-        long oneFastApproveWorstDistance,
-        long twoFastApproveWorstDistance,
-        long threeFastDenyWorstDistance,
-        long fourFastDenyWorstDistance,
         long fiveFastDenyWorstDistance)
     {
         if (useFloatAvx2 && Avx2.IsSupported && blockLanes == 8)
@@ -29,10 +25,6 @@ internal sealed partial class IvfIndex
                 nProbe,
                 repair,
                 zeroFastApproveWorstDistance,
-                oneFastApproveWorstDistance,
-                twoFastApproveWorstDistance,
-                threeFastDenyWorstDistance,
-                fourFastDenyWorstDistance,
                 fiveFastDenyWorstDistance);
         }
 
@@ -59,17 +51,10 @@ internal sealed partial class IvfIndex
         if (repair)
         {
             byte initialFrauds = CountFrauds(candidateLabels);
-            long worstDistance = candidateDistances[^1];
-            if (ShouldSkipRepair(initialFrauds, worstDistance,
-                    zeroFastApproveWorstDistance,
-                    oneFastApproveWorstDistance,
-                    twoFastApproveWorstDistance,
-                    threeFastDenyWorstDistance,
-                    fourFastDenyWorstDistance,
-                    fiveFastDenyWorstDistance))
-            {
-                return initialFrauds;
-            }
+            if (initialFrauds == 0 && candidateDistances[^1] < zeroFastApproveWorstDistance)
+                return 0;
+            if (initialFrauds == 5 && candidateDistances[^1] < fiveFastDenyWorstDistance)
+                return 5;
         }
 
         if (repair)
@@ -77,25 +62,6 @@ internal sealed partial class IvfIndex
 
         return CountFrauds(candidateLabels);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool ShouldSkipRepair(
-        byte frauds,
-        long worstDistance,
-        long zeroFastApproveWorstDistance,
-        long oneFastApproveWorstDistance,
-        long twoFastApproveWorstDistance,
-        long threeFastDenyWorstDistance,
-        long fourFastDenyWorstDistance,
-        long fiveFastDenyWorstDistance) => frauds switch
-        {
-            0 => worstDistance < zeroFastApproveWorstDistance,
-            1 => worstDistance < oneFastApproveWorstDistance,
-            2 => worstDistance < twoFastApproveWorstDistance,
-            3 => worstDistance < threeFastDenyWorstDistance,
-            4 => worstDistance < fourFastDenyWorstDistance,
-            _ => worstDistance < fiveFastDenyWorstDistance
-        };
 
     /// <summary>
     /// Scans non-probed IVF2 clusters whose bounding box could still contain a top-five vector.

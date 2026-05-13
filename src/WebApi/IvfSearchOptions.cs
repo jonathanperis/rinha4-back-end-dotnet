@@ -8,10 +8,6 @@
 /// <param name="RepairMinFrauds">Inclusive lower fraud-count boundary for second-pass repair.</param>
 /// <param name="RepairMaxFrauds">Inclusive upper fraud-count boundary for second-pass repair.</param>
 /// <param name="ZeroFastApproveWorstDistance">Worst top-five distance under which zero-fraud candidates skip repair.</param>
-/// <param name="OneFastApproveWorstDistance">Worst top-five distance under which one-fraud candidates skip repair.</param>
-/// <param name="TwoFastApproveWorstDistance">Worst top-five distance under which two-fraud candidates skip repair.</param>
-/// <param name="ThreeFastDenyWorstDistance">Worst top-five distance under which three-fraud candidates skip repair.</param>
-/// <param name="FourFastDenyWorstDistance">Worst top-five distance under which four-fraud candidates skip repair.</param>
 /// <param name="FiveFastDenyWorstDistance">Worst top-five distance under which five-fraud candidates skip repair.</param>
 internal readonly record struct IvfSearchOptions(
     int FastNProbe,
@@ -21,10 +17,6 @@ internal readonly record struct IvfSearchOptions(
     byte RepairMinFrauds,
     byte RepairMaxFrauds,
     long ZeroFastApproveWorstDistance,
-    long OneFastApproveWorstDistance,
-    long TwoFastApproveWorstDistance,
-    long ThreeFastDenyWorstDistance,
-    long FourFastDenyWorstDistance,
     long FiveFastDenyWorstDistance)
 {
     /// <summary>
@@ -46,10 +38,6 @@ internal readonly record struct IvfSearchOptions(
             repairMin,
             repairMax,
             EnvNonNegativeLong("IVF_ZERO_FAST_APPROVE_WORST_DISTANCE", 0),
-            EnvNonNegativeLong("IVF_ONE_FAST_APPROVE_WORST_DISTANCE", 0),
-            EnvNonNegativeLong("IVF_TWO_FAST_APPROVE_WORST_DISTANCE", 0),
-            EnvNonNegativeLong("IVF_THREE_FAST_DENY_WORST_DISTANCE", 0),
-            EnvNonNegativeLong("IVF_FOUR_FAST_DENY_WORST_DISTANCE", 0),
             EnvNonNegativeLong("IVF_FIVE_FAST_DENY_WORST_DISTANCE", 0));
     }
 
