@@ -566,22 +566,22 @@ internal sealed unsafe class BucketIndex : IDisposable
         if (referenceFastPath1 == null)
             return false;
 
-        byte result = referenceFastPath1[ReferenceFastPath1Key(query)];
-        if (result == LegitMask && options.ReferenceFastPathLegit)
+        if (referenceFastPath2 == null)
+            return false;
+
+        byte result = referenceFastPath2[ReferenceFastPath2Key(query)];
+        if (result == LegitMask && options.ReferenceFastPath2Legit)
             return true;
-        if (result == FraudMask && options.ReferenceFastPathFraud)
+        if (result == FraudMask && options.ReferenceFastPath2Fraud)
         {
             frauds = K;
             return true;
         }
 
-        if (referenceFastPath2 == null)
-            return false;
-
-        result = referenceFastPath2[ReferenceFastPath2Key(query)];
-        if (result == LegitMask && options.ReferenceFastPath2Legit)
+        result = referenceFastPath1[ReferenceFastPath1Key(query)];
+        if (result == LegitMask && options.ReferenceFastPathLegit)
             return true;
-        if (result == FraudMask && options.ReferenceFastPath2Fraud)
+        if (result == FraudMask && options.ReferenceFastPathFraud)
         {
             frauds = K;
             return true;
