@@ -186,8 +186,8 @@ As of 2026-05-13 session state:
 - local `docs/public/official/latest.json` may still point to old issue `#2088`
 - current stable scorer config uses `SCORER_MODE=hybrid`, IVF clusters `512`, train sample `65536`, iterations `6`, nprobe `1/1`
 - kept perf commits include profile-first bucket fast path and IVF skip thresholds
-- untracked generated `data/references.bucket.bin` may appear; do not commit with normal Git
-- local `src/WebApi/RawHttpServer.cs` may contain unvalidated hot-path route reorder; keep separate from spec/docs commits unless user requests
+- generated `data/references.bucket.bin` may appear; it can be touched when needed, but normal Git push exceeds GitHub `100 MB` limit, so use image build, artifact, or LFS strategy if versioning is required
+- local `src/WebApi/RawHttpServer.cs` may contain hot-path route experiments; validate before promotion
 
 ## Benchmark Workflow
 
@@ -316,8 +316,8 @@ Before official preview or final:
 - Make small, benchmarkable changes.
 - Verify with focused tests or benchmarks whenever feasible.
 - Separate official vs CI vs local results.
-- Separate spec/docs commits from runtime perf commits unless user explicitly asks to combine.
+- Combine spec/docs/runtime work when user requests; keep diff review explicit.
 - State accuracy risk when suggesting or applying accuracy-affecting changes.
 - For code review, prioritize failures, correctness drift, rule violations, and p99 risks.
 - Never claim a top ranking from CI alone.
-- Never commit `data/references.bucket.bin` via normal Git.
+- If `data/references.bucket.bin` must be versioned, use LFS/artifact/image-build strategy; normal Git exceeds GitHub size limit.

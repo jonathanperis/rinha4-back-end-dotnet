@@ -38,3 +38,10 @@
 - Compare variants on same CI baseline.
 - Promote only measured wins.
 - Sync official result into docs/state after preview.
+
+## M7 - Competitor Gap Analysis
+
+- Compare current candidate against Danilo and Pedro with same-CI, same-run evidence.
+- Isolate infra, transport, fast-path, scorer/index, and runtime/threading layers.
+- Prototype only rule-safe public-source-inspired ideas behind toggles.
+- Promote only missing-factor wins that keep `0%` failures.

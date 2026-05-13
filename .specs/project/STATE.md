@@ -19,8 +19,8 @@
 - Competition rules are hard constraints.
 - `0%` failures outranks p99 experiments unless user accepts accuracy risk.
 - Official preview outranks CI; CI outranks local; local outranks theory.
-- Do not commit generated `data/references.bucket.bin` through normal Git; file exceeds GitHub `100 MB` limit.
-- Do not mix documentation/spec commits with unvalidated hot-path experiments.
+- Generated `data/references.bucket.bin` can be touched when needed, but normal Git push exceeds GitHub `100 MB` limit; use image build, artifact, or LFS strategy if it must be versioned.
+- Runtime, docs, and specs may be worked together when user requests; keep diff review explicit.
 - Keep benchmark changes small and reversible.
 
 ## Active Runtime Defaults
@@ -45,7 +45,7 @@
 
 ## Open Work
 
-- Validate any local `src/WebApi/RawHttpServer.cs` hot-path experiment before committing.
+- Validate `src/WebApi/RawHttpServer.cs` hot-path changes before promotion.
 - Continue transport/parser/index inspections only with focused tests or CI benchmark evidence.
 - Beat Pedro on same CI before official submission attempt.
 - Resolve bucket index artifact strategy if generated binary must be distributed outside image build.
