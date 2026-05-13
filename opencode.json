@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "default_agent": "rinha-expert",
+  "default_agent": "rinha-csharp-expert",
   "agent": {
     "build": {
       "disable": true
