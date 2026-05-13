@@ -62,9 +62,9 @@ services:
       - sockets:/sockets
     healthcheck:
       test: ["CMD-SHELL", "test -S \"$${SOCKET_PATH}\""]
-      interval: 100ms
-      timeout: 100ms
-      retries: 100
+      interval: 5s
+      timeout: 500ms
+      retries: 20
       start_period: 1s
     deploy:
       resources:
