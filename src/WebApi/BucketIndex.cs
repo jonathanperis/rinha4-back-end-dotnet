@@ -275,10 +275,10 @@ internal sealed unsafe class BucketIndex : IDisposable
 
     public bool TryFastPathFraudCount(ReadOnlySpan<short> query, BucketSearchOptions options, out byte frauds)
     {
-        if (options.ReferenceFastPath && TryReferenceFastDecision(query, options, out frauds))
+        if (options.ProfileFastPath && TryProfileFastDecision(query, options, out frauds))
             return true;
 
-        if (options.ProfileFastPath && TryProfileFastDecision(query, options, out frauds))
+        if (options.ReferenceFastPath && TryReferenceFastDecision(query, options, out frauds))
             return true;
 
         frauds = 0;
