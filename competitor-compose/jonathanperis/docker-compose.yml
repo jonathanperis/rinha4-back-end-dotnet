@@ -5,7 +5,6 @@ services:
     image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-1d3831f15238a76af2c01b4c7d418a18059d65c3}
     pull_policy: always
     platform: linux/amd64
-    cpuset: "0"
     user: root
     restart: always
     read_only: true
@@ -16,7 +15,8 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "2"
-      MIN_WORKER_THREADS: "128"
+      MIN_WORKER_THREADS: "16"
+      MAX_WORKER_THREADS: "16"
       SCORER_MODE: hybrid
       SOCKET_PATH: /sockets/api1.sock
       DATA_DIR: /data
@@ -66,7 +66,6 @@ services:
 
   webapi2:
     <<: *webapi
-    cpuset: "1"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
@@ -74,7 +73,8 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "2"
-      MIN_WORKER_THREADS: "128"
+      MIN_WORKER_THREADS: "16"
+      MAX_WORKER_THREADS: "16"
       SCORER_MODE: hybrid
       SOCKET_PATH: /sockets/api2.sock
       DATA_DIR: /data
@@ -107,7 +107,6 @@ services:
     image: jrblatt/so-no-forevis:v0.0.2
     pull_policy: always
     platform: linux/amd64
-    cpuset: "2,3"
     user: root
     security_opt:
       - seccomp=unconfined
