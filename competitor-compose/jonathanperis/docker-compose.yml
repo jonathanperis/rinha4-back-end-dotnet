@@ -2,7 +2,7 @@ name: rinha-2026-jonathanperis
 
 services:
   webapi1: &webapi
-    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-1d3831f15238a76af2c01b4c7d418a18059d65c3}
+    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-e05057a7544ee97674a73a1718b2f3588eab6377}
     pull_policy: always
     platform: linux/amd64
     user: root
@@ -11,7 +11,6 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
-      DOTNET_GCHeapCount: "1"
       DOTNET_PROCESSOR_COUNT: "1"
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
@@ -69,7 +68,6 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
-      DOTNET_GCHeapCount: "1"
       DOTNET_PROCESSOR_COUNT: "1"
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
