@@ -2,7 +2,7 @@ name: rinha-2026-jonathanperis
 
 services:
   webapi1: &webapi
-    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-e05057a7544ee97674a73a1718b2f3588eab6377}
+    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-fdce0e1bad3733a6f366bce5bcf48a0dbf293c03}
     pull_policy: always
     platform: linux/amd64
     user: root
@@ -27,8 +27,8 @@ services:
       IVF_BBOX_REPAIR: "true"
       IVF_REPAIR_MIN_FRAUDS: "0"
       IVF_REPAIR_MAX_FRAUDS: "5"
-      IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "0"
-      IVF_FIVE_FAST_DENY_WORST_DISTANCE: "0"
+      IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "5000000"
+      IVF_FIVE_FAST_DENY_WORST_DISTANCE: "4000000"
       BUCKET_PATH: /data/references.bucket.bin
       BUCKET_EARLY_CANDIDATES: "9800"
       BUCKET_MIN_CANDIDATES: "16150"
@@ -57,7 +57,7 @@ services:
       resources:
         limits:
           cpus: "0.40"
-          memory: "160MB"
+          memory: "165MB"
     ulimits:
       nofile:
         soft: 65535
@@ -84,8 +84,8 @@ services:
       IVF_BBOX_REPAIR: "true"
       IVF_REPAIR_MIN_FRAUDS: "0"
       IVF_REPAIR_MAX_FRAUDS: "5"
-      IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "0"
-      IVF_FIVE_FAST_DENY_WORST_DISTANCE: "0"
+      IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "5000000"
+      IVF_FIVE_FAST_DENY_WORST_DISTANCE: "4000000"
       BUCKET_PATH: /data/references.bucket.bin
       BUCKET_EARLY_CANDIDATES: "9800"
       BUCKET_MIN_CANDIDATES: "16150"
@@ -102,18 +102,12 @@ services:
       BUCKET_AVX_CUTOFF_DIMS: "6"
 
   lb:
-    image: jrblatt/so-no-forevis:v0.0.2
+    image: nginx:latest
     pull_policy: always
     platform: linux/amd64
     user: root
-    security_opt:
-      - seccomp=unconfined
-    environment:
-      UPSTREAMS: /sockets/api1.sock,/sockets/api2.sock
-      PORT: "9999"
-      BUF_SIZE: "4096"
-      WORKERS: "1"
     volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - sockets:/sockets
     depends_on:
       webapi1:
@@ -126,7 +120,7 @@ services:
       resources:
         limits:
           cpus: "0.20"
-          memory: "30MB"
+          memory: "20MB"
     ulimits:
       nofile:
         soft: 65535
