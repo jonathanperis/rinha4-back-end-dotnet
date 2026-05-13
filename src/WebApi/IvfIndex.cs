@@ -21,6 +21,7 @@ internal sealed partial class IvfIndex
     private readonly byte[] labels;
     private readonly int[] ids;
     private readonly short[] blocks;
+    private readonly bool useFloatAvx2;
 
     /// <summary>
     /// Creates an IVF index from already validated binary arrays.
@@ -45,7 +46,8 @@ internal sealed partial class IvfIndex
         int[] offsets,
         byte[] labels,
         int[] ids,
-        short[] blocks)
+        short[] blocks,
+        bool useFloatAvx2)
     {
         this.clusters = clusters;
         this.scale = scale;
@@ -57,6 +59,7 @@ internal sealed partial class IvfIndex
         this.labels = labels;
         this.ids = ids;
         this.blocks = blocks;
+        this.useFloatAvx2 = useFloatAvx2;
     }
 
     /// <summary>
@@ -134,7 +137,7 @@ internal sealed partial class IvfIndex
                 return false;
             }
 
-            index = new IvfIndex(clusters, scale, blockLanes, centroids, bboxMin, bboxMax, offsets, labels, ids, blocks);
+            index = new IvfIndex(clusters, scale, blockLanes, centroids, bboxMin, bboxMax, offsets, labels, ids, blocks, UseFloatAvx2());
             return true;
         }
         catch (Exception ex) when (ex is IOException or EndOfStreamException or ArgumentException or OverflowException)
@@ -187,6 +190,16 @@ internal sealed partial class IvfIndex
     /// <param name="values">Destination array.</param>
     private static void ReadArray<T>(Stream stream, T[] values) where T : unmanaged =>
         stream.ReadExactly(MemoryMarshal.AsBytes(values.AsSpan()));
+
+    private static bool UseFloatAvx2()
+    {
+        string? value = Environment.GetEnvironmentVariable("IVF_FLOAT_AVX2");
+        if (string.IsNullOrEmpty(value))
+            return true;
+
+        return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>
     /// Broadcasts one quantized query into per-dimension AVX2 vectors.

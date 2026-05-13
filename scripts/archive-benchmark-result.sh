@@ -37,6 +37,13 @@ BENCHMARK_PROXY_MEMORY="${BENCHMARK_PROXY_MEMORY:-}"
 BENCHMARK_REPETITIONS="${BENCHMARK_REPETITIONS:-1}"
 SCORER_MODE="${SCORER_MODE:-}"
 ACCEPT_LOOPS="${ACCEPT_LOOPS:-}"
+MIN_WORKER_THREADS="${MIN_WORKER_THREADS:-}"
+MAX_WORKER_THREADS="${MAX_WORKER_THREADS:-}"
+MAX_IO_THREADS="${MAX_IO_THREADS:-}"
+BUCKET_AVX_CUTOFF_DIMS="${BUCKET_AVX_CUTOFF_DIMS:-}"
+BUCKET_REFERENCE_FASTPATH="${BUCKET_REFERENCE_FASTPATH:-}"
+BUCKET_REFERENCE_FASTPATH_LEGIT="${BUCKET_REFERENCE_FASTPATH_LEGIT:-}"
+BUCKET_REFERENCE_FASTPATH_FRAUD="${BUCKET_REFERENCE_FASTPATH_FRAUD:-}"
 IVF_ZERO_FAST_APPROVE_WORST_DISTANCE="${IVF_ZERO_FAST_APPROVE_WORST_DISTANCE:-}"
 IVF_FIVE_FAST_DENY_WORST_DISTANCE="${IVF_FIVE_FAST_DENY_WORST_DISTANCE:-}"
 REPETITION_SUMMARY="${REPETITION_SUMMARY:-$(dirname "$RESULTS_JSON")/repetition-summary.json}"
@@ -124,6 +131,13 @@ jq -n \
     --arg benchmark_repetitions "$BENCHMARK_REPETITIONS" \
     --arg scorer_mode "$SCORER_MODE" \
     --arg accept_loops "$ACCEPT_LOOPS" \
+    --arg min_worker_threads "$MIN_WORKER_THREADS" \
+    --arg max_worker_threads "$MAX_WORKER_THREADS" \
+    --arg max_io_threads "$MAX_IO_THREADS" \
+    --arg bucket_avx_cutoff_dims "$BUCKET_AVX_CUTOFF_DIMS" \
+    --arg bucket_reference_fastpath "$BUCKET_REFERENCE_FASTPATH" \
+    --arg bucket_reference_fastpath_legit "$BUCKET_REFERENCE_FASTPATH_LEGIT" \
+    --arg bucket_reference_fastpath_fraud "$BUCKET_REFERENCE_FASTPATH_FRAUD" \
     --arg ivf_zero_fast_approve_worst_distance "$IVF_ZERO_FAST_APPROVE_WORST_DISTANCE" \
     --arg ivf_five_fast_deny_worst_distance "$IVF_FIVE_FAST_DENY_WORST_DISTANCE" \
     --arg source "zanfranceschi/rinha-de-backend-2026:test/test.js" \
@@ -172,6 +186,13 @@ jq -n \
                 ivf_repair_max_frauds: $ivf_repair_max_frauds,
                 scorer_mode: $scorer_mode,
                 accept_loops: $accept_loops,
+                min_worker_threads: $min_worker_threads,
+                max_worker_threads: $max_worker_threads,
+                max_io_threads: $max_io_threads,
+                bucket_avx_cutoff_dims: $bucket_avx_cutoff_dims,
+                bucket_reference_fastpath: $bucket_reference_fastpath,
+                bucket_reference_fastpath_legit: $bucket_reference_fastpath_legit,
+                bucket_reference_fastpath_fraud: $bucket_reference_fastpath_fraud,
                 ivf_zero_fast_approve_worst_distance: $ivf_zero_fast_approve_worst_distance,
                 ivf_five_fast_deny_worst_distance: $ivf_five_fast_deny_worst_distance
             },

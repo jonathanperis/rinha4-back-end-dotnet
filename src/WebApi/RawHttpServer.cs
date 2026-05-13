@@ -7,11 +7,12 @@ internal sealed class RawHttpServer
 {
     private const int ListenBacklog = 16384;
     private const int DefaultAcceptLoops = 1;
-    private const int ConnectionBufferBytes = 16 * 1024;
-    private const int MaxBodyBytes = 8192;
+    private const int ConnectionBufferBytes = 4096;
+    private const int MaxBodyBytes = 4096;
 
     private readonly string? socketPath;
     private readonly FraudScorer scorer;
+    private readonly int keepAliveMax;
 
     /// <summary>
     /// Creates a server bound to the configured socket path and fraud scorer.
@@ -21,6 +22,7 @@ internal sealed class RawHttpServer
     {
         this.socketPath = socketPath;
         this.scorer = scorer;
+        keepAliveMax = GetNonNegativeIntEnvironment("KEEP_ALIVE_MAX", 0);
     }
 
     /// <summary>
@@ -94,6 +96,12 @@ internal sealed class RawHttpServer
         return int.TryParse(value, out int parsed) && parsed > 0 ? parsed : fallback;
     }
 
+    private static int GetNonNegativeIntEnvironment(string name, int fallback)
+    {
+        string? value = Environment.GetEnvironmentVariable(name);
+        return int.TryParse(value, out int parsed) && parsed >= 0 ? parsed : fallback;
+    }
+
     /// <summary>
     /// Handles all keep-alive requests for one socket using a pooled read buffer.
     /// It accepts bodies up to the expected Rinha payload size and preserves pipelined bytes.
@@ -105,6 +113,7 @@ internal sealed class RawHttpServer
             byte[] buffer = ArrayPool<byte>.Shared.Rent(ConnectionBufferBytes);
             int start = 0;
             int end = 0;
+            int requests = 0;
 
             try
             {
@@ -152,6 +161,7 @@ internal sealed class RawHttpServer
 
                     ReadOnlyMemory<byte> response = SelectResponse(buffer.AsSpan(start, headerEnd - start), buffer.AsSpan(bodyStart, contentLength));
                     HttpWire.SendAll(socket, response.Span);
+                    requests++;
 
                     int remaining = end - requestEnd;
                     if (remaining > 0)
@@ -159,6 +169,8 @@ internal sealed class RawHttpServer
 
                     start = 0;
                     end = remaining;
+                    if (keepAliveMax > 0 && requests >= keepAliveMax)
+                        return;
                 }
             }
             catch

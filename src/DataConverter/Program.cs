@@ -43,17 +43,20 @@ using (var doc = JsonDocument.Parse(gz))
     }
 }
 
-ExactIndexBuilder.Write(exactOutputPath, vectors, labels, count, exactMaxRefs);
-long exactSize = new FileInfo(exactOutputPath).Length;
-Console.WriteLine($"Exact output: {exactSize / (1024.0 * 1024.0):F1} MB ({exactSize:N0} bytes)");
-
 float[] floatVectors = GC.AllocateUninitializedArray<float>(vectors.Length);
 for (int i = 0; i < vectors.Length; i++)
     floatVectors[i] = (float)vectors[i];
 
-IvfIndexBuilder.Write(ivfOutputPath, floatVectors, labels, count, ivfOptions);
-long ivfSize = new FileInfo(ivfOutputPath).Length;
-Console.WriteLine($"IVF output: {ivfSize / (1024.0 * 1024.0):F1} MB ({ivfSize:N0} bytes)");
+if (!DataConverterOptions.BucketOnly())
+{
+    ExactIndexBuilder.Write(exactOutputPath, vectors, labels, count, exactMaxRefs);
+    long exactSize = new FileInfo(exactOutputPath).Length;
+    Console.WriteLine($"Exact output: {exactSize / (1024.0 * 1024.0):F1} MB ({exactSize:N0} bytes)");
+
+    IvfIndexBuilder.Write(ivfOutputPath, floatVectors, labels, count, ivfOptions);
+    long ivfSize = new FileInfo(ivfOutputPath).Length;
+    Console.WriteLine($"IVF output: {ivfSize / (1024.0 * 1024.0):F1} MB ({ivfSize:N0} bytes)");
+}
 
 BucketIndexBuilder.Write(bucketOutputPath, floatVectors, labels, count, bucketOptions);
 long bucketSize = new FileInfo(bucketOutputPath).Length;
@@ -107,10 +110,22 @@ internal static class DataConverterOptions
     public static BucketBuildOptions BucketOptions() => new(
         Math.Min(EnvInt("BUCKET_SCALE", EnvInt("IVF_SCALE", IvfIndexBuilder.DefaultScale)), short.MaxValue));
 
+    public static bool BucketOnly() => EnvBool("BUCKET_ONLY", false);
+
     private static int EnvInt(string name, int fallback)
     {
         string? value = Environment.GetEnvironmentVariable(name);
         return int.TryParse(value, CultureInfo.InvariantCulture, out int parsed) && parsed > 0 ? parsed : fallback;
+    }
+
+    private static bool EnvBool(string name, bool fallback)
+    {
+        string? value = Environment.GetEnvironmentVariable(name);
+        if (string.IsNullOrEmpty(value))
+            return fallback;
+
+        return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
     }
 
 }

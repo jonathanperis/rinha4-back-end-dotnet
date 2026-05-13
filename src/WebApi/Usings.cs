@@ -4,6 +4,7 @@ global using System.Globalization;
 global using System.IO.MemoryMappedFiles;
 global using System.Net;
 global using System.Net.Sockets;
+global using System.Numerics;
 global using System.Runtime.CompilerServices;
 global using System.Runtime.InteropServices;
 global using System.Runtime.Intrinsics;

@@ -65,10 +65,12 @@ internal sealed class FraudScorer
         MccRiskTable mcc = MccRiskTable.Load(Path.Combine(dataDirectory, "mcc_risk.json"));
         ScorerMode mode = ResolveMode();
         ExactIndex? exactIndex = mode == ScorerMode.Exact ? LoadExact(dataDirectory) : null;
-        IvfIndex? ivfIndex = mode == ScorerMode.Ivf ? LoadIvf(dataDirectory) : null;
-        BucketIndex? bucketIndex = mode == ScorerMode.Bucket ? LoadBucket(dataDirectory) : null;
-        IvfSearchOptions ivfOptions = mode == ScorerMode.Ivf ? IvfSearchOptions.FromEnvironment() : default;
-        BucketSearchOptions bucketOptions = mode == ScorerMode.Bucket ? BucketSearchOptions.FromEnvironment() : default;
+        IvfIndex? ivfIndex = mode is ScorerMode.Ivf or ScorerMode.Hybrid ? LoadIvf(dataDirectory) : null;
+        BucketIndex? bucketIndex = mode is ScorerMode.Bucket or ScorerMode.Hybrid ? LoadBucket(dataDirectory) : null;
+        IvfSearchOptions ivfOptions = mode is ScorerMode.Ivf or ScorerMode.Hybrid ? IvfSearchOptions.FromEnvironment() : default;
+        BucketSearchOptions bucketOptions = mode is ScorerMode.Bucket or ScorerMode.Hybrid ? BucketSearchOptions.FromEnvironment() : default;
+        if (mode == ScorerMode.Hybrid && bucketIndex!.Scale != ivfIndex!.Scale)
+            throw new InvalidOperationException($"Hybrid scorer requires matching scales. bucket={bucketIndex.Scale} ivf={ivfIndex.Scale}");
 
         Console.WriteLine("Dataset loaded. Ready to serve.");
         return new FraudScorer(normalization, mcc, exactIndex, ivfIndex, ivfOptions, bucketIndex, bucketOptions, mode);
@@ -104,6 +106,7 @@ internal sealed class FraudScorer
         {
             ScorerMode.Exact => exactIndex!.Scale,
             ScorerMode.Ivf => ivfIndex!.Scale,
+            ScorerMode.Hybrid => bucketIndex!.Scale,
             _ => bucketIndex!.Scale
         };
         QuantizeRequest(req, qv, scale);
@@ -114,6 +117,7 @@ internal sealed class FraudScorer
         {
             ScorerMode.Exact => exactIndex!.FraudCount(qv),
             ScorerMode.Ivf => ivfIndex!.FraudCount(qv, ivfOptions),
+            ScorerMode.Hybrid => bucketIndex!.TryFastPathFraudCount(qv, bucketOptions, out byte fastFrauds) ? fastFrauds : ivfIndex!.FraudCount(qv, ivfOptions),
             _ => bucketIndex!.FraudCount(qv, bucketOptions)
         };
         return HttpResponses.FraudScores[frauds];
@@ -197,6 +201,8 @@ internal sealed class FraudScorer
             return ScorerMode.Exact;
         if (string.Equals(value, "ivf", StringComparison.OrdinalIgnoreCase))
             return ScorerMode.Ivf;
+        if (string.Equals(value, "hybrid", StringComparison.OrdinalIgnoreCase))
+            return ScorerMode.Hybrid;
 
         return ScorerMode.Bucket;
     }
@@ -220,7 +226,8 @@ internal sealed class FraudScorer
     {
         Bucket,
         Ivf,
-        Exact
+        Exact,
+        Hybrid
     }
 
 }

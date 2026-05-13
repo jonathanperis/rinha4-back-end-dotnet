@@ -5,6 +5,11 @@ internal readonly record struct BucketSearchOptions(
     int EarlyCandidates,
     int MinCandidates,
     int MaxCandidates,
+    bool ReferenceFastPath,
+    bool ReferenceFastPathLegit,
+    bool ReferenceFastPathFraud,
+    bool ReferenceFastPath2Legit,
+    bool ReferenceFastPath2Fraud,
     bool ProfileFastPath,
     int ProfileLegitMinCount,
     int ProfileFraudMinCount,
@@ -20,10 +25,18 @@ internal readonly record struct BucketSearchOptions(
         int profileMinCount = EnvPositiveInt("BUCKET_PROFILE_MIN_COUNT", 15);
         int exactFallbackMode = ExactFallbackMode();
 
+        bool referenceLegit = EnvBool("BUCKET_REFERENCE_FASTPATH_LEGIT", false);
+        bool referenceFraud = EnvBool("BUCKET_REFERENCE_FASTPATH_FRAUD", true);
+
         return new BucketSearchOptions(
             earlyCandidates,
             minCandidates,
             maxCandidates,
+            EnvBool("BUCKET_REFERENCE_FASTPATH", true),
+            referenceLegit,
+            referenceFraud,
+            EnvBool("BUCKET_REFERENCE_FASTPATH2_LEGIT", true),
+            EnvBool("BUCKET_REFERENCE_FASTPATH2_FRAUD", referenceFraud),
             EnvBool("BUCKET_PROFILE_FASTPATH", true),
             EnvPositiveInt("BUCKET_PROFILE_LEGIT_MIN_COUNT", 5),
             EnvPositiveInt("BUCKET_PROFILE_FRAUD_MIN_COUNT", profileMinCount),

@@ -14,6 +14,7 @@ on:
           - docker-compose.envoy.yml
           - docker-compose.yarp.yml
           - docker-compose.clb.yml
+          - docker-compose.forevis.yml
       official_ref:
         description: Rinha official repo ref to clone for test/test.js and test-data.json
         required: true
@@ -29,11 +30,12 @@ on:
       scorer_mode:
         description: Runtime scorer mode
         required: true
-        default: bucket
+        default: hybrid
         type: choice
         options:
           - ivf
           - bucket
+          - hybrid
           - exact
       report_kind:
         description: Report lane used by GitHub Pages archive
@@ -47,7 +49,7 @@ on:
       ivf_clusters:
         description: IVF build cluster count
         required: true
-        default: "2048"
+        default: "512"
       ivf_train_sample:
         description: IVF build training sample size
         required: true
@@ -95,11 +97,11 @@ on:
       ivf_zero_fast_approve_worst_distance:
         description: Zero-fraud top-five distance threshold that skips repair
         required: true
-        default: "5000000"
+        default: "0"
       ivf_five_fast_deny_worst_distance:
         description: Five-fraud top-five distance threshold that skips repair
         required: true
-        default: "4500000"
+        default: "0"
       benchmark_api_cpuset:
         description: Optional Docker cpuset for WebApi containers; overrides stack cpuset for API only
         required: false
@@ -152,6 +154,8 @@ jobs:
             compose_file: docker-compose.yarp.yml
           - name: clb
             compose_file: docker-compose.clb.yml
+          - name: forevis
+            compose_file: docker-compose.forevis.yml
     concurrency:
       group: benchmark-${{ github.run_id }}-${{ matrix.lb.name }}
       cancel-in-progress: false
@@ -203,9 +207,15 @@ jobs:
           BENCHMARK_API_CPUS: ${{ inputs.benchmark_api_cpus }}
           BENCHMARK_PROXY_CPUS: ${{ inputs.benchmark_proxy_cpus }}
           ACCEPT_LOOPS: ${{ inputs.accept_loops }}
+          MIN_WORKER_THREADS: "128"
+          MAX_WORKER_THREADS: ""
+          MAX_IO_THREADS: ""
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
           SCORER_MODE: ${{ inputs.scorer_mode }}
           BUCKET_AVX_CUTOFF_DIMS: ${{ inputs.bucket_avx_cutoff_dims }}
+          BUCKET_REFERENCE_FASTPATH: "true"
+          BUCKET_REFERENCE_FASTPATH_LEGIT: "false"
+          BUCKET_REFERENCE_FASTPATH_FRAUD: "true"
         run: bash scripts/ci-official-benchmark.sh
 
       - name: Write benchmark metadata
@@ -284,8 +294,14 @@ jobs:
           BENCHMARK_PROXY_CPUS: ${{ inputs.benchmark_proxy_cpus }}
           ACCEPT_LOOPS: ${{ inputs.accept_loops }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
-          MIN_WORKER_THREADS: ${{ inputs.min_worker_threads }}
+          MIN_WORKER_THREADS: "128"
+          MAX_WORKER_THREADS: ""
+          MAX_IO_THREADS: ""
           SCORER_MODE: ${{ inputs.scorer_mode }}
+          BUCKET_AVX_CUTOFF_DIMS: ${{ inputs.bucket_avx_cutoff_dims }}
+          BUCKET_REFERENCE_FASTPATH: "true"
+          BUCKET_REFERENCE_FASTPATH_LEGIT: "false"
+          BUCKET_REFERENCE_FASTPATH_FRAUD: "true"
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

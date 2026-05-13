@@ -37,8 +37,8 @@ internal readonly record struct IvfSearchOptions(
             EnvBool("IVF_BBOX_REPAIR", true),
             repairMin,
             repairMax,
-            EnvNonNegativeLong("IVF_ZERO_FAST_APPROVE_WORST_DISTANCE", 5_000_000),
-            EnvNonNegativeLong("IVF_FIVE_FAST_DENY_WORST_DISTANCE", 4_500_000));
+            EnvNonNegativeLong("IVF_ZERO_FAST_APPROVE_WORST_DISTANCE", 0),
+            EnvNonNegativeLong("IVF_FIVE_FAST_DENY_WORST_DISTANCE", 0));
     }
 
     /// <summary>

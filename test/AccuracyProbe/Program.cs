@@ -3,6 +3,8 @@ if (args.Length < 2)
     Console.Error.WriteLine("Usage: AccuracyProbe <test-data.json> <data-dir> [repair-min] [repair-max]");
     Console.Error.WriteLine("       AccuracyProbe <test-data.json> <data-dir> exact <request-id>");
     Console.Error.WriteLine("       AccuracyProbe <test-data.json> <data-dir> profile");
+    Console.Error.WriteLine("       AccuracyProbe <test-data.json> <data-dir> hybrid-profile");
+    Console.Error.WriteLine("       AccuracyProbe <test-data.json> <data-dir> bucket-profile");
     return 2;
 }
 
@@ -11,6 +13,12 @@ string dataDirectory = args[1];
 
 if (args.Length >= 3 && string.Equals(args[2], "profile", StringComparison.OrdinalIgnoreCase))
     return RunProfileProbe(testDataPath, dataDirectory);
+
+if (args.Length >= 3 && string.Equals(args[2], "hybrid-profile", StringComparison.OrdinalIgnoreCase))
+    return RunHybridProfileProbe(testDataPath, dataDirectory);
+
+if (args.Length >= 3 && string.Equals(args[2], "bucket-profile", StringComparison.OrdinalIgnoreCase))
+    return RunBucketProfileProbe(testDataPath, dataDirectory);
 
 if (args.Length >= 4 && string.Equals(args[2], "exact", StringComparison.OrdinalIgnoreCase))
     return RunExactProbe(testDataPath, dataDirectory, args[3]);
@@ -99,6 +107,202 @@ static bool ParseApproved(ReadOnlySpan<byte> response, out double fraudScore)
     return approved;
 }
 
+static int RunBucketProfileProbe(string testDataPath, string dataDirectory)
+{
+    NormalizationConstants normalization = NormalizationConstants.Load(Path.Combine(dataDirectory, "normalization.json"));
+    MccRiskTable mcc = MccRiskTable.Load(Path.Combine(dataDirectory, "mcc_risk.json"));
+    string bucketPath = Environment.GetEnvironmentVariable("BUCKET_PATH") ?? Path.Combine(dataDirectory, "references.bucket.bin");
+    if (!BucketIndex.TryLoad(bucketPath, out BucketIndex? index, out string error) || index is null)
+    {
+        Console.Error.WriteLine(error);
+        return 1;
+    }
+
+    BucketSearchOptions options = BucketSearchOptions.FromEnvironment();
+    using JsonDocument testDoc = JsonDocument.Parse(File.ReadAllBytes(testDataPath));
+    var samples = new List<BucketProfileSample>(54100);
+    var elapsedNanos = new List<long>(54100);
+    var missFraudScores = new SortedDictionary<double, int>();
+    var missIds = new List<string>(32);
+    var fraudCounts = new int[6];
+    var initialFraudCounts = new int[6];
+    var fallbackByInitialFrauds = new int[6];
+    var initialToFinalFrauds = new int[6, 6];
+
+    int total = 0;
+    int fp = 0;
+    int fn = 0;
+    int tp = 0;
+    int tn = 0;
+    Span<double> fv = stackalloc double[14];
+    Span<short> qv = stackalloc short[16];
+    foreach (JsonElement entry in testDoc.RootElement.GetProperty("entries").EnumerateArray())
+    {
+        bool expectedApproved = entry.GetProperty("expected_approved").GetBoolean();
+        JsonElement request = entry.GetProperty("request");
+        VectorizeRequestDouble(request, normalization, mcc, fv);
+        for (int i = 0; i < 14; i++)
+            qv[i] = QuantizeRuntimeRounded(fv[i], index.Scale);
+        qv[14] = 0;
+        qv[15] = 0;
+
+        long start = System.Diagnostics.Stopwatch.GetTimestamp();
+        BucketProfileSample sample = index.Profile(qv, options);
+        long elapsed = System.Diagnostics.Stopwatch.GetTimestamp() - start;
+        long elapsedNs = elapsed * 1_000_000_000L / System.Diagnostics.Stopwatch.Frequency;
+        samples.Add(sample);
+        elapsedNanos.Add(elapsedNs);
+
+        bool approved = sample.Frauds < 3;
+        double fraudScore = sample.Frauds / 5.0;
+        total++;
+        fraudCounts[sample.Frauds]++;
+        initialFraudCounts[sample.InitialFrauds]++;
+        initialToFinalFrauds[sample.InitialFrauds, sample.Frauds]++;
+        if (sample.UsedFallback)
+            fallbackByInitialFrauds[sample.InitialFrauds]++;
+        if (approved == expectedApproved)
+        {
+            if (approved) tn++;
+            else tp++;
+            continue;
+        }
+
+        string id = request.GetProperty("id").GetString() ?? total.ToString(CultureInfo.InvariantCulture);
+        if (approved) fn++;
+        else fp++;
+        missFraudScores[fraudScore] = missFraudScores.TryGetValue(fraudScore, out int count) ? count + 1 : 1;
+        if (missIds.Count < 32)
+            missIds.Add($"{id}:{(approved ? "FN" : "FP")}:{fraudScore.ToString(CultureInfo.InvariantCulture)}");
+    }
+
+    int weighted = fp + (fn * 3);
+    double failureRate = total == 0 ? 0.0 : (fp + fn) * 100.0 / total;
+    Console.WriteLine($"mode=bucket-profile early={options.EarlyCandidates} min={options.MinCandidates} max={options.MaxCandidates} avx_cutoff={options.AvxCutoffDims} exact={options.ExactFallback} risky={options.RiskyFallback}");
+    Console.WriteLine($"total={total} tp={tp} tn={tn} fp={fp} fn={fn} weighted={weighted} failure_rate={failureRate.ToString("F4", CultureInfo.InvariantCulture)}%");
+    Console.WriteLine("initial_fraud_counts=" + string.Join(",", initialFraudCounts.Select(static (count, frauds) => $"{frauds}:{count}")));
+    Console.WriteLine("fraud_counts=" + string.Join(",", fraudCounts.Select(static (count, frauds) => $"{frauds}:{count}")));
+    PrintFraudMatrix("initial_to_final", initialToFinalFrauds);
+    Console.WriteLine("fallback_by_initial=" + string.Join(",", fallbackByInitialFrauds.Select(static (count, frauds) => $"{frauds}:{count}")));
+    Console.WriteLine($"profile_fast_path={samples.Count(static sample => sample.ProfileFastPath)} fallback={samples.Count(static sample => sample.UsedFallback)} risky={samples.Count(static sample => sample.UsedRiskyFallback)} exact={samples.Count(static sample => sample.UsedExactFallback)} full_tiebreak={samples.Count(static sample => sample.UsedFullRiskyTiebreak)} corrections={samples.Count(static sample => sample.InitialFrauds != sample.Frauds)}");
+    PrintBucketPercentiles("candidate_visits", samples, static sample => sample.CandidateVisits);
+    PrintBucketPercentiles("scanned_candidates", samples, static sample => sample.ScannedCandidates);
+    PrintBucketPercentiles("skipped_candidates", samples, static sample => sample.SkippedCandidates);
+    PrintBucketPercentiles("neighbor_buckets", samples, static sample => sample.NeighborBuckets);
+    PrintBucketPercentiles("risky_scanned", samples, static sample => sample.RiskyScannedCandidates);
+    PrintBucketPercentiles("exact_scanned", samples, static sample => sample.ExactScannedCandidates);
+    PrintBucketPercentiles("risky_fine_buckets", samples, static sample => sample.RiskyFineBuckets);
+    PrintLongPercentiles("elapsed_ns", elapsedNanos);
+    Console.WriteLine("miss_fraud_scores=" + string.Join(",", missFraudScores.Select(static item => $"{item.Key.ToString(CultureInfo.InvariantCulture)}:{item.Value}")));
+    Console.WriteLine("sample_misses=" + string.Join(",", missIds));
+    return 0;
+}
+
+static int RunHybridProfileProbe(string testDataPath, string dataDirectory)
+{
+    NormalizationConstants normalization = NormalizationConstants.Load(Path.Combine(dataDirectory, "normalization.json"));
+    MccRiskTable mcc = MccRiskTable.Load(Path.Combine(dataDirectory, "mcc_risk.json"));
+    string bucketPath = Environment.GetEnvironmentVariable("BUCKET_PATH") ?? Path.Combine(dataDirectory, "references.bucket.bin");
+    if (!BucketIndex.TryLoad(bucketPath, out BucketIndex? bucketIndex, out string error) || bucketIndex is null)
+    {
+        Console.Error.WriteLine(error);
+        return 1;
+    }
+
+    ProfileIvfIndex ivfIndex = ProfileIvfIndex.Load(Path.Combine(dataDirectory, "references.ivf.bin"));
+    BucketSearchOptions bucketOptions = BucketSearchOptions.FromEnvironment();
+    using JsonDocument testDoc = JsonDocument.Parse(File.ReadAllBytes(testDataPath));
+
+    var samples = new List<ProfileSample>(4096);
+    var byFrauds = new ProfileBucket[6];
+    for (int i = 0; i < byFrauds.Length; i++)
+        byFrauds[i] = new ProfileBucket();
+
+    var fastFraudCounts = new int[6];
+    var fallbackFraudCounts = new int[6];
+    var fallbackInitialCounts = new int[6];
+    var initialToFinalFrauds = new int[6, 6];
+    var missFraudScores = new SortedDictionary<double, int>();
+    var missIds = new List<string>(32);
+
+    int total = 0;
+    int fast = 0;
+    int fallback = 0;
+    int fp = 0;
+    int fn = 0;
+    int tp = 0;
+    int tn = 0;
+    Span<double> fv = stackalloc double[14];
+    Span<short> qv = stackalloc short[16];
+
+    foreach (JsonElement entry in testDoc.RootElement.GetProperty("entries").EnumerateArray())
+    {
+        bool expectedApproved = entry.GetProperty("expected_approved").GetBoolean();
+        JsonElement request = entry.GetProperty("request");
+        VectorizeRequestDouble(request, normalization, mcc, fv);
+        for (int i = 0; i < 14; i++)
+            qv[i] = QuantizeRuntimeRounded(fv[i], bucketIndex.Scale);
+        qv[14] = 0;
+        qv[15] = 0;
+
+        int frauds;
+        if (bucketIndex.TryFastPathFraudCount(qv, bucketOptions, out byte fastFrauds))
+        {
+            fast++;
+            frauds = fastFrauds;
+            fastFraudCounts[frauds]++;
+        }
+        else
+        {
+            fallback++;
+            ProfileSample sample = ivfIndex.Profile(qv);
+            samples.Add(sample);
+            byFrauds[sample.Frauds].Add(sample);
+            fallbackFraudCounts[sample.Frauds]++;
+            fallbackInitialCounts[sample.InitialFrauds]++;
+            initialToFinalFrauds[sample.InitialFrauds, sample.Frauds]++;
+            frauds = sample.Frauds;
+        }
+
+        bool approved = frauds < 3;
+        total++;
+        if (approved == expectedApproved)
+        {
+            if (approved) tn++;
+            else tp++;
+            continue;
+        }
+
+        string id = request.GetProperty("id").GetString() ?? total.ToString(CultureInfo.InvariantCulture);
+        if (approved) fn++;
+        else fp++;
+        double fraudScore = frauds / 5.0;
+        missFraudScores[fraudScore] = missFraudScores.TryGetValue(fraudScore, out int count) ? count + 1 : 1;
+        if (missIds.Count < 32)
+            missIds.Add($"{id}:{(approved ? "FN" : "FP")}:{fraudScore.ToString(CultureInfo.InvariantCulture)}");
+    }
+
+    int weighted = fp + (fn * 3);
+    double failureRate = total == 0 ? 0.0 : (fp + fn) * 100.0 / total;
+    samples.Sort(static (left, right) => left.TotalBlocks.CompareTo(right.TotalBlocks));
+    Console.WriteLine($"mode=hybrid-profile total={total} fast={fast} fallback={fallback} fallback_rate={(fallback * 100.0 / Math.Max(total, 1)).ToString("F2", CultureInfo.InvariantCulture)}%");
+    Console.WriteLine($"total={total} tp={tp} tn={tn} fp={fp} fn={fn} weighted={weighted} failure_rate={failureRate.ToString("F4", CultureInfo.InvariantCulture)}%");
+    Console.WriteLine("fast_fraud_counts=" + string.Join(",", fastFraudCounts.Select(static (count, frauds) => $"{frauds}:{count}")));
+    Console.WriteLine("fallback_initial_counts=" + string.Join(",", fallbackInitialCounts.Select(static (count, frauds) => $"{frauds}:{count}")));
+    Console.WriteLine("fallback_fraud_counts=" + string.Join(",", fallbackFraudCounts.Select(static (count, frauds) => $"{frauds}:{count}")));
+    PrintFraudMatrix("fallback_initial_to_final", initialToFinalFrauds);
+    PrintPercentiles("fallback_repair_clusters", samples, static sample => sample.RepairClusters);
+    PrintPercentiles("fallback_repair_blocks", samples, static sample => sample.RepairBlocks);
+    PrintPercentiles("fallback_total_blocks", samples, static sample => sample.TotalBlocks);
+    PrintEarlyFiveStats(samples);
+    PrintInitialDecisionStats(samples);
+    for (int frauds = 0; frauds < byFrauds.Length; frauds++)
+        Console.WriteLine($"fallback_frauds={frauds} count={byFrauds[frauds].Count} avg_total_blocks={byFrauds[frauds].AverageTotalBlocks():F2} avg_repair_clusters={byFrauds[frauds].AverageRepairClusters():F2}");
+    Console.WriteLine("miss_fraud_scores=" + string.Join(",", missFraudScores.Select(static item => $"{item.Key.ToString(CultureInfo.InvariantCulture)}:{item.Value}")));
+    Console.WriteLine("sample_misses=" + string.Join(",", missIds));
+    return 0;
+}
+
 static int RunProfileProbe(string testDataPath, string dataDirectory)
 {
     NormalizationConstants normalization = NormalizationConstants.Load(Path.Combine(dataDirectory, "normalization.json"));
@@ -153,7 +357,54 @@ static void PrintPercentiles(string name, List<ProfileSample> samples, Func<Prof
         $"p95:{Percentile(values, 0.95)} p99:{Percentile(values, 0.99)} max:{values[^1]}");
 }
 
+static void PrintBucketPercentiles(string name, List<BucketProfileSample> samples, Func<BucketProfileSample, int> selector)
+{
+    int[] values = new int[samples.Count];
+    for (int i = 0; i < samples.Count; i++)
+        values[i] = selector(samples[i]);
+    Array.Sort(values);
+
+    Console.WriteLine(
+        $"{name}=avg:{values.Average().ToString("F2", CultureInfo.InvariantCulture)} " +
+        $"p50:{Percentile(values, 0.50)} p90:{Percentile(values, 0.90)} " +
+        $"p95:{Percentile(values, 0.95)} p99:{Percentile(values, 0.99)} max:{values[^1]}");
+}
+
+static void PrintLongPercentiles(string name, List<long> values)
+{
+    long[] sorted = values.ToArray();
+    Array.Sort(sorted);
+
+    Console.WriteLine(
+        $"{name}=avg:{sorted.Average().ToString("F2", CultureInfo.InvariantCulture)} " +
+        $"p50:{PercentileLong(sorted, 0.50)} p90:{PercentileLong(sorted, 0.90)} " +
+        $"p95:{PercentileLong(sorted, 0.95)} p99:{PercentileLong(sorted, 0.99)} max:{sorted[^1]}");
+}
+
+static void PrintFraudMatrix(string name, int[,] matrix)
+{
+    var rows = new string[6];
+    for (int initial = 0; initial < rows.Length; initial++)
+    {
+        var cells = new string[6];
+        for (int final = 0; final < cells.Length; final++)
+            cells[final] = $"{final}:{matrix[initial, final]}";
+        rows[initial] = $"{initial}->" + string.Join("/", cells);
+    }
+
+    Console.WriteLine($"{name}=" + string.Join(",", rows));
+}
+
 static int Percentile(int[] sorted, double percentile)
+{
+    if (sorted.Length == 0)
+        return 0;
+
+    int index = (int)Math.Ceiling(percentile * sorted.Length) - 1;
+    return sorted[Math.Clamp(index, 0, sorted.Length - 1)];
+}
+
+static long PercentileLong(long[] sorted, double percentile)
 {
     if (sorted.Length == 0)
         return 0;
@@ -197,6 +448,7 @@ static void PrintEarlyFiveStats(List<ProfileSample> samples)
 
 static void PrintInitialDecisionStats(List<ProfileSample> samples)
 {
+    int[] thresholds = [1_000_000, 2_000_000, 3_000_000, 4_000_000, 5_000_000];
     for (int initialFrauds = 0; initialFrauds <= 5; initialFrauds++)
     {
         long approveSafe = 0;
@@ -249,6 +501,24 @@ static void PrintInitialDecisionStats(List<ProfileSample> samples)
             $"initial_decision={initialFrauds} approve_safe:{approveSafe} approve_safe_max:{approveSafeMax} " +
             $"approve_unsafe:{approveUnsafe} approve_unsafe_min:{approveUnsafeText} " +
             $"deny_safe:{denySafe} deny_safe_max:{denySafeMax} deny_unsafe:{denyUnsafe} deny_unsafe_min:{denyUnsafeText}");
+
+        foreach (int threshold in thresholds)
+        {
+            int skipped = 0;
+            int bad = 0;
+            foreach (ProfileSample sample in samples)
+            {
+                if (sample.InitialFrauds != initialFrauds || sample.InitialWorstDistance >= threshold)
+                    continue;
+
+                skipped++;
+                if ((sample.InitialFrauds < 3) != (sample.Frauds < 3))
+                    bad++;
+            }
+
+            if (skipped > 0 || bad > 0)
+                Console.WriteLine($"  threshold<{threshold}: skipped:{skipped} bad:{bad}");
+        }
     }
 }
 
@@ -406,6 +676,8 @@ static int FraudCount(ReadOnlySpan<byte> labels)
 }
 
 static double Clamp(double value) => value < 0.0 ? 0.0 : (value > 1.0 ? 1.0 : value);
+
+static short QuantizeRuntimeRounded(double value, int scale) => (short)Math.Round(value * scale);
 
 static short QuantizeRounded(double value, int scale) => (short)Math.Round(value * scale, MidpointRounding.AwayFromZero);
 

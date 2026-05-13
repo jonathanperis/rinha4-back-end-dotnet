@@ -4,12 +4,17 @@
 internal sealed unsafe class BucketIndex : IDisposable
 {
     private const int Magic = 0x4b435542; // BUCK
-    private const int Version = 1;
+    private const int Version = 2;
+    private const int MinReadableVersion = 1;
     private const int Dims = 14;
     private const int PaddedDims = 16;
     private const int K = 5;
     private const int BucketCount = 4096;
     private const int ProfileCount = 1 << 22;
+    private const int ReferenceFastPath1Slots = 1 << 24;
+    private const int ReferenceFastPath2Slots = 1 << 20;
+    private const int ReferenceFastPath1Edges = 16 + 8 + 64 + 2 + 8 + 16 + 2 + 4;
+    private const int ReferenceFastPath2Edges = 16 + 16 + 16 + 16 + 16;
     private const int RiskyFineExtraBits = 3;
     private const int RiskyFineBucketCount = BucketCount << RiskyFineExtraBits;
     private const int HeaderBytes = 7 * sizeof(int);
@@ -29,6 +34,10 @@ internal sealed unsafe class BucketIndex : IDisposable
     private readonly short* vectors;
     private readonly ushort* profileCounts;
     private readonly byte* profileMasks;
+    private readonly byte* referenceFastPath1;
+    private readonly short* referenceFastPath1Edges;
+    private readonly byte* referenceFastPath2;
+    private readonly short* referenceFastPath2Edges;
     private readonly int[] riskyPositions;
     private readonly int[] riskyFineBucketOffsets;
     private readonly int[] riskyCoarseFineOffsets;
@@ -46,6 +55,10 @@ internal sealed unsafe class BucketIndex : IDisposable
         short* vectors,
         ushort* profileCounts,
         byte* profileMasks,
+        byte* referenceFastPath1,
+        short* referenceFastPath1Edges,
+        byte* referenceFastPath2,
+        short* referenceFastPath2Edges,
         int[] riskyPositions,
         int[] riskyFineBucketOffsets,
         int[] riskyCoarseFineOffsets,
@@ -62,6 +75,10 @@ internal sealed unsafe class BucketIndex : IDisposable
         this.vectors = vectors;
         this.profileCounts = profileCounts;
         this.profileMasks = profileMasks;
+        this.referenceFastPath1 = referenceFastPath1;
+        this.referenceFastPath1Edges = referenceFastPath1Edges;
+        this.referenceFastPath2 = referenceFastPath2;
+        this.referenceFastPath2Edges = referenceFastPath2Edges;
         this.riskyPositions = riskyPositions;
         this.riskyFineBucketOffsets = riskyFineBucketOffsets;
         this.riskyCoarseFineOffsets = riskyCoarseFineOffsets;
@@ -91,7 +108,8 @@ internal sealed unsafe class BucketIndex : IDisposable
 
             try
             {
-                if (*(int*)ptr != Magic || *(int*)(ptr + 4) != Version)
+                int version = *(int*)(ptr + 4);
+                if (*(int*)ptr != Magic || version < MinReadableVersion || version > Version)
                 {
                     error = "Invalid bucket index header.";
                     return false;
@@ -114,7 +132,10 @@ internal sealed unsafe class BucketIndex : IDisposable
                 long vectorsOffset = labelsOffset + count;
                 long profileCountsOffset = vectorsOffset + (long)count * Dims * sizeof(short);
                 long profileMasksOffset = profileCountsOffset + ProfileCount * sizeof(ushort);
-                long expectedLength = profileMasksOffset + ProfileCount;
+                long baseLength = profileMasksOffset + ProfileCount;
+                long expectedLength = version == 1 ? baseLength : baseLength +
+                    ReferenceFastPath1Edges * sizeof(short) + ReferenceFastPath1Slots +
+                    ReferenceFastPath2Edges * sizeof(short) + ReferenceFastPath2Slots;
                 if (length != expectedLength)
                 {
                     error = "Invalid bucket index length.";
@@ -129,6 +150,21 @@ internal sealed unsafe class BucketIndex : IDisposable
                 }
 
                 short* vectors = (short*)(ptr + vectorsOffset);
+                byte* referenceFastPath1 = null;
+                short* referenceFastPath1Edges = null;
+                byte* referenceFastPath2 = null;
+                short* referenceFastPath2Edges = null;
+                if (version >= 2)
+                {
+                    long fastOffset = baseLength;
+                    referenceFastPath1Edges = (short*)(ptr + fastOffset);
+                    fastOffset += ReferenceFastPath1Edges * sizeof(short);
+                    referenceFastPath1 = ptr + fastOffset;
+                    fastOffset += ReferenceFastPath1Slots;
+                    referenceFastPath2Edges = (short*)(ptr + fastOffset);
+                    fastOffset += ReferenceFastPath2Edges * sizeof(short);
+                    referenceFastPath2 = ptr + fastOffset;
+                }
                 BuildRiskyFallbackIndex(
                     IsRiskyFallbackEnabled(),
                     vectors,
@@ -151,6 +187,10 @@ internal sealed unsafe class BucketIndex : IDisposable
                     vectors,
                     (ushort*)(ptr + profileCountsOffset),
                     ptr + profileMasksOffset,
+                    referenceFastPath1,
+                    referenceFastPath1Edges,
+                    referenceFastPath2,
+                    referenceFastPath2Edges,
                     riskyPositions,
                     riskyFineBucketOffsets,
                     riskyCoarseFineOffsets,
@@ -174,7 +214,7 @@ internal sealed unsafe class BucketIndex : IDisposable
 
     public byte FraudCount(ReadOnlySpan<short> query, BucketSearchOptions options)
     {
-        if (options.ProfileFastPath && TryProfileFastDecision(query, options, out byte fastFrauds))
+        if (TryFastPathFraudCount(query, options, out byte fastFrauds))
             return fastFrauds;
 
         Span<long> topDist = stackalloc long[K];
@@ -233,6 +273,99 @@ internal sealed unsafe class BucketIndex : IDisposable
         return frauds;
     }
 
+    public bool TryFastPathFraudCount(ReadOnlySpan<short> query, BucketSearchOptions options, out byte frauds)
+    {
+        if (options.ReferenceFastPath && TryReferenceFastDecision(query, options, out frauds))
+            return true;
+
+        if (options.ProfileFastPath && TryProfileFastDecision(query, options, out frauds))
+            return true;
+
+        frauds = 0;
+        return false;
+    }
+
+    public BucketProfileSample Profile(ReadOnlySpan<short> query, BucketSearchOptions options)
+    {
+        if (TryFastPathFraudCount(query, options, out byte fastFrauds))
+            return new BucketProfileSample(fastFrauds, fastFrauds, true, false, false, false, false, 0, 0, 0, 0, 0, 0, 0);
+
+        Span<long> topDist = stackalloc long[K];
+        Span<int> topIds = stackalloc int[K];
+        Span<byte> topLabels = stackalloc byte[K];
+        topDist.Fill(long.MaxValue);
+        topIds.Fill(int.MaxValue);
+        Span<short> paddedQuery = stackalloc short[PaddedDims];
+        if (Avx2.IsSupported)
+        {
+            paddedQuery.Clear();
+            query.CopyTo(paddedQuery);
+        }
+
+        int candidates = 0;
+        int scannedCandidates = 0;
+        int skippedCandidates = 0;
+        int neighborBuckets = 0;
+        ReadOnlySpan<ushort> neighborKeys = NeighborKeyOrders.AsSpan(BucketKey(query) * BucketCount, BucketCount);
+        for (int neighborIndex = 0; neighborIndex < neighborKeys.Length; neighborIndex++)
+        {
+            neighborBuckets++;
+            int key = neighborKeys[neighborIndex];
+            int start = offsets[key];
+            int end = offsets[key + 1];
+            if (topDist[^1] != long.MaxValue && BucketLowerBound(key, query) > topDist[^1])
+            {
+                int skipped = end - start;
+                skippedCandidates += skipped;
+                candidates += skipped;
+                if (candidates >= options.MaxCandidates)
+                    goto CandidateSearchDone;
+
+                if (candidates >= options.EarlyCandidates && StrongDecision(topLabels))
+                    goto CandidateSearchDone;
+                if (candidates >= options.MinCandidates)
+                    goto CandidateSearchDone;
+
+                continue;
+            }
+
+            int scanEnd = Math.Min(end, start + options.MaxCandidates - candidates);
+            int scanned = scanEnd - start;
+            ConsiderRange(query, paddedQuery, start, scanEnd, topDist, topIds, topLabels, options.AvxCutoffDims);
+            scannedCandidates += scanned;
+            candidates += scanned;
+            if (candidates >= options.MaxCandidates)
+                goto CandidateSearchDone;
+
+            if (candidates >= options.EarlyCandidates && StrongDecision(topLabels))
+                goto CandidateSearchDone;
+            if (candidates >= options.MinCandidates)
+                goto CandidateSearchDone;
+        }
+
+    CandidateSearchDone:
+        byte frauds = CountFrauds(topLabels);
+        if (candidates < K)
+        {
+            byte exactFrauds = ExactFraudCountProfile(query, options.AvxCutoffDims, out int exactScannedCandidates);
+            return new BucketProfileSample(exactFrauds, frauds, false, true, true, false, false, candidates, scannedCandidates, skippedCandidates, 0, exactScannedCandidates, neighborBuckets, 0);
+        }
+
+        if (ShouldUseExactFallback(query, frauds, options))
+        {
+            if (options.RiskyFallback)
+            {
+                byte riskyFrauds = RiskyFraudCountProfile(query, true, options.AvxCutoffDims, out int riskyScannedCandidates, out int exactScannedCandidates, out int riskyFineBuckets, out bool fullTiebreak);
+                return new BucketProfileSample(riskyFrauds, frauds, false, true, exactScannedCandidates > 0, true, fullTiebreak, candidates, scannedCandidates, skippedCandidates, riskyScannedCandidates, exactScannedCandidates, neighborBuckets, riskyFineBuckets);
+            }
+
+            byte exactFrauds = ExactFraudCountProfile(query, options.AvxCutoffDims, out int exactScannedCandidatesOnly);
+            return new BucketProfileSample(exactFrauds, frauds, false, true, true, false, false, candidates, scannedCandidates, skippedCandidates, 0, exactScannedCandidatesOnly, neighborBuckets, 0);
+        }
+
+        return new BucketProfileSample(frauds, frauds, false, false, false, false, false, candidates, scannedCandidates, skippedCandidates, 0, 0, neighborBuckets, 0);
+    }
+
     [SkipLocalsInit]
     private byte RiskyFraudCount(ReadOnlySpan<short> query, bool allowFullTiebreak, int avxCutoffDims)
     {
@@ -278,6 +411,70 @@ internal sealed unsafe class BucketIndex : IDisposable
 
         byte frauds = CountFrauds(topLabels);
         return allowFullTiebreak && NeedsFullRiskyTiebreak(query, frauds) ? ExactFraudCount(query, avxCutoffDims) : frauds;
+    }
+
+    [SkipLocalsInit]
+    private byte RiskyFraudCountProfile(
+        ReadOnlySpan<short> query,
+        bool allowFullTiebreak,
+        int avxCutoffDims,
+        out int riskyScannedCandidates,
+        out int exactScannedCandidates,
+        out int riskyFineBuckets,
+        out bool fullTiebreak)
+    {
+        riskyScannedCandidates = 0;
+        exactScannedCandidates = 0;
+        riskyFineBuckets = 0;
+        fullTiebreak = false;
+        if (riskyPositions.Length < K)
+            return ExactFraudCountProfile(query, avxCutoffDims, out exactScannedCandidates);
+
+        Span<long> topDist = stackalloc long[K];
+        Span<int> topIds = stackalloc int[K];
+        Span<byte> topLabels = stackalloc byte[K];
+        topDist.Fill(long.MaxValue);
+        topIds.Fill(int.MaxValue);
+
+        Span<short> paddedQuery = stackalloc short[PaddedDims];
+        if (Avx2.IsSupported)
+        {
+            paddedQuery.Clear();
+            query.CopyTo(paddedQuery);
+        }
+
+        ReadOnlySpan<ushort> neighborKeys = NeighborKeyOrders.AsSpan(BucketKey(query) * BucketCount, BucketCount);
+        for (int neighborIndex = 0; neighborIndex < neighborKeys.Length; neighborIndex++)
+        {
+            int coarseKey = neighborKeys[neighborIndex];
+            if (BucketLowerBound(coarseKey, query) >= topDist[^1])
+                continue;
+
+            int fineStart = riskyCoarseFineOffsets[coarseKey];
+            int fineEnd = riskyCoarseFineOffsets[coarseKey + 1];
+            for (int finePos = fineStart; finePos < fineEnd; finePos++)
+            {
+                int fineKey = riskyFineKeys[finePos];
+                if (RiskyFineBucketLowerBound(fineKey, query) >= topDist[^1])
+                    continue;
+
+                int start = riskyFineBucketOffsets[fineKey];
+                int end = riskyFineBucketOffsets[fineKey + 1];
+                riskyFineBuckets++;
+                riskyScannedCandidates += end - start;
+                ConsiderRiskyPositions(query, paddedQuery, start, end, topDist, topIds, topLabels, avxCutoffDims);
+            }
+        }
+
+        if (topDist[^1] == long.MaxValue)
+            return ExactFraudCountProfile(query, avxCutoffDims, out exactScannedCandidates);
+
+        byte frauds = CountFrauds(topLabels);
+        if (!allowFullTiebreak || !NeedsFullRiskyTiebreak(query, frauds))
+            return frauds;
+
+        fullTiebreak = true;
+        return ExactFraudCountProfile(query, avxCutoffDims, out exactScannedCandidates);
     }
 
     [SkipLocalsInit]
@@ -363,6 +560,36 @@ internal sealed unsafe class BucketIndex : IDisposable
         return false;
     }
 
+    private bool TryReferenceFastDecision(ReadOnlySpan<short> query, BucketSearchOptions options, out byte frauds)
+    {
+        frauds = 0;
+        if (referenceFastPath1 == null)
+            return false;
+
+        byte result = referenceFastPath1[ReferenceFastPath1Key(query)];
+        if (result == LegitMask && options.ReferenceFastPathLegit)
+            return true;
+        if (result == FraudMask && options.ReferenceFastPathFraud)
+        {
+            frauds = K;
+            return true;
+        }
+
+        if (referenceFastPath2 == null)
+            return false;
+
+        result = referenceFastPath2[ReferenceFastPath2Key(query)];
+        if (result == LegitMask && options.ReferenceFastPath2Legit)
+            return true;
+        if (result == FraudMask && options.ReferenceFastPath2Fraud)
+        {
+            frauds = K;
+            return true;
+        }
+
+        return false;
+    }
+
     private byte ExactFraudCount(ReadOnlySpan<short> query, int avxCutoffDims)
     {
         Span<long> topDist = stackalloc long[K];
@@ -383,6 +610,35 @@ internal sealed unsafe class BucketIndex : IDisposable
                 continue;
 
             ConsiderRange(query, paddedQuery, offsets[key], offsets[key + 1], topDist, topIds, topLabels, avxCutoffDims);
+        }
+
+        return CountFrauds(topLabels);
+    }
+
+    private byte ExactFraudCountProfile(ReadOnlySpan<short> query, int avxCutoffDims, out int scannedCandidates)
+    {
+        Span<long> topDist = stackalloc long[K];
+        Span<int> topIds = stackalloc int[K];
+        Span<byte> topLabels = stackalloc byte[K];
+        topDist.Fill(long.MaxValue);
+        topIds.Fill(int.MaxValue);
+        Span<short> paddedQuery = stackalloc short[PaddedDims];
+        if (Avx2.IsSupported)
+        {
+            paddedQuery.Clear();
+            query.CopyTo(paddedQuery);
+        }
+
+        scannedCandidates = 0;
+        for (int key = 0; key < BucketCount; key++)
+        {
+            if (topDist[^1] != long.MaxValue && BucketLowerBound(key, query) > topDist[^1])
+                continue;
+
+            int start = offsets[key];
+            int end = offsets[key + 1];
+            scannedCandidates += end - start;
+            ConsiderRange(query, paddedQuery, start, end, topDist, topIds, topLabels, avxCutoffDims);
         }
 
         return CountFrauds(topLabels);
@@ -661,6 +917,55 @@ internal sealed unsafe class BucketIndex : IDisposable
         key |= (vector[1] > scale / 10 ? 1 : 0) << 19;
         key |= Bucket4(vector[13]) << 20;
         return key;
+    }
+
+    private int ReferenceFastPath1Key(ReadOnlySpan<short> vector)
+    {
+        short* edges = referenceFastPath1Edges;
+        int key = 0;
+        int shift = 0;
+        AddReferenceFastPathBin(ref key, ref shift, vector[0], edges, 16); edges += 16;
+        AddReferenceFastPathBin(ref key, ref shift, vector[7], edges, 8); edges += 8;
+        AddReferenceFastPathBin(ref key, ref shift, vector[10], edges, 64); edges += 64;
+        AddReferenceFastPathBin(ref key, ref shift, vector[1], edges, 2); edges += 2;
+        AddReferenceFastPathBin(ref key, ref shift, vector[9], edges, 8); edges += 8;
+        AddReferenceFastPathBin(ref key, ref shift, vector[11], edges, 16); edges += 16;
+        AddReferenceFastPathBin(ref key, ref shift, vector[12], edges, 2); edges += 2;
+        AddReferenceFastPathBin(ref key, ref shift, vector[3], edges, 4);
+        return key;
+    }
+
+    private int ReferenceFastPath2Key(ReadOnlySpan<short> vector)
+    {
+        short* edges = referenceFastPath2Edges;
+        int key = 0;
+        int shift = 0;
+        AddReferenceFastPathBin(ref key, ref shift, vector[5], edges, 16); edges += 16;
+        AddReferenceFastPathBin(ref key, ref shift, vector[13], edges, 16); edges += 16;
+        AddReferenceFastPathBin(ref key, ref shift, vector[6], edges, 16); edges += 16;
+        AddReferenceFastPathBin(ref key, ref shift, vector[1], edges, 16); edges += 16;
+        AddReferenceFastPathBin(ref key, ref shift, vector[12], edges, 16);
+        return key;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void AddReferenceFastPathBin(ref int key, ref int shift, short value, short* edges, int bins)
+    {
+        int bin = ReferenceFastPathBin(value, edges, bins);
+        key |= bin << shift;
+        shift += BitOperations.Log2((uint)bins);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int ReferenceFastPathBin(short value, short* edges, int bins)
+    {
+        for (int bin = 0; bin < bins - 1; bin++)
+        {
+            if (value < edges[bin])
+                return bin;
+        }
+
+        return bins - 1;
     }
 
     private int Bucket4(short value) => value <= 0 ? 0 : Math.Clamp(value * 4 / (scale + 1), 0, 3);

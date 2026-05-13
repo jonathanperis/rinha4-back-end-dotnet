@@ -18,6 +18,16 @@ internal sealed partial class IvfIndex
         long zeroFastApproveWorstDistance,
         long fiveFastDenyWorstDistance)
     {
+        if (useFloatAvx2 && Avx2.IsSupported && blockLanes == 8)
+        {
+            return FraudCountOnceFloat(
+                quantizedQuery,
+                nProbe,
+                repair,
+                zeroFastApproveWorstDistance,
+                fiveFastDenyWorstDistance);
+        }
+
         Span<int> bestClusters = stackalloc int[nProbe];
         Span<long> bestDistances = stackalloc long[nProbe];
         bestDistances.Fill(long.MaxValue);
