@@ -2,10 +2,9 @@ name: 'rinha-2026-dotnet'
 
 services:
   webapi1: &webapi
-    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-1d3831f15238a76af2c01b4c7d418a18059d65c3
+    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-8975fac9770485b430d61286c830065ce7702f78
     pull_policy: always
     container_name: webapi-1
-    cpuset: "0"
     user: root
     restart: always
     read_only: true
@@ -66,7 +65,6 @@ services:
   webapi2:
     <<: *webapi
     container_name: webapi-2
-    cpuset: "1"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
@@ -105,7 +103,6 @@ services:
   lb:
     image: jrblatt/so-no-forevis:v0.0.2
     container_name: rinha-lb
-    cpuset: "2,3"
     platform: linux/amd64
     restart: always
     depends_on:
