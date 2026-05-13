@@ -226,8 +226,8 @@ internal static class IvfRepairAssertions
         Span<float> query = stackalloc float[14];
         Span<short> quantized = stackalloc short[16];
 
-        byte fastOnly = index.FraudCount(quantized, new IvfSearchOptions(1, 1, false, false, 1, 4, 5_000_000, 4_500_000));
-        byte repaired = index.FraudCount(quantized, new IvfSearchOptions(1, 1, true, true, 1, 4, 5_000_000, 4_500_000));
+        byte fastOnly = index.FraudCount(quantized, new IvfSearchOptions(1, 1, false, false, 1, 4, 5_000_000, 4_500_000, false));
+        byte repaired = index.FraudCount(quantized, new IvfSearchOptions(1, 1, true, true, 1, 4, 5_000_000, 4_500_000, false));
 
         VectorizationTestRunner.AssertEqualInt(expectedFastOnly, fastOnly);
         VectorizationTestRunner.AssertEqualInt(expectedRepaired, repaired);

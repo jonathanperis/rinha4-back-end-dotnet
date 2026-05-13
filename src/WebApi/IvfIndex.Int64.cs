@@ -16,7 +16,8 @@ internal sealed partial class IvfIndex
         int nProbe,
         bool repair,
         long zeroFastApproveWorstDistance,
-        long fiveFastDenyWorstDistance)
+        long fiveFastDenyWorstDistance,
+        bool labelBboxDecision)
     {
         if (useFloatAvx2 && Avx2.IsSupported && blockLanes == 8)
         {
@@ -25,7 +26,8 @@ internal sealed partial class IvfIndex
                 nProbe,
                 repair,
                 zeroFastApproveWorstDistance,
-                fiveFastDenyWorstDistance);
+                fiveFastDenyWorstDistance,
+                labelBboxDecision);
         }
 
         Span<int> bestClusters = stackalloc int[nProbe];
@@ -55,12 +57,140 @@ internal sealed partial class IvfIndex
                 return 0;
             if (initialFrauds == 5 && candidateDistances[^1] < fiveFastDenyWorstDistance)
                 return 5;
+
+            if (labelBboxDecision && TryStableDecisionByLabelBboxLong(candidateDistances, candidateLabels, bestClusters, quantizedQuery, initialFrauds, out byte stableFrauds))
+                return stableFrauds;
         }
 
         if (repair)
             RepairByBoundingBoxLong(candidateDistances, candidateIds, candidateLabels, bestClusters, quantizedQuery, queryVectors);
 
         return CountFrauds(candidateLabels);
+    }
+
+    private bool TryStableDecisionByLabelBboxLong(
+        ReadOnlySpan<long> candidateDistances,
+        ReadOnlySpan<byte> candidateLabels,
+        scoped ReadOnlySpan<int> probedClusters,
+        ReadOnlySpan<short> query,
+        byte initialFrauds,
+        out byte stableFrauds)
+    {
+        stableFrauds = initialFrauds;
+        int needed;
+        byte incomingLabel;
+        byte outgoingLabel;
+        if (initialFrauds < 3)
+        {
+            needed = 3 - initialFrauds;
+            incomingLabel = 1;
+            outgoingLabel = 0;
+        }
+        else
+        {
+            needed = initialFrauds - 2;
+            incomingLabel = 0;
+            outgoingLabel = 1;
+        }
+
+        Span<long> outgoingDistances = stackalloc long[3];
+        outgoingDistances.Fill(long.MinValue);
+        int outgoingSeen = 0;
+        for (int i = 0; i < 5; i++)
+        {
+            if (candidateLabels[i] != outgoingLabel)
+                continue;
+
+            InsertDescendingLong(candidateDistances[i], outgoingDistances[..needed]);
+            outgoingSeen++;
+        }
+
+        if (outgoingSeen < needed)
+            return false;
+
+        Span<long> lowerBounds = stackalloc long[3];
+        lowerBounds.Fill(long.MaxValue);
+        for (int cluster = 0; cluster < clusters; cluster++)
+        {
+            if (IsProbed(cluster, probedClusters) || labelCounts[incomingLabel * clusters + cluster] == 0)
+                continue;
+
+            long lowerBound = LabelBboxLowerBoundLong(incomingLabel, cluster, query, lowerBounds[needed - 1]);
+            int copies = Math.Min(labelCounts[incomingLabel * clusters + cluster], needed);
+            for (int copy = 0; copy < copies; copy++)
+                InsertAscendingLong(lowerBound, lowerBounds[..needed]);
+        }
+
+        for (int i = 0; i < needed; i++)
+        {
+            if (lowerBounds[i] > outgoingDistances[i])
+                return true;
+        }
+
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private long LabelBboxLowerBoundLong(byte label, int cluster, ReadOnlySpan<short> query, long cutoff)
+    {
+        int baseIndex = label * clusters * Dims + cluster;
+        long sum = 0;
+        for (int dim = 0; dim < Dims; dim++)
+        {
+            short value = query[dim];
+            short min = labelBboxMin[baseIndex + dim * clusters];
+            short max = labelBboxMax[baseIndex + dim * clusters];
+            if (value < min)
+            {
+                long diff = (long)value - min;
+                sum += diff * diff;
+                if (sum >= cutoff)
+                    return sum;
+            }
+            else if (value > max)
+            {
+                long diff = (long)value - max;
+                sum += diff * diff;
+                if (sum >= cutoff)
+                    return sum;
+            }
+        }
+
+        return sum;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void InsertAscendingLong(long value, Span<long> values)
+    {
+        int last = values.Length - 1;
+        if (value >= values[last])
+            return;
+
+        int pos = last;
+        while (pos > 0 && value < values[pos - 1])
+        {
+            values[pos] = values[pos - 1];
+            pos--;
+        }
+
+        values[pos] = value;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void InsertDescendingLong(long value, Span<long> values)
+    {
+        int last = values.Length - 1;
+        if (value <= values[last])
+            return;
+
+        int pos = last;
+        while (pos > 0 && value > values[pos - 1])
+        {
+            values[pos] = values[pos - 1];
+            pos--;
+        }
+
+        values[pos] = value;
     }
 
     /// <summary>

@@ -9,7 +9,8 @@ internal sealed partial class IvfIndex
         int nProbe,
         bool repair,
         long zeroFastApproveWorstDistance,
-        long fiveFastDenyWorstDistance)
+        long fiveFastDenyWorstDistance,
+        bool labelBboxDecision)
     {
         Span<int> bestClusters = stackalloc int[nProbe];
         Span<float> bestDistances = stackalloc float[nProbe];
@@ -42,10 +43,138 @@ internal sealed partial class IvfIndex
             if (initialFrauds == 5 && worstDistance < fiveFastDenyWorstDistance)
                 return 5;
 
+            if (labelBboxDecision && TryStableDecisionByLabelBboxFloat(candidateDistances, candidateLabels, bestClusters, quantizedQuery, initialFrauds, out byte stableFrauds))
+                return stableFrauds;
+
             RepairByBoundingBoxFloat(candidateDistances, candidateIds, candidateLabels, ref worstIndex, bestClusters, quantizedQuery, queryVectors);
         }
 
         return CountFrauds(candidateLabels);
+    }
+
+    private bool TryStableDecisionByLabelBboxFloat(
+        ReadOnlySpan<float> candidateDistances,
+        ReadOnlySpan<byte> candidateLabels,
+        scoped ReadOnlySpan<int> probedClusters,
+        ReadOnlySpan<short> query,
+        byte initialFrauds,
+        out byte stableFrauds)
+    {
+        stableFrauds = initialFrauds;
+        int needed;
+        byte incomingLabel;
+        byte outgoingLabel;
+        if (initialFrauds < 3)
+        {
+            needed = 3 - initialFrauds;
+            incomingLabel = 1;
+            outgoingLabel = 0;
+        }
+        else
+        {
+            needed = initialFrauds - 2;
+            incomingLabel = 0;
+            outgoingLabel = 1;
+        }
+
+        Span<float> outgoingDistances = stackalloc float[3];
+        outgoingDistances.Fill(float.NegativeInfinity);
+        int outgoingSeen = 0;
+        for (int i = 0; i < 5; i++)
+        {
+            if (candidateLabels[i] != outgoingLabel)
+                continue;
+
+            InsertDescendingFloat(candidateDistances[i], outgoingDistances[..needed]);
+            outgoingSeen++;
+        }
+
+        if (outgoingSeen < needed)
+            return false;
+
+        Span<float> lowerBounds = stackalloc float[3];
+        lowerBounds.Fill(float.PositiveInfinity);
+        for (int cluster = 0; cluster < clusters; cluster++)
+        {
+            if (IsProbed(cluster, probedClusters) || labelCounts[incomingLabel * clusters + cluster] == 0)
+                continue;
+
+            float lowerBound = LabelBboxLowerBoundFloat(incomingLabel, cluster, query, lowerBounds[needed - 1]);
+            int copies = Math.Min(labelCounts[incomingLabel * clusters + cluster], needed);
+            for (int copy = 0; copy < copies; copy++)
+                InsertAscendingFloat(lowerBound, lowerBounds[..needed]);
+        }
+
+        for (int i = 0; i < needed; i++)
+        {
+            if (lowerBounds[i] > outgoingDistances[i])
+                return true;
+        }
+
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private float LabelBboxLowerBoundFloat(byte label, int cluster, ReadOnlySpan<short> query, float cutoff)
+    {
+        int baseIndex = label * clusters * Dims + cluster;
+        float sum = 0;
+        for (int dim = 0; dim < Dims; dim++)
+        {
+            short value = query[dim];
+            short min = labelBboxMin[baseIndex + dim * clusters];
+            short max = labelBboxMax[baseIndex + dim * clusters];
+            if (value < min)
+            {
+                float diff = value - min;
+                sum += diff * diff;
+                if (sum >= cutoff)
+                    return sum;
+            }
+            else if (value > max)
+            {
+                float diff = value - max;
+                sum += diff * diff;
+                if (sum >= cutoff)
+                    return sum;
+            }
+        }
+
+        return sum;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void InsertAscendingFloat(float value, Span<float> values)
+    {
+        int last = values.Length - 1;
+        if (value >= values[last])
+            return;
+
+        int pos = last;
+        while (pos > 0 && value < values[pos - 1])
+        {
+            values[pos] = values[pos - 1];
+            pos--;
+        }
+
+        values[pos] = value;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void InsertDescendingFloat(float value, Span<float> values)
+    {
+        int last = values.Length - 1;
+        if (value <= values[last])
+            return;
+
+        int pos = last;
+        while (pos > 0 && value > values[pos - 1])
+        {
+            values[pos] = values[pos - 1];
+            pos--;
+        }
+
+        values[pos] = value;
     }
 
     [SkipLocalsInit]
@@ -142,7 +271,7 @@ internal sealed partial class IvfIndex
     }
 
     [SkipLocalsInit]
-    private void ScanBlocksFloat(
+    private unsafe void ScanBlocksFloat(
         Span<float> candidateDistances,
         Span<int> candidateIds,
         Span<byte> candidateLabels,
@@ -154,6 +283,18 @@ internal sealed partial class IvfIndex
         Span<float> laneDistances = stackalloc float[8];
         for (int block = startBlock; block < endBlock; block++)
         {
+            if (Sse.IsSupported)
+            {
+                int prefetchBlock = block + 8;
+                if (prefetchBlock < endBlock)
+                {
+                    ref short prefetchRef = ref blocks[prefetchBlock * Dims * blockLanes];
+                    short* prefetchPtr = (short*)Unsafe.AsPointer(ref prefetchRef);
+                    Sse.Prefetch0(prefetchPtr);
+                    Sse.Prefetch0(prefetchPtr + 56);
+                }
+            }
+
             int blockBase = block * Dims * blockLanes;
             int labelBase = block * blockLanes;
             Vector256<float> acc0 = Vector256<float>.Zero;

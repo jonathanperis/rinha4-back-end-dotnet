@@ -202,6 +202,7 @@ jobs:
           IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
           IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: ${{ inputs.ivf_zero_fast_approve_worst_distance }}
           IVF_FIVE_FAST_DENY_WORST_DISTANCE: ${{ inputs.ivf_five_fast_deny_worst_distance }}
+          IVF_LABEL_BBOX_DECISION: "true"
           BENCHMARK_API_CPUSET: ${{ inputs.benchmark_api_cpuset }}
           BENCHMARK_PROXY_CPUSET: ${{ inputs.benchmark_proxy_cpuset }}
           BENCHMARK_API_CPUS: ${{ inputs.benchmark_api_cpus }}
@@ -288,6 +289,7 @@ jobs:
           IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
           IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: ${{ inputs.ivf_zero_fast_approve_worst_distance }}
           IVF_FIVE_FAST_DENY_WORST_DISTANCE: ${{ inputs.ivf_five_fast_deny_worst_distance }}
+          IVF_LABEL_BBOX_DECISION: "true"
           BENCHMARK_API_CPUSET: ${{ inputs.benchmark_api_cpuset }}
           BENCHMARK_PROXY_CPUSET: ${{ inputs.benchmark_proxy_cpuset }}
           BENCHMARK_API_CPUS: ${{ inputs.benchmark_api_cpus }}
