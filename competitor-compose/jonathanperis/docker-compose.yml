@@ -15,7 +15,7 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "2"
-      MIN_WORKER_THREADS: "16"
+      MIN_WORKER_THREADS: "128"
       SCORER_MODE: hybrid
       SOCKET_PATH: /sockets/api1.sock
       DATA_DIR: /data
@@ -57,7 +57,7 @@ services:
       resources:
         limits:
           cpus: "0.40"
-          memory: "165MB"
+          memory: "160MB"
     ulimits:
       nofile:
         soft: 65535
@@ -72,7 +72,7 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "2"
-      MIN_WORKER_THREADS: "16"
+      MIN_WORKER_THREADS: "128"
       SCORER_MODE: hybrid
       SOCKET_PATH: /sockets/api2.sock
       DATA_DIR: /data
