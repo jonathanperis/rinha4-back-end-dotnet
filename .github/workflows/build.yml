@@ -174,7 +174,7 @@ jobs:
           WEBAPI_IMAGE: ${{ needs.build-amd64.outputs.benchmark_image }}
           BENCHMARK_PULL_IMAGE: "true"
           BENCHMARK_NO_BUILD: "true"
-          COMPOSE_FILE: docker-compose.clb.yml
+          COMPOSE_FILE: docker-compose.yml
           OFFICIAL_REF: main
           K6_IMAGE: grafana/k6:latest
           RESULTS_DIR: benchmark-results
@@ -201,7 +201,7 @@ jobs:
           BENCHMARK_RUN_ID: ${{ github.run_id }}
           BENCHMARK_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           BENCHMARK_TIMESTAMP: ${{ github.event.head_commit.timestamp }}
-          COMPOSE_FILE: docker-compose.clb.yml
+          COMPOSE_FILE: docker-compose.yml
           OFFICIAL_REF: main
           K6_IMAGE: grafana/k6:latest
           IVF_CLUSTERS: "512"
@@ -226,7 +226,7 @@ jobs:
           WEBAPI_IMAGE: ${{ needs.build-amd64.outputs.benchmark_image }}
           BENCHMARK_PULL_IMAGE: "true"
           BENCHMARK_NO_BUILD: "true"
-          COMPOSE_FILE: docker-compose.clb.yml
+          COMPOSE_FILE: docker-compose.yml
           OFFICIAL_REF: main
           K6_IMAGE: grafana/k6:latest
           RESULTS_DIR: benchmark-results-calibrated
@@ -256,7 +256,7 @@ jobs:
           BENCHMARK_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           BENCHMARK_TIMESTAMP: ${{ github.event.head_commit.timestamp }}
           BENCHMARK_REPORT_KIND: official-calibrated
-          COMPOSE_FILE: docker-compose.clb.yml
+          COMPOSE_FILE: docker-compose.yml
           OFFICIAL_REF: main
           K6_IMAGE: grafana/k6:latest
           IVF_CLUSTERS: "512"

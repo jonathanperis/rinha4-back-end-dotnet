@@ -16,6 +16,9 @@ services:
         IVF_ITERATIONS: ${IVF_ITERATIONS:-6}
         IVF_SCALE: ${IVF_SCALE:-10000}
     container_name: webapi-1
+    cpuset: "0"
+    security_opt:
+      - seccomp=unconfined
     user: root
     restart: always
     read_only: true
@@ -61,16 +64,12 @@ services:
     volumes:
       - sockets:/sockets
     healthcheck:
-      test: ["CMD-SHELL", "test -S \"$${SOCKET_PATH}\""]
-      interval: 5s
-      timeout: 500ms
-      retries: 20
-      start_period: 1s
+      disable: true
     deploy:
       resources:
         limits:
-          cpus: "0.40"
-          memory: "165MB"
+          cpus: "0.42"
+          memory: "160MB"
     ulimits:
       nofile:
         soft: 65535
@@ -79,6 +78,7 @@ services:
   webapi2:
     <<: *webapi
     container_name: webapi-2
+    cpuset: "1"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
@@ -120,6 +120,38 @@ services:
       - /tmp
     volumes:
       - sockets:/sockets
+
+
+  lb:
+    image: ${LB_IMAGE:-ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-019a1f02e8b840db5ae6391a8df31ec8874e0c84}
+    container_name: rinha-lb
+    pull_policy: always
+    platform: linux/amd64
+    cpuset: "2,3"
+    user: root
+    restart: always
+    environment:
+      LB_MODE: "proxy"
+      PORT: "9999"
+      UPSTREAMS: "/sockets/api1.sock,/sockets/api2.sock"
+    volumes:
+      - sockets:/sockets
+    depends_on:
+      - webapi1
+      - webapi2
+    ports:
+      - "9999:9999"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.16"
+          memory: "30MB"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    security_opt:
+      - seccomp=unconfined
 
 volumes:
   sockets:

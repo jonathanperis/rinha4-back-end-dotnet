@@ -149,9 +149,8 @@ Build/data:
 Infra:
 
 - `docker-compose.yml`: base API services and runtime env defaults
-- `docker-compose.clb.yml`: standalone `rinha4-lb-yolo-mode` proxy overlay used by CI
-- `docker-compose.override.yml`: local default overlay; mirrors the standalone yolo LB
-- Historical nginx/HAProxy/Envoy/YARP/Forevis and embedded C-LB files were removed; do not reintroduce them for Jonathan-owned scenarios.
+- `docker-compose.yml`: standalone `rinha4-lb-yolo-mode` proxy runtime used by CI and local runs
+- Historical nginx/HAProxy/Envoy/YARP/Forevis, overlay compose files, and embedded C-LB files were removed; do not reintroduce them for Jonathan-owned scenarios.
 
 Validation/tools:
 

@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OFFICIAL_REPO="${OFFICIAL_REPO:-https://github.com/zanfranceschi/rinha-de-backend-2026.git}"
 OFFICIAL_REF="${OFFICIAL_REF:-main}"
-COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.clb.yml}"
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 RESULTS_DIR="${RESULTS_DIR:-benchmark-results}"
 K6_IMAGE="${K6_IMAGE:-grafana/k6:latest}"
 BENCHMARK_PULL_IMAGE="${BENCHMARK_PULL_IMAGE:-false}"
@@ -33,7 +33,7 @@ IVF_FIVE_FAST_DENY_WORST_DISTANCE="${IVF_FIVE_FAST_DENY_WORST_DISTANCE:-0}"
 cd "$ROOT_DIR"
 
 if [[ -z "$COMPOSE_FILE" || "$COMPOSE_FILE" == "docker-compose.yml" ]]; then
-    COMPOSE_FILE="docker-compose.clb.yml"
+    COMPOSE_FILE="docker-compose.yml"
 fi
 
 compose_args=(--compatibility -f docker-compose.yml)
