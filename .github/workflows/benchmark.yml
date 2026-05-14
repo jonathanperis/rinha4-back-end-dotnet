@@ -49,41 +49,101 @@ jobs:
           set -euo pipefail
 
           # Cost-control policy for all-comparison:
-          # - Keep Jonathan plus the latest top two competitors ahead by p99.
+          # - Always run Jonathan.
+          # - Add the top two known .NET competitors ahead of us in the official preview ranking.
           # - Disabled competitors remain selectable explicitly via workflow input.
-          case "${{ inputs.compose_file }}" in
-            all-comparison)
-              participants='[
-                {"name":"jonathanperis","compose_file":"competitor-compose/jonathanperis/docker-compose.yml"},
-                {"name":"jordao-latest","compose_file":"competitor-compose/jordao-latest/docker-compose.yml"},
-                {"name":"danilo-latest","compose_file":"competitor-compose/danilo-latest/docker-compose.yml"}
-              ]'
-              ;;
-            competitor-compose/jonathanperis/docker-compose.yml)
-              participants='[{"name":"jonathanperis","compose_file":"competitor-compose/jonathanperis/docker-compose.yml"}]'
-              ;;
-            competitor-compose/zan-latest/docker-compose.yml)
-              participants='[{"name":"zan-latest","compose_file":"competitor-compose/zan-latest/docker-compose.yml"}]'
-              ;;
-            competitor-compose/danilo-latest/docker-compose.yml)
-              participants='[{"name":"danilo-latest","compose_file":"competitor-compose/danilo-latest/docker-compose.yml"}]'
-              ;;
-            competitor-compose/pedro-latest/docker-compose.yml)
-              participants='[{"name":"pedro-latest","compose_file":"competitor-compose/pedro-latest/docker-compose.yml"}]'
-              ;;
-            competitor-compose/jordao-latest/docker-compose.yml)
-              participants='[{"name":"jordao-latest","compose_file":"competitor-compose/jordao-latest/docker-compose.yml"}]'
-              ;;
-            competitor-compose/hanake0-latest/docker-compose.yml)
-              participants='[{"name":"hanake0-latest","compose_file":"competitor-compose/hanake0-latest/docker-compose.yml"}]'
-              ;;
-            *)
-              echo "Unsupported compose_file=${{ inputs.compose_file }}" >&2
-              exit 1
-              ;;
-          esac
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import sys
+          import urllib.request
 
-          echo "participants=$(jq -c . <<<"$participants")" >> "$GITHUB_OUTPUT"
+          selected = "${{ inputs.compose_file }}"
+          participants = {
+              "jonathanperis": {
+                  "name": "jonathanperis",
+                  "compose_file": "competitor-compose/jonathanperis/docker-compose.yml",
+                  "repo": "https://github.com/jonathanperis/rinha4-back-end-dotnet",
+              },
+              "danilo-latest": {
+                  "name": "danilo-latest",
+                  "compose_file": "competitor-compose/danilo-latest/docker-compose.yml",
+                  "repo": "https://github.com/daniloitagyba/rinha-2026-dotnet",
+              },
+              "pedro-latest": {
+                  "name": "pedro-latest",
+                  "compose_file": "competitor-compose/pedro-latest/docker-compose.yml",
+                  "repo": "https://github.com/pedrosakuma/rinha-backend-2026",
+              },
+              "jordao-latest": {
+                  "name": "jordao-latest",
+                  "compose_file": "competitor-compose/jordao-latest/docker-compose.yml",
+                  "repo": "https://github.com/JordaoGustavo/rinha-backend-2026",
+              },
+              "zan-latest": {
+                  "name": "zan-latest",
+                  "compose_file": "competitor-compose/zan-latest/docker-compose.yml",
+                  "repo": "",
+              },
+              "hanake0-latest": {
+                  "name": "hanake0-latest",
+                  "compose_file": "competitor-compose/hanake0-latest/docker-compose.yml",
+                  "repo": "",
+              },
+          }
+          by_compose = {v["compose_file"]: v for v in participants.values()}
+
+          def emit(rows):
+              print("participants=" + json.dumps(rows, separators=(",", ":")))
+
+          if selected != "all-comparison":
+              row = by_compose.get(selected)
+              if row is None:
+                  print(f"Unsupported compose_file={selected}", file=sys.stderr)
+                  sys.exit(1)
+              emit([{"name": row["name"], "compose_file": row["compose_file"]}])
+              sys.exit(0)
+
+          url = "https://raw.githubusercontent.com/arinhadebackend/arinhadebackend.github.io/2026-preview/results-preview.json"
+          fallback = ["danilo-latest", "pedro-latest"]
+          try:
+              req = urllib.request.Request(url, headers={"User-Agent": "rinha4-back-end-dotnet-ci"})
+              data = json.load(urllib.request.urlopen(req, timeout=30))
+
+              rows = []
+              for participant, submissions in data.items():
+                  for submission_id, info in (submissions or {}).items():
+                      scoring = info.get("scoring") or {}
+                      score = scoring.get("final_score")
+                      if isinstance(score, (int, float)):
+                          repo = (info.get("repo_url") or "").rstrip("/").lower()
+                          rows.append({
+                              "score": float(score),
+                              "p99": info.get("p99"),
+                              "participant": participant,
+                              "submission_id": submission_id,
+                              "repo": repo,
+                          })
+
+              ours_repo = participants["jonathanperis"]["repo"].rstrip("/").lower()
+              ours = next((r for r in rows if r["repo"] == ours_repo), None)
+              known = []
+              for key, meta in participants.items():
+                  if key == "jonathanperis" or not meta["repo"]:
+                      continue
+                  repo = meta["repo"].rstrip("/").lower()
+                  best = max((r for r in rows if r["repo"] == repo), key=lambda r: r["score"], default=None)
+                  if best and (ours is None or best["score"] > ours["score"]):
+                      known.append((best["score"], key, best))
+
+              known.sort(reverse=True, key=lambda item: item[0])
+              targets = [key for _, key, _ in known[:2]] or fallback
+          except Exception as exc:
+              print(f"ranking fetch failed, using fallback targets {fallback}: {exc}", file=sys.stderr)
+              targets = fallback
+
+          chosen = [participants["jonathanperis"]] + [participants[key] for key in targets]
+          emit([{"name": row["name"], "compose_file": row["compose_file"]} for row in chosen])
+          PY
 
   benchmark:
     name: ${{ matrix.participant.name }} benchmark
