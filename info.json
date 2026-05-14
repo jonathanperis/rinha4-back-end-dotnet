@@ -9,8 +9,7 @@
     "stack": [
         "dotnet",
         "csharp",
-        "c",
-        "custom-lb"
+        "forevis"
     ],
     "open_to_work": false
 }
