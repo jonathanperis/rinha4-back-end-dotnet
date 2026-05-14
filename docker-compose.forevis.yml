@@ -1,31 +1,42 @@
 services:
   webapi1:
+    cpuset: "0"
+    security_opt:
+      - seccomp=unconfined
+    healthcheck:
+      disable: true
     deploy:
       resources:
         limits:
-          cpus: "0.40"
+          cpus: "0.42"
           memory: "160MB"
 
   webapi2:
+    cpuset: "1"
+    security_opt:
+      - seccomp=unconfined
+    healthcheck:
+      disable: true
     deploy:
       resources:
         limits:
-          cpus: "0.40"
+          cpus: "0.42"
           memory: "160MB"
 
   lb:
     image: jrblatt/so-no-forevis:v0.0.2
     container_name: rinha-lb
+    pull_policy: always
     platform: linux/amd64
+    cpuset: "2,3"
+    user: root
     restart: always
     depends_on:
-      webapi1:
-        condition: service_healthy
-      webapi2:
-        condition: service_healthy
+      - webapi1
+      - webapi2
     environment:
-      UPSTREAMS: /sockets/api1.sock,/sockets/api2.sock
       PORT: "9999"
+      UPSTREAMS: /sockets/api1.sock,/sockets/api2.sock
       BUF_SIZE: "4096"
       WORKERS: "1"
     ports:
@@ -35,7 +46,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.20"
+          cpus: "0.16"
           memory: "30MB"
     ulimits:
       nofile:

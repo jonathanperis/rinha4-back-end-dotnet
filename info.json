@@ -1,7 +1,15 @@
 {
-    "participants": ["Jonathan Peris"],
-    "social": ["https://github.com/jonathanperis"],
+    "participants": [
+        "Jonathan Peris"
+    ],
+    "social": [
+        "https://github.com/jonathanperis"
+    ],
     "source-code-repo": "https://github.com/jonathanperis/rinha4-back-end-dotnet",
-    "stack": ["dotnet", "csharp", "nginx"],
+    "stack": [
+        "dotnet",
+        "csharp",
+        "forevis"
+    ],
     "open_to_work": false
 }
