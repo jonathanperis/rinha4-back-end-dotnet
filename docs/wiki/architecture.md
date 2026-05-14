@@ -15,8 +15,8 @@ rinha4-lb-yolo-mode :9999
 
 1. The standalone yolo load balancer accepts TCP on port `9999` in `proxy` mode.
 2. It forwards bytes to API instances over Unix Domain Sockets.
-   The compose file lets `webapi1` run on cpuset `0,1`, `webapi2` on `2,3`, and
-   the lightweight `lb` on `0,2`. CPU quotas still total `1.00`; cpuset reduces scheduler
+   The compose file pins `webapi1` to cpuset `0`, `webapi2` to `1`, and
+   `lb` to `2,3`. CPU quotas still total `1.00`; cpuset reduces scheduler
    contention under the official host.
 3. `RawHttpServer` accepts the socket connection.
 4. `HttpWire` parses method, path, headers, and `Content-Length`.
