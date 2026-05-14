@@ -1,24 +1,52 @@
 services:
+  webapi1:
+    cpuset: "0"
+    security_opt:
+      - seccomp=unconfined
+    healthcheck:
+      disable: true
+    deploy:
+      resources:
+        limits:
+          cpus: "0.42"
+          memory: "160MB"
+
+  webapi2:
+    cpuset: "1"
+    security_opt:
+      - seccomp=unconfined
+    healthcheck:
+      disable: true
+    deploy:
+      resources:
+        limits:
+          cpus: "0.42"
+          memory: "160MB"
+
   lb:
     image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:latest}
     container_name: rinha-lb
+    pull_policy: always
+    platform: linux/amd64
+    cpuset: "2,3"
     user: root
+    restart: always
     entrypoint: ["/rinha-lb"]
     volumes:
       - sockets:/sockets
     depends_on:
-      webapi1:
-        condition: service_healthy
-      webapi2:
-        condition: service_healthy
+      - webapi1
+      - webapi2
     ports:
       - "9999:9999"
     deploy:
       resources:
         limits:
-          cpus: "0.20"
-          memory: "20MB"
+          cpus: "0.16"
+          memory: "30MB"
     ulimits:
       nofile:
         soft: 65535
         hard: 65535
+    security_opt:
+      - seccomp=unconfined
