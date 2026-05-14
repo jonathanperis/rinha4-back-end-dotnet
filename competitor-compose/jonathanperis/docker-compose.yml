@@ -18,7 +18,7 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "2"
-      MIN_WORKER_THREADS: "128"
+      MIN_WORKER_THREADS: "64"
       SCORER_MODE: hybrid
       SOCKET_PATH: /sockets/api1.sock
       DATA_DIR: /data
@@ -71,7 +71,7 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "2"
-      MIN_WORKER_THREADS: "128"
+      MIN_WORKER_THREADS: "64"
       SCORER_MODE: hybrid
       SOCKET_PATH: /sockets/api2.sock
       DATA_DIR: /data
