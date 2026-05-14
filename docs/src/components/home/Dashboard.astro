@@ -64,7 +64,7 @@ const detectionScore = Number(result.scoring.detection_score.value).toLocaleStri
   <div class="scenario-card">
     <h3>Transport Path</h3>
     <div class="endpoint"><span class="method get">GET</span> /ready</div>
-    <p>nginx stream accepts port 9999 and forwards raw HTTP to two API containers through Unix Domain Sockets. The app parses enough HTTP/1 to satisfy the Rinha workload.</p>
+    <p>The standalone yolo load balancer accepts port 9999 and forwards raw HTTP to two API containers through Unix Domain Sockets. The app parses enough HTTP/1 to satisfy the Rinha workload.</p>
     <div class="progress-container">
       <div class="progress-label">Latency path [||||||||||||||||||..] tuned</div>
     </div>

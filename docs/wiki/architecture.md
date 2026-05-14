@@ -4,7 +4,7 @@
 k6 / judge
     |
     v
-nginx stream :9999
+rinha4-lb-yolo-mode :9999
     |
     +-- unix:/sockets/api1.sock -> WebApi NativeAOT
     |
@@ -13,10 +13,10 @@ nginx stream :9999
 
 ## Request path
 
-1. nginx accepts TCP on port `9999`.
-2. nginx stream forwards bytes to API instances over Unix Domain Sockets.
-   The compose file pins nginx to cpuset `0`, `webapi1` to `1,2`, and
-   `webapi2` to `2,3`. CPU quotas still total `1.00`; cpuset reduces scheduler
+1. The standalone yolo load balancer accepts TCP on port `9999` in `proxy` mode.
+2. It forwards bytes to API instances over Unix Domain Sockets.
+   The compose file pins `webapi1` to cpuset `0`, `webapi2` to `1`, and
+   `lb` to `2,3`. CPU quotas still total `1.00`; cpuset reduces scheduler
    contention under the official host.
 3. `RawHttpServer` accepts the socket connection.
 4. `HttpWire` parses method, path, headers, and `Content-Length`.
@@ -53,4 +53,6 @@ Runtime implementation is split into focused partial files:
 
 ## Startup readiness
 
-Compose checks for both API Unix socket files before nginx starts. This keeps `/ready` from succeeding while nginx still has missing upstream sockets.
+Each API process recreates its Unix socket file on startup in the shared
+`sockets` tmpfs volume. The standalone LB consumes `/sockets/api1.sock` and
+`/sockets/api2.sock` and keeps the proxy layer byte-oriented.

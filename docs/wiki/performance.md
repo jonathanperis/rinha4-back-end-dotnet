@@ -6,48 +6,24 @@ Hot path choices:
 - raw socket HTTP/1
 - one task per client connection
 - pooled read buffers
-- Unix Domain Sockets behind proxy
+- Unix Domain Sockets behind the standalone yolo proxy
 - manual request parsing
 - no model binding
 - prebuilt response bytes
 - rounded int16 IVF nearest-neighbor ranking
-- nginx waits for both API socket files before serving `/ready`
+- no fraud-payload parsing in the proxy layer
 
 ## Current bottleneck
 
-Transport is fast enough for the current target. Recent CI runs have shown `0`
-HTTP errors; p99 work is now inside IVF repair and vector scan cost.
+Transport is fast enough for the current target. Recent yolo-LB CI runs have
+shown `0` HTTP errors; p99 work is now inside IVF repair, vector scan cost, and
+CPU split between the API containers and the standalone proxy.
 
-Latest official runner result for image `ci-5012a0f5f71de1da753eea3a2ec8011fc8db3c60`
-was p99 `6.90ms`, score `5161.39`, and `0%` failures. GitHub Actions ran the
-same class of candidate near p99 `1.80ms`, so CI now records a separate
-`official-calibrated` lane with lower container CPU quotas. Treat that lane as a
-hardware-mismatch predictor only; the submission compose remains unchanged.
-
-The active bottleneck is balancing full-repair accuracy with p99. Rounded IVF
-matched the public benchmark locally with `0` false positives and `0` false
-negatives, but the full-repair path still needs CI latency improvement.
-The best unconstrained zero-failure CI lane used `2048` IVF clusters, scalar
-bbox repair, and first-cluster `5/5` fraud fast accept under a tuned int16
-distance bound: p99 `1.46ms`, score `5836.34`. That did not match official
-preview behavior. A one-core cpuset probe against the same image produced p99
-`22.52ms`, score `4647.51`, and `0%` failures. After adding the first-cluster
-`0/5` approval shortcut, the constrained CI candidate improved to p99
-`21.03ms`, score `4677.25`, and `0%` failures on image
-`ci-780d16603df535d54a0c58d1a8f5b4701d16b7b6`, so optimization now targets
-remaining scan CPU under constrained contention.
-The latest cleanup run under the same one-core overlay produced p99 `20.82ms`,
-score `4681.44`, and `0%` failures. That mode is retained as a manual stress
-probe; candidate tracking keeps the submission compose cpuset layout.
-
-`test/AccuracyProbe profile` showed high-confidence first-cluster `0/5`
-approvals and `5/5` denials can skip bbox repair under tuned distance bounds.
-Public replay stays at `0` false positives and `0` false negatives with both
-guarded shortcuts, and local replay time dropped from `20.76s` to `11.71s`.
-
-AVX2 bbox repair raised p99 to `5.37ms`; a cluster-major bbox copy raised p99
-to `6.89ms`; `4096` clusters raised p99 to `16.69ms`; `1024` clusters raised
-p99 to `19.78ms`; removed experiments either missed labels or lost to nginx.
+The latest validated main build before this cleanup used image
+`ci-ecdcc3f1b0059842489ae32102763ac957cc2a36` and produced p99 `0.40ms`,
+score `6000`, `0` false positives, `0` false negatives, and `0` HTTP errors in
+the automatic benchmark lane. A same-matrix comparison with that image was also
+correct but narrowly trailed Danilo in that run (`0.39ms` vs `0.37ms`).
 
 ## Accuracy experiments
 
@@ -67,11 +43,17 @@ The current production lane is IVF approximate nearest-neighbor search:
 This path is implemented, unit-tested on a synthetic boundary case, and under
 CI benchmarking as the submission default.
 
+Rejected A/Bs: AVX2 bbox repair raised p99 to `5.37ms`; a cluster-major bbox
+copy raised p99 to `6.89ms`; `4096` clusters raised p99 to `16.69ms`; `1024`
+clusters raised p99 to `19.78ms`; removed experiments either missed labels or
+lost to the current standalone-yolo path.
+
 ## Reverse proxy
 
-The retained load balancer path is nginx stream. It keeps the proxy byte-oriented on port `9999` and forwards to the API containers over Unix Domain Sockets.
+The retained load balancer path is the standalone `rinha4-lb-yolo-mode` image in
+`LB_MODE=proxy`. It keeps the proxy byte-oriented on port `9999` and forwards to
+the API containers over Unix Domain Sockets.
 
-The benchmark workflow runs the default nginx stream compose file used by the submission.
-The submission compose pins the proxy to cpuset `0` and the API containers to
-`1,2` and `2,3`, matching the official-accepted pattern observed in the #12
-.NET implementation while keeping the same `1.00 CPU / 350 MB` quota.
+The benchmark workflow runs the canonical root `docker-compose.yml` used by the
+submission. The compose file allocates `0.42 CPU / 160 MB` to each API container
+and `0.16 CPU / 30 MB` to the proxy while keeping the total at `1.00 CPU / 350 MB`.

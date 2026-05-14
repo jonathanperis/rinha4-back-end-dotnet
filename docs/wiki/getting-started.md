@@ -27,7 +27,7 @@ dotnet run --project src/DataConverter/DataConverter.csproj -- data/
 Run focused tests:
 
 ```bash
-dotnet run --project test/VectorizationTests/VectorizationTests.csproj --no-restore
+dotnet run --project tests/VectorizationTests/VectorizationTests.csproj --no-restore
 ```
 
 Run official-like benchmark locally:

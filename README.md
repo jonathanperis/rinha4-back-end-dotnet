@@ -35,10 +35,9 @@ Submission shape:
 - `main` contains source code, tests, docs, and build workflow.
 - `submission` contains only runnable files required by the official runner:
   - `docker-compose.yml`
-  - `nginx.conf`
   - `info.json`
   - `LICENSE`
-- `docker-compose.yml` on `submission` pins the immutable public GHCR image built from `main`.
+- `docker-compose.yml` on `submission` pins the immutable public GHCR API image built from `main` and the standalone yolo load balancer image.
 
 ## Current Architecture
 
@@ -46,7 +45,7 @@ Submission shape:
 k6 / judge
     |
     v
-nginx stream proxy :9999
+standalone rinha4-lb-yolo-mode proxy :9999
     |
     +-- unix:/sockets/api1.sock -> WebApi NativeAOT
     |
@@ -55,8 +54,8 @@ nginx stream proxy :9999
 
 Default path:
 
-1. `nginx` accepts TCP on `9999`.
-2. `nginx stream` forwards raw HTTP over Unix Domain Sockets.
+1. `rinha4-lb-yolo-mode` accepts TCP on `9999` in `proxy` mode.
+2. The standalone LB forwards raw HTTP over Unix Domain Sockets.
 3. WebApi handles HTTP/1 directly on a raw socket connection.
 4. A small in-process HTTP parser reads headers, content length, and body.
 5. A manual `Utf8JsonReader` parser extracts only fields needed by vectorization.
@@ -74,21 +73,20 @@ The raw HTTP server intentionally implements only the subset required by this wo
 
 It is not a general-purpose web server.
 
-Docker Compose waits for both API Unix socket files before starting nginx. This prevents the reverse proxy from accepting `/ready` while upstream sockets are still missing, which was the likely cause of official `No status` health-check failures.
+The API containers create their Unix socket files at startup and mount the shared `sockets` tmpfs volume used by the standalone LB.
 
 ## Services And Limits
 
 | Service | CPU | Memory | cpuset | Notes |
 | --- | ---: | ---: | --- | --- |
-| `nginx` | `0.20` | `20 MB` | `0` | stream TCP proxy |
-| `webapi1` | `0.40` | `165 MB` | `1,2` | .NET 10 NativeAOT |
-| `webapi2` | `0.40` | `165 MB` | `2,3` | .NET 10 NativeAOT |
+| `webapi1` | `0.42` | `160 MB` | `0` | .NET 10 NativeAOT |
+| `webapi2` | `0.42` | `160 MB` | `1` | .NET 10 NativeAOT |
+| `lb` | `0.16` | `30 MB` | `2,3` | standalone yolo proxy |
 | **Total** | **1.00** | **350 MB** | - | competition limit |
 
-The cpuset layout follows the same official-accepted pattern used by the #12
-.NET competitor: keep the proxy on one host core and let each API quota run on
-separate scheduler sets. CPU quotas still sum to `1.00`; cpuset only reduces
-CFS contention and wakeup jitter.
+The current cpuset layout keeps each API instance on a distinct host CPU and
+lets the standalone proxy use the remaining scheduler set. CPU quotas still sum
+to `1.00`; cpuset only reduces CFS contention and wakeup jitter.
 
 API memory is dominated by:
 
@@ -189,8 +187,8 @@ Implemented:
 - pooled per-connection read buffers
 - Unix Domain Sockets between proxy and APIs
 - socket cleanup on process start
-- socket chmod so nginx can reach API sockets
-- Compose healthcheck waits for both API socket files before nginx starts
+- socket chmod so the standalone LB can reach API sockets
+- standalone yolo LB forwards raw HTTP to both API socket files
 - direct header and `Content-Length` parsing
 - manual `Utf8JsonReader` parser
 - no JSON model binding in `/fraud-score`
@@ -200,7 +198,7 @@ Implemented:
 - no per-request response serialization
 - no hot-path logging
 - rounded int16 IVF2 classifier with int64 accumulation
-- guarded first-cluster decision shortcuts for safe approval/denial cases found by `test/AccuracyProbe profile`
+- guarded first-cluster decision shortcuts for safe approval/denial cases found by `tests/AccuracyProbe profile`
 
 ## Reverse Proxy
 
@@ -212,12 +210,12 @@ docker compose up -d --force-recreate
 
 Uses:
 
-- [nginx.conf](./nginx.conf)
-- stream TCP proxy
-- UDS upstreams
-- `20 MB` proxy memory
+- `ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-019a1f02e8b840db5ae6391a8df31ec8874e0c84`
+- `LB_MODE=proxy`
+- UDS upstreams from `UPSTREAMS=/sockets/api1.sock,/sockets/api2.sock`
+- `30 MB` proxy memory
 
-nginx stream is the retained load balancer path. It keeps the proxy layer byte-oriented, avoids HTTP parsing in the proxy, and leaves request parsing to the raw socket server.
+The standalone yolo load balancer is the retained proxy path. It keeps the proxy layer byte-oriented, avoids fraud-payload parsing in the proxy, and leaves request parsing to the raw socket server.
 
 Local benchmark caveats:
 
@@ -243,7 +241,7 @@ DATA_DIR=data IVF_PATH=data/references.ivf.bin \
 Profile IVF repair cost:
 
 ```bash
-dotnet run --project test/AccuracyProbe/AccuracyProbe.csproj -- \
+dotnet run --project tests/AccuracyProbe/AccuracyProbe.csproj -- \
   /path/to/test-data.json data profile
 ```
 
@@ -282,7 +280,7 @@ CI official-like benchmark:
 - Trigger: manual `workflow_dispatch`
 - Test source: clones `zanfranceschi/rinha-de-backend-2026` and runs official `test/test.js`
 - Stack start: `docker compose --compatibility` so Compose maps `deploy.resources.limits` into local container limits
-- Optional contention probe: set `benchmark_stack_cpuset=0` to pin nginx and both WebApi containers to one host CPU. This is manual-only because it is stricter than the submission compose layout and produced p99 around `20ms` with `0%` failures.
+- Optional contention probe: set `benchmark_stack_cpuset=0` to pin the standalone LB and both WebApi containers to one host CPU. This is manual-only because it is stricter than the submission compose layout.
 - Optional full-host probe: set `benchmark_k6_cpuset=0` too when k6 should contend on the same CPU. This is stricter than official-like service limits and is for diagnosis only.
 - Artifacts: `benchmark-results/results.json`, `benchmark-results/k6-report.html`, `benchmark-results/docker-compose.log`, and `benchmark-results/docker-state-*.txt`
 - Main build workflow also runs the same benchmark automatically after the amd64 image build/push succeeds.
@@ -298,18 +296,10 @@ CI official-like benchmark:
 Current local/CI signal:
 
 - rounded IVF local replay over public `test-data.json`: `0` FP, `0` FN
-- best zero-failure CI candidate so far uses `IVF_CLUSTERS=2048`, scalar bbox repair,
-  and first-cluster `5/5` fraud fast accept below an int16 distance bound:
-  p99 `1.46ms`, score `5836.34`, image `ci-23ce4472f631deaf88a530c33ed91d18b9c1c2bb`
-- latest no-overlay candidate after cleanup: p99 `1.84ms`, score `5735.44`,
-  `0%` failures, image `ci-845cb262ce03f12b41b6ab4375b4c289effb3498`
-- one-core cpuset CI probes produced p99 around `20ms` with `0%` failures; the
-  latest pushed cleanup run was p99 `20.82ms`, score `4681.44`, `0%` failures
-  on image `ci-a2cf864cf74ecd8afdf5d0d1cf3ebce366e0e955`
-- `test/AccuracyProbe profile` showed high-confidence `0/5` approvals and `5/5`
-  denials can skip bbox repair; public replay stays at `0` FP/FN and local replay
-  time dropped from `20.76s` to `11.71s`
-- rejected A/Bs: AVX2 bbox repair regressed to p99 `5.37ms`, cluster-major bbox copy regressed to p99 `6.89ms`, `4096` clusters was p99 `16.69ms`, `1024` clusters was p99 `19.78ms`; removed experiments either missed labels or lost to nginx
+- root `docker-compose.yml` now carries the canonical standalone-yolo runtime; no primary override compose file is required
+- latest validated main build before this cleanup used image `ci-ecdcc3f1b0059842489ae32102763ac957cc2a36` and produced p99 `0.40ms`, score `6000`, `0` FP, `0` FN, and `0` HTTP errors in the automatic benchmark lane
+- same-matrix comparison with the validated image was green (`score=6000`, `0` FP/FN/HTTP) but narrowly trailed Danilo in that run (`0.39ms` vs `0.37ms`)
+- rejected A/Bs: AVX2 bbox repair regressed to p99 `5.37ms`, cluster-major bbox copy regressed to p99 `6.89ms`, `4096` clusters was p99 `16.69ms`, `1024` clusters was p99 `19.78ms`; removed experiments either missed labels or lost to the current standalone-yolo path
 - latest published candidate is updated by the main benchmark after each successful image build
 
 Local replay numbers are correctness checks against the public payload. CI
@@ -324,7 +314,7 @@ Run from GitHub Actions:
 1. Open **Actions**.
 2. Select **Official-like Benchmark**.
 3. Choose compose file:
-   - `docker-compose.yml` for nginx stream baseline
+   - `docker-compose.yml` for the standalone yolo-LB baseline
 4. For IVF experiment, set `report_kind=experiment`, tune `IVF_CLUSTERS` or `IVF_SCALE`, and keep `IVF_FAST_NPROBE=1`, `IVF_FULL_NPROBE=1`, `IVF_BBOX_REPAIR=true`, `IVF_BOUNDARY_FULL=false`, and repair frauds `0..5`.
 5. For official-mismatch investigation, set `benchmark_stack_cpuset=0`. Leave
    `benchmark_k6_cpuset` empty unless the goal is max local contention.
@@ -354,10 +344,10 @@ bun run dev
 
 ## Tests And Validation
 
-Unit-style vectorization tests live under `test/`:
+Unit-style vectorization tests live under `tests/`:
 
 ```bash
-dotnet run --project test/VectorizationTests/VectorizationTests.csproj --no-restore
+dotnet run --project tests/VectorizationTests/VectorizationTests.csproj --no-restore
 ```
 
 Current focused tests cover timestamp parsing, request parsing, fraud-count
@@ -405,15 +395,15 @@ Preview issues are opened in the official Rinha repository after `main` image bu
 Main blocker for top-10 target:
 
 - keep rounded IVF at `0%` failures in CI and official preview
-- reduce full-repair p99 below the #9 .NET reference (`1.73ms`)
-- preserve `0` HTTP errors after the nginx/socket readiness hardening
+- keep yolo-LB p99 competitive with the current .NET leaders while preserving score `6000`
+- preserve `0` HTTP errors with the standalone yolo-LB/socket path
 
 Likely next moves:
 
 1. Keep IVF2 scale 10000 as candidate default because public replay stays at `0` FP/FN.
 2. Profile repair p99 and reduce bbox scan cost without changing rounded IVF2 accuracy.
-3. Compare new CI p99 against #9 .NET reference (`1.73ms`) while preserving `0%` failures.
-4. Promote submission when CI shows `0` failures and p99 below #9.
+3. Compare new CI p99 against Danilo and other current .NET leaders while preserving `0%` failures.
+4. Promote submission when same-matrix CI shows `0` failures and beats the current .NET leader.
 5. Track official preview results from the updated submission branch.
 
 ## License
