@@ -50,10 +50,11 @@ services:
       - /tmp
     volumes:
       - sockets:/sockets
+
     deploy:
       resources:
         limits:
-          cpus: "0.42"
+          cpus: "0.425"
           memory: "160MB"
     ulimits:
       nofile:
@@ -100,15 +101,19 @@ services:
       BUCKET_AVX_CUTOFF_DIMS: "6"
 
   lb:
-    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-d384902a41ca819eeaccdb10503a8d4db8e97bc2}
+    image: jrblatt/so-no-forevis:v0.0.2
     pull_policy: always
     platform: linux/amd64
     cpuset: "2,3"
     user: root
     restart: always
-    entrypoint: ["/rinha-lb"]
     security_opt:
       - seccomp=unconfined
+    environment:
+      PORT: "9999"
+      UPSTREAMS: /sockets/api1.sock,/sockets/api2.sock
+      BUF_SIZE: "4096"
+      WORKERS: "1"
     volumes:
       - sockets:/sockets
     depends_on:
@@ -119,7 +124,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.16"
+          cpus: "0.15"
           memory: "30MB"
     ulimits:
       nofile:
