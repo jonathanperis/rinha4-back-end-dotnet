@@ -2,12 +2,15 @@ name: rinha-2026-jonathanperis
 
 services:
   webapi1: &webapi
-    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-fdce0e1bad3733a6f366bce5bcf48a0dbf293c03}
+    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-d384902a41ca819eeaccdb10503a8d4db8e97bc2}
     pull_policy: always
     platform: linux/amd64
+    cpuset: "0"
     user: root
     restart: always
     read_only: true
+    security_opt:
+      - seccomp=unconfined
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
@@ -47,17 +50,12 @@ services:
       - /tmp
     volumes:
       - sockets:/sockets
-    healthcheck:
-      test: ["CMD-SHELL", "test -S \"$${SOCKET_PATH}\""]
-      interval: 5s
-      timeout: 500ms
-      retries: 20
-      start_period: 1s
+
     deploy:
       resources:
         limits:
-          cpus: "0.40"
-          memory: "165MB"
+          cpus: "0.42"
+          memory: "160MB"
     ulimits:
       nofile:
         soft: 65535
@@ -65,6 +63,7 @@ services:
 
   webapi2:
     <<: *webapi
+    cpuset: "1"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
@@ -102,25 +101,31 @@ services:
       BUCKET_AVX_CUTOFF_DIMS: "6"
 
   lb:
-    image: nginx:latest
+    image: jrblatt/so-no-forevis:v0.0.2
     pull_policy: always
     platform: linux/amd64
+    cpuset: "2,3"
     user: root
+    restart: always
+    security_opt:
+      - seccomp=unconfined
+    environment:
+      PORT: "9999"
+      UPSTREAMS: /sockets/api1.sock,/sockets/api2.sock
+      BUF_SIZE: "4096"
+      WORKERS: "1"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - sockets:/sockets
     depends_on:
-      webapi1:
-        condition: service_healthy
-      webapi2:
-        condition: service_healthy
+      - webapi1
+      - webapi2
     ports:
       - "9999:9999"
     deploy:
       resources:
         limits:
-          cpus: "0.20"
-          memory: "20MB"
+          cpus: "0.16"
+          memory: "30MB"
     ulimits:
       nofile:
         soft: 65535

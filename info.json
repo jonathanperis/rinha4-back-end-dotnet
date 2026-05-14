@@ -9,7 +9,7 @@
     "stack": [
         "dotnet",
         "csharp",
-        "nginx"
+        "forevis"
     ],
     "open_to_work": false
 }
