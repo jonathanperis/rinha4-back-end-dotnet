@@ -6,15 +6,10 @@ on:
       compose_file:
         description: Docker Compose LB override to benchmark
         required: true
-        default: docker-compose.nginx.yml
+        default: docker-compose.clb.yml
         type: choice
         options:
-          - docker-compose.nginx.yml
-          - docker-compose.haproxy.yml
-          - docker-compose.envoy.yml
-          - docker-compose.yarp.yml
           - docker-compose.clb.yml
-          - docker-compose.forevis.yml
       official_ref:
         description: Rinha official repo ref to clone for test/test.js and test-data.json
         required: true
@@ -144,18 +139,8 @@ jobs:
       max-parallel: 4
       matrix:
         lb:
-          - name: nginx
-            compose_file: docker-compose.nginx.yml
-          - name: haproxy
-            compose_file: docker-compose.haproxy.yml
-          - name: envoy
-            compose_file: docker-compose.envoy.yml
-          - name: yarp
-            compose_file: docker-compose.yarp.yml
-          - name: clb
+          - name: yolo
             compose_file: docker-compose.clb.yml
-          - name: forevis
-            compose_file: docker-compose.forevis.yml
     concurrency:
       group: benchmark-${{ github.run_id }}-${{ matrix.lb.name }}
       cancel-in-progress: false

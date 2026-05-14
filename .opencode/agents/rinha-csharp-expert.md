@@ -149,12 +149,9 @@ Build/data:
 Infra:
 
 - `docker-compose.yml`: base API services and runtime env defaults
-- `docker-compose.forevis.yml`: current best-known CI LB override
-- `docker-compose.nginx.yml`: default CI nginx LB overlay
-- `docker-compose.haproxy.yml`, `docker-compose.envoy.yml`, `docker-compose.yarp.yml`: LB experiments
-- `docker-compose.clb.yml`: custom C epoll LB experiment
-- `nginx.conf`: retained stream proxy config
-- `src/Lb/rinha-lb.c`: custom TCP/UDS epoll load balancer
+- `docker-compose.clb.yml`: standalone `rinha4-lb-yolo-mode` proxy overlay used by CI
+- `docker-compose.override.yml`: local default overlay; mirrors the standalone yolo LB
+- Historical nginx/HAProxy/Envoy/YARP/Forevis and embedded C-LB files were removed; do not reintroduce them for Jonathan-owned scenarios.
 
 Validation/tools:
 

@@ -12,7 +12,7 @@ SHORT_SHA="${SHA:0:12}"
 RUN_ID="${BENCHMARK_RUN_ID:-${GITHUB_RUN_ID:-}}"
 RUN_URL="${BENCHMARK_RUN_URL:-${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-jonathanperis/rinha4-back-end-dotnet}/actions/runs/${RUN_ID}}"
 IMAGE="${BENCHMARK_IMAGE:-${WEBAPI_IMAGE:-}}"
-COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.nginx.yml}"
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.clb.yml}"
 OFFICIAL_REF="${OFFICIAL_REF:-main}"
 K6_IMAGE="${K6_IMAGE:-grafana/k6:latest}"
 REPORT_KIND="${BENCHMARK_REPORT_KIND:-}"
@@ -49,7 +49,7 @@ IVF_FIVE_FAST_DENY_WORST_DISTANCE="${IVF_FIVE_FAST_DENY_WORST_DISTANCE:-}"
 REPETITION_SUMMARY="${REPETITION_SUMMARY:-$(dirname "$RESULTS_JSON")/repetition-summary.json}"
 
 if [[ -z "$REPORT_KIND" ]]; then
-    if [[ "$COMPOSE_FILE" == "docker-compose.yml" || "$COMPOSE_FILE" == "docker-compose.nginx.yml" ]]; then
+    if [[ "$COMPOSE_FILE" == "docker-compose.yml" || "$COMPOSE_FILE" == "docker-compose.clb.yml" ]]; then
         REPORT_KIND="candidate"
     else
         REPORT_KIND="experiment"
@@ -214,7 +214,7 @@ for report in "$REPORTS_DIR"/${REPORT_PREFIX}-*.json; do
         run_url: .metadata.run_url,
         image: .metadata.image,
         compose_file: .metadata.compose_file,
-        report_kind: (.metadata.report_kind // (if (.metadata.compose_file == "docker-compose.yml" or .metadata.compose_file == "docker-compose.nginx.yml") then "candidate" else "experiment" end)),
+        report_kind: (.metadata.report_kind // (if (.metadata.compose_file == "docker-compose.yml" or .metadata.compose_file == "docker-compose.clb.yml") then "candidate" else "experiment" end)),
         benchmark_stack_cpuset: (.metadata.benchmark_stack_cpuset // ""),
         benchmark_k6_cpuset: (.metadata.benchmark_k6_cpuset // ""),
         benchmark_api_cpuset: (.metadata.benchmark_api_cpuset // ""),

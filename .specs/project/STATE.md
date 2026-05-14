@@ -4,7 +4,7 @@
 
 - Runtime target: .NET 10 NativeAOT, raw HTTP/1, Unix domain sockets, prebuilt responses.
 - Active scorer target: `SCORER_MODE=hybrid` with bucket fast paths plus IVF repair/fallback.
-- Active LB target for best CI candidate: Forevis override (`docker-compose.forevis.yml`).
+- Active LB target for all Jonathan-owned scenarios: standalone `rinha4-lb-yolo-mode` (`docker-compose.clb.yml`, `LB_MODE=proxy`).
 - Correctness first; p99 second.
 
 ## Known Results

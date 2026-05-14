@@ -14,7 +14,6 @@
 - `src/WebApi/IvfIndex.Int64.cs`: int64 IVF2 candidate path, AVX2 scans, bbox repair.
 - `src/WebApi/ExactIndex.cs`: exact KNN fallback/test path.
 - `src/DataConverter/*`: offline conversion from reference JSON to binary indexes.
-- `src/Lb/rinha-lb.c`: custom C LB experiment.
 
 ## Data Flow
 
@@ -40,8 +39,8 @@ client/k6 -> LB :9999 -> unix:/sockets/apiN.sock -> RawHttpServer -> parse -> ve
 ## Load Balancers
 
 - Base compose defines two API services and shared socket volume.
-- Overrides test nginx, HAProxy, Envoy, YARP, custom C LB, and Forevis.
-- Current best-known CI candidate uses Forevis LB with `0.20 CPU / 30 MB` and two APIs at `0.40 CPU / 160 MB`.
+- Jonathan-owned scenarios use only the standalone `rinha4-lb-yolo-mode` image in `LB_MODE=proxy`.
+- The active standalone-yolo split is `0.16 CPU / 30 MB` for the LB and `0.42 CPU / 160 MB` per API.
 - LB must not inspect fraud payload or answer `/fraud-score`.
 
 ## Performance Notes

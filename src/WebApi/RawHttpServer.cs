@@ -1,6 +1,6 @@
 /// <summary>
 /// Raw HTTP/1 server used for the competition container. It binds to the Unix
-/// domain socket used by nginx in Docker, or TCP port 8080 for local runs, then
+/// domain socket used by the standalone load balancer in Docker, or TCP port 8080 for local runs, then
 /// keeps request handling allocation-light with one pooled buffer per connection.
 /// </summary>
 internal sealed class RawHttpServer
@@ -27,7 +27,7 @@ internal sealed class RawHttpServer
 
     /// <summary>
     /// Starts listening and runs the configured number of accept loops forever.
-    /// Unix socket permissions are widened on Linux so nginx can connect as its user.
+    /// Unix socket permissions are widened on Linux so the standalone load balancer can connect as its user.
     /// </summary>
     public async Task RunAsync()
     {
