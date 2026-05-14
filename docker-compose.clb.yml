@@ -24,7 +24,7 @@ services:
           memory: "160MB"
 
   lb:
-    image: ${LB_IMAGE:-ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-30108e87f40928a0e5edcfa7056a0451a9caa67a}
+    image: ${LB_IMAGE:-ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-019a1f02e8b840db5ae6391a8df31ec8874e0c84}
     container_name: rinha-lb
     pull_policy: always
     platform: linux/amd64
