@@ -2,10 +2,10 @@ name: rinha-2026-jonathanperis
 
 services:
   webapi1: &webapi
-    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-6c747139bd782f70083b501da779edf692217031}
+    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-625ece649554b8d43980a187f14d7808626c5152}
     pull_policy: always
     platform: linux/amd64
-    cpuset: "0"
+    cpuset: "0,1"
     user: root
     restart: always
     read_only: true
@@ -54,7 +54,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.42"
+          cpus: "0.44"
           memory: "160MB"
     ulimits:
       nofile:
@@ -63,7 +63,7 @@ services:
 
   webapi2:
     <<: *webapi
-    cpuset: "1"
+    cpuset: "2,3"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
@@ -104,7 +104,7 @@ services:
     image: ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-019a1f02e8b840db5ae6391a8df31ec8874e0c84
     pull_policy: always
     platform: linux/amd64
-    cpuset: "2,3"
+    cpuset: "0,2"
     user: root
     restart: always
     security_opt:
@@ -123,7 +123,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.16"
+          cpus: "0.12"
           memory: "30MB"
     ulimits:
       nofile:
