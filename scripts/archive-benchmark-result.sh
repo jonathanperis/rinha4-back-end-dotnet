@@ -49,7 +49,7 @@ IVF_FIVE_FAST_DENY_WORST_DISTANCE="${IVF_FIVE_FAST_DENY_WORST_DISTANCE:-}"
 REPETITION_SUMMARY="${REPETITION_SUMMARY:-$(dirname "$RESULTS_JSON")/repetition-summary.json}"
 
 if [[ -z "$REPORT_KIND" ]]; then
-    if [[ "$COMPOSE_FILE" == "docker-compose.yml" || "$COMPOSE_FILE" == "docker-compose.yml" ]]; then
+    if [[ "$COMPOSE_FILE" == "docker-compose.yml" ]]; then
         REPORT_KIND="candidate"
     else
         REPORT_KIND="experiment"
@@ -214,7 +214,7 @@ for report in "$REPORTS_DIR"/${REPORT_PREFIX}-*.json; do
         run_url: .metadata.run_url,
         image: .metadata.image,
         compose_file: .metadata.compose_file,
-        report_kind: (.metadata.report_kind // (if (.metadata.compose_file == "docker-compose.yml" or .metadata.compose_file == "docker-compose.yml") then "candidate" else "experiment" end)),
+        report_kind: (.metadata.report_kind // (if (.metadata.compose_file == "docker-compose.yml") then "candidate" else "experiment" end)),
         benchmark_stack_cpuset: (.metadata.benchmark_stack_cpuset // ""),
         benchmark_k6_cpuset: (.metadata.benchmark_k6_cpuset // ""),
         benchmark_api_cpuset: (.metadata.benchmark_api_cpuset // ""),

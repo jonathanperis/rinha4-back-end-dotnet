@@ -37,7 +37,9 @@ if [[ -z "$COMPOSE_FILE" || "$COMPOSE_FILE" == "docker-compose.yml" ]]; then
 fi
 
 compose_args=(--compatibility -f docker-compose.yml)
-compose_args+=(-f "$COMPOSE_FILE")
+if [[ "$COMPOSE_FILE" != "docker-compose.yml" ]]; then
+    compose_args+=(-f "$COMPOSE_FILE")
+fi
 
 mkdir -p "$RESULTS_DIR"
 rm -rf "$RESULTS_DIR/official"
