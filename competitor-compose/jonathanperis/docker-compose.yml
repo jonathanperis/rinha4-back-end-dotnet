@@ -54,7 +54,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.40"
+          cpus: "0.42"
           memory: "160MB"
     ulimits:
       nofile:
@@ -101,7 +101,7 @@ services:
       BUCKET_AVX_CUTOFF_DIMS: "6"
 
   lb:
-    image: jrblatt/so-no-forevis:v0.0.2
+    image: ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-019a1f02e8b840db5ae6391a8df31ec8874e0c84
     pull_policy: always
     platform: linux/amd64
     cpuset: "2,3"
@@ -110,10 +110,9 @@ services:
     security_opt:
       - seccomp=unconfined
     environment:
+      LB_MODE: "proxy"
       PORT: "9999"
       UPSTREAMS: /sockets/api1.sock,/sockets/api2.sock
-      BUF_SIZE: "4096"
-      WORKERS: "1"
     volumes:
       - sockets:/sockets
     depends_on:
@@ -124,7 +123,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.20"
+          cpus: "0.16"
           memory: "30MB"
     ulimits:
       nofile:
