@@ -1,12 +1,13 @@
 :root {
   --bg-deep: #04120e;
   --bg-metal: #071b14;
-  --term-green: #5cffb1;
-  --term-green-soft: #a7ffd6;
-  --term-green-dim: rgba(92, 255, 177, 0.2);
-  --term-green-glow: rgba(92, 255, 177, 0.46);
-  --text-main: #d6ffea;
-  --text-muted: #87cfae;
+  /* GitHub Linguist official C# color: https://github.com/github-linguist/linguist */
+  --term-green: #178600;
+  --term-green-soft: #56b84d;
+  --term-green-dim: rgba(23, 134, 0, 0.24);
+  --term-green-glow: rgba(23, 134, 0, 0.55);
+  --text-main: #dff8dc;
+  --text-muted: #9acb93;
   --warn-amber: #ffb300;
   --kill-red: #ff2d55;
   --violet-signal: #7d64ff;
@@ -48,7 +49,7 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background: rgba(92, 255, 177, 0.025);
+  background: rgba(23, 134, 0, 0.035);
   z-index: 50;
   pointer-events: none;
   animation: flicker 0.16s infinite;
@@ -198,7 +199,7 @@ footer {
   min-height: 390px;
   background: rgba(0, 8, 0, 0.82);
   border: 1px solid var(--term-green-dim);
-  box-shadow: inset 0 0 55px rgba(0, 255, 65, 0.05), 0 0 24px rgba(0, 255, 65, 0.1);
+  box-shadow: inset 0 0 55px rgba(23, 134, 0, 0.08), 0 0 24px rgba(23, 134, 0, 0.16);
   padding: 2rem;
   position: relative;
   overflow: hidden;
@@ -265,13 +266,13 @@ footer {
 }
 
 .stat-box {
-  background: rgba(0, 255, 65, 0.025);
+  background: rgba(23, 134, 0, 0.04);
   border-left: 4px solid var(--term-green);
   padding: 1.4rem;
   transition: all 0.2s ease;
 }
 
-.stat-box:hover { transform: translateX(5px); background: rgba(0, 255, 65, 0.055); }
+.stat-box:hover { transform: translateX(5px); background: rgba(23, 134, 0, 0.08); }
 .stat-box.warning { border-color: var(--warn-amber); }
 .stat-box.danger { border-color: var(--kill-red); }
 
@@ -286,7 +287,7 @@ footer {
   color: var(--term-green);
   font-size: clamp(1.8rem, 3.2vw, 2.6rem);
   line-height: 1;
-  text-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+  text-shadow: 0 0 10px rgba(23, 134, 0, 0.38);
 }
 
 .stat-box.warning .stat-value { color: var(--warn-amber); }
@@ -305,7 +306,7 @@ footer {
   justify-content: space-between;
   gap: 1.5rem;
   border: 1px solid rgba(255, 179, 0, 0.28);
-  background: linear-gradient(90deg, rgba(255, 179, 0, 0.08), rgba(92, 255, 177, 0.035));
+  background: linear-gradient(90deg, rgba(255, 179, 0, 0.08), rgba(23, 134, 0, 0.05));
   padding: 1.25rem 1.5rem;
   margin: -3rem 0 5rem;
 }
@@ -368,7 +369,7 @@ footer {
 }
 
 .scenario-card {
-  background: linear-gradient(135deg, rgba(0, 255, 65, 0.055), rgba(0, 0, 0, 0));
+  background: linear-gradient(135deg, rgba(23, 134, 0, 0.08), rgba(0, 0, 0, 0));
   border: 1px solid var(--term-green-dim);
   padding: 2rem;
   position: relative;
@@ -422,8 +423,8 @@ footer {
 .danger-text { color: var(--kill-red); }
 
 .stress-tests {
-  background: linear-gradient(135deg, rgba(0, 255, 65, 0.055), rgba(51, 255, 102, 0.025));
-  border: 1px solid rgba(0, 255, 65, 0.15);
+  background: linear-gradient(135deg, rgba(23, 134, 0, 0.08), rgba(23, 134, 0, 0.04));
+  border: 1px solid rgba(23, 134, 0, 0.20);
   padding: 3rem;
   margin: 3rem 0 5rem;
   position: relative;
@@ -462,7 +463,7 @@ footer {
 
 .stress-metric {
   text-align: center;
-  border: 1px solid rgba(0, 255, 65, 0.12);
+  border: 1px solid rgba(23, 134, 0, 0.18);
   background: rgba(255, 255, 255, 0.025);
   padding: 1.4rem;
 }
@@ -491,8 +492,8 @@ footer {
 }
 
 .stress-link {
-  border: 1px solid rgba(0, 255, 65, 0.22);
-  background: rgba(0, 255, 65, 0.08);
+  border: 1px solid rgba(23, 134, 0, 0.28);
+  background: rgba(23, 134, 0, 0.12);
   color: var(--term-green-soft);
   padding: 0.85rem 1.3rem;
   font-size: 0.9rem;

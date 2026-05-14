@@ -133,7 +133,7 @@ body { display: block; }
 .content a { color: var(--term-green-soft); }
 
 .content code {
-  background: rgba(0, 255, 65, 0.08);
+  background: rgba(23, 134, 0, 0.12);
   border: 1px solid var(--term-green-dim);
   color: var(--term-green);
   padding: 0.1rem 0.35rem;
@@ -169,7 +169,7 @@ body { display: block; }
 
 .content th {
   color: var(--term-green);
-  background: rgba(0, 255, 65, 0.08);
+  background: rgba(23, 134, 0, 0.12);
 }
 
 .content td { color: var(--text-main); }
