@@ -5,12 +5,9 @@ services:
     image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-d384902a41ca819eeaccdb10503a8d4db8e97bc2}
     pull_policy: always
     platform: linux/amd64
-    cpuset: "0"
     user: root
     restart: always
     read_only: true
-    security_opt:
-      - seccomp=unconfined
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
@@ -59,8 +56,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.425"
-          memory: "160MB"
+          cpus: "0.40"
+          memory: "165MB"
     ulimits:
       nofile:
         soft: 65535
@@ -68,7 +65,6 @@ services:
 
   webapi2:
     <<: *webapi
-    cpuset: "1"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
@@ -109,7 +105,6 @@ services:
     image: nginx:latest
     pull_policy: always
     platform: linux/amd64
-    cpuset: "2,3"
     user: root
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
@@ -124,8 +119,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.15"
-          memory: "30MB"
+          cpus: "0.20"
+          memory: "20MB"
     ulimits:
       nofile:
         soft: 65535
