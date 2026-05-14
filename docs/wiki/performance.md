@@ -55,5 +55,5 @@ The retained load balancer path is the standalone `rinha4-lb-yolo-mode` image in
 the API containers over Unix Domain Sockets.
 
 The benchmark workflow runs the canonical root `docker-compose.yml` used by the
-submission. The compose file allocates `0.42 CPU / 160 MB` to each API container
-and `0.16 CPU / 30 MB` to the proxy while keeping the total at `1.00 CPU / 350 MB`.
+submission. The compose file allocates `0.44 CPU / 160 MB` to each API container
+and `0.12 CPU / 30 MB` to the proxy while keeping the total at `1.00 CPU / 350 MB`.

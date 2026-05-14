@@ -13,14 +13,14 @@ Main build flow:
 
 The automatic main-branch benchmark runs against the immutable image tag built in
 the same workflow, not a locally rebuilt image. The canonical submission/runtime
-shape is root `docker-compose.yml`: `webapi1` on cpuset `0`, `webapi2` on `1`,
-and standalone `lb` on `2,3`, while Docker resource limits remain active. Manual
+shape is root `docker-compose.yml`: `webapi1` on cpuset `0,1`, `webapi2` on `2,3`,
+and standalone `lb` on `0,2`, while Docker resource limits remain active. Manual
 runs can add a one-core overlay when diagnosing official mismatch, but that
 stress mode is stricter than the candidate tracking run.
 
 The build workflow also archives an `official-calibrated` run after the normal
 candidate run. That lane can override service CPU quotas to screen splits such as
-`api=0.40` and `proxy=0.20`. It is a prediction/screening signal only; the
+`api=0.44` and `proxy=0.12`. It is a prediction/screening signal only; the
 candidate/submission compose remains the source for official testing.
 
 Manual **Official-like Benchmark** runs can archive experiment reports too. For
