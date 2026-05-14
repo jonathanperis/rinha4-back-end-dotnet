@@ -24,14 +24,17 @@ services:
           memory: "160MB"
 
   lb:
-    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:latest}
+    image: ${LB_IMAGE:-ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-019a1f02e8b840db5ae6391a8df31ec8874e0c84}
     container_name: rinha-lb
     pull_policy: always
     platform: linux/amd64
     cpuset: "2,3"
     user: root
     restart: always
-    entrypoint: ["/rinha-lb"]
+    environment:
+      LB_MODE: "proxy"
+      PORT: "9999"
+      UPSTREAMS: "/sockets/api1.sock,/sockets/api2.sock"
     volumes:
       - sockets:/sockets
     depends_on:
