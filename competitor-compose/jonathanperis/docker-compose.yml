@@ -2,7 +2,7 @@ name: rinha-2026-jonathanperis
 
 services:
   webapi1: &webapi
-    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-d384902a41ca819eeaccdb10503a8d4db8e97bc2}
+    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-ecdcc3f1b0059842489ae32102763ac957cc2a36}
     pull_policy: always
     platform: linux/amd64
     cpuset: "0"
