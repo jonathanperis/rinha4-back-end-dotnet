@@ -37,27 +37,64 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  select-participants:
+    name: Select comparison participants
+    runs-on: ubuntu-latest
+    outputs:
+      participants: ${{ steps.participants.outputs.participants }}
+    steps:
+      - id: participants
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Cost-control policy for all-comparison:
+          # - Keep Jonathan plus the latest top two competitors ahead by p99.
+          # - Disabled competitors remain selectable explicitly via workflow input.
+          case "${{ inputs.compose_file }}" in
+            all-comparison)
+              participants='[
+                {"name":"jonathanperis","compose_file":"competitor-compose/jonathanperis/docker-compose.yml"},
+                {"name":"jordao-latest","compose_file":"competitor-compose/jordao-latest/docker-compose.yml"},
+                {"name":"danilo-latest","compose_file":"competitor-compose/danilo-latest/docker-compose.yml"}
+              ]'
+              ;;
+            competitor-compose/jonathanperis/docker-compose.yml)
+              participants='[{"name":"jonathanperis","compose_file":"competitor-compose/jonathanperis/docker-compose.yml"}]'
+              ;;
+            competitor-compose/zan-latest/docker-compose.yml)
+              participants='[{"name":"zan-latest","compose_file":"competitor-compose/zan-latest/docker-compose.yml"}]'
+              ;;
+            competitor-compose/danilo-latest/docker-compose.yml)
+              participants='[{"name":"danilo-latest","compose_file":"competitor-compose/danilo-latest/docker-compose.yml"}]'
+              ;;
+            competitor-compose/pedro-latest/docker-compose.yml)
+              participants='[{"name":"pedro-latest","compose_file":"competitor-compose/pedro-latest/docker-compose.yml"}]'
+              ;;
+            competitor-compose/jordao-latest/docker-compose.yml)
+              participants='[{"name":"jordao-latest","compose_file":"competitor-compose/jordao-latest/docker-compose.yml"}]'
+              ;;
+            competitor-compose/hanake0-latest/docker-compose.yml)
+              participants='[{"name":"hanake0-latest","compose_file":"competitor-compose/hanake0-latest/docker-compose.yml"}]'
+              ;;
+            *)
+              echo "Unsupported compose_file=${{ inputs.compose_file }}" >&2
+              exit 1
+              ;;
+          esac
+
+          echo "participants=$(jq -c . <<<"$participants")" >> "$GITHUB_OUTPUT"
+
   benchmark:
     name: ${{ matrix.participant.name }} benchmark
+    needs: select-participants
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        participant:
-          - name: jonathanperis
-            compose_file: competitor-compose/jonathanperis/docker-compose.yml
-          - name: zan-latest
-            compose_file: competitor-compose/zan-latest/docker-compose.yml
-          - name: danilo-latest
-            compose_file: competitor-compose/danilo-latest/docker-compose.yml
-          - name: pedro-latest
-            compose_file: competitor-compose/pedro-latest/docker-compose.yml
-          - name: jordao-latest
-            compose_file: competitor-compose/jordao-latest/docker-compose.yml
-          - name: hanake0-latest
-            compose_file: competitor-compose/hanake0-latest/docker-compose.yml
+        participant: ${{ fromJSON(needs.select-participants.outputs.participants) }}
 
     permissions:
       contents: read
