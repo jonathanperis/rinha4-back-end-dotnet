@@ -2,7 +2,7 @@ name: rinha-2026-jonathanperis
 
 services:
   webapi1: &webapi
-    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-6c747139bd782f70083b501da779edf692217031}
+    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-a166a2375254bbe00e80207f56a37c50774e9b63}
     pull_policy: always
     platform: linux/amd64
     cpuset: "0"
@@ -101,7 +101,7 @@ services:
       BUCKET_AVX_CUTOFF_DIMS: "6"
 
   lb:
-    image: ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-019a1f02e8b840db5ae6391a8df31ec8874e0c84
+    image: ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-b5b0e375ca9c9c39152950ddffbbc5ce6a7bd92e
     pull_policy: always
     platform: linux/amd64
     cpuset: "2,3"
