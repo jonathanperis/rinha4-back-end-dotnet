@@ -10,8 +10,8 @@
 
 ## Known Results
 
-- Best known same-CI candidate: run `25822565412`, p99 `1.33ms`, score `5875.65`, `0%` failures.
-- Pedro same-CI reference: run `25808383580`, p99 `0.42ms`, score `6000`, `0%` failures.
+- Best known same-CI candidate: run `25925874711`, proxy p99 `0.43ms`, score `6000`, `0%` failures; fixed FD-pass run `25926881583` p99 `0.44ms`, score `6000`, `0%` failures.
+- Latest same-CI competitor comparison: run `25927303467`; Danilo p99 `0.35ms`, Pedro p99 `0.37ms`, Jonathan p99 `0.44ms`; all score `6000`, `0%` failures.
 - Latest known dotnet official preview: issue `#4038`, p99 `1.88ms`, score `5726.08`, `0%` failures.
 - Local FD-pass smoke on 2026-05-15: `docker-compose.fdpass.yml` with `HOST_PORT=10099` returned `/ready` 200 and sample `/fraud-score` 200; no API restarts after `DllImport("*")` fix.
 - CI FD-pass run `25926440708` on old LB image `ci-a2de791...` failed (`5118` HTTP errors, `9.47%` failure); root cause likely nonblocking accepted sockets handed to API before request bytes arrived.
@@ -53,7 +53,7 @@
 
 - Validate `src/WebApi/RawHttpServer.cs` hot-path changes before promotion.
 - Continue transport/parser/index inspections only with focused tests or CI benchmark evidence.
-- Beat Pedro on same CI before official submission attempt.
+- Close p99 gap to Danilo/Pedro on same CI before official submission attempt.
 - Resolve bucket index artifact strategy if generated binary must be distributed outside image build.
 
 ## Risks
