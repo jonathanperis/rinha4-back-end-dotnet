@@ -26,6 +26,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
       DOTNET_PROCESSOR_COUNT: "1"
+      DOTNET_ThreadPool_UnfairSemaphoreSpinLimit: "0"
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "${ACCEPT_LOOPS:-2}"
@@ -83,6 +84,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
       DOTNET_PROCESSOR_COUNT: "1"
+      DOTNET_ThreadPool_UnfairSemaphoreSpinLimit: "0"
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "${ACCEPT_LOOPS:-2}"
@@ -123,13 +125,13 @@ services:
 
 
   lb:
-    image: ${LB_IMAGE:-ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-019a1f02e8b840db5ae6391a8df31ec8874e0c84}
+    image: ${LB_IMAGE:-ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-a2de791730f5df352aa90c87e2f1f65406a8d9cc}
     container_name: rinha-lb
-    pull_policy: always
     platform: linux/amd64
     cpuset: "2,3"
     user: root
     restart: always
+    pull_policy: always
     environment:
       LB_MODE: "proxy"
       PORT: "9999"
@@ -140,7 +142,7 @@ services:
       - webapi1
       - webapi2
     ports:
-      - "9999:9999"
+      - "${HOST_PORT:-9999}:9999"
     deploy:
       resources:
         limits:

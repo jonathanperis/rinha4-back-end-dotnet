@@ -9,10 +9,14 @@ internal sealed class RawHttpServer
     private const int DefaultAcceptLoops = 1;
     private const int ConnectionBufferBytes = 4096;
     private const int MaxBodyBytes = 4096;
+    private const int SolSocket = 1;
+    private const int ScmRights = 1;
+    private const int Eintr = 4;
 
     private readonly string? socketPath;
     private readonly FraudScorer scorer;
     private readonly int keepAliveMax;
+    private readonly bool fdPassMode;
 
     /// <summary>
     /// Creates a server bound to the configured socket path and fraud scorer.
@@ -20,7 +24,20 @@ internal sealed class RawHttpServer
     /// </summary>
     public RawHttpServer(string? socketPath, FraudScorer scorer)
     {
-        this.socketPath = socketPath;
+        if (socketPath is not null && socketPath.StartsWith("fd:", StringComparison.Ordinal))
+        {
+            fdPassMode = true;
+            this.socketPath = socketPath[3..];
+        }
+        else if (socketPath is not null && socketPath.StartsWith("unix:", StringComparison.Ordinal))
+        {
+            this.socketPath = socketPath[5..];
+        }
+        else
+        {
+            this.socketPath = socketPath;
+        }
+
         this.scorer = scorer;
         keepAliveMax = GetNonNegativeIntEnvironment("KEEP_ALIVE_MAX", 0);
     }
@@ -39,9 +56,19 @@ internal sealed class RawHttpServer
 
         Console.WriteLine(string.IsNullOrEmpty(socketPath)
             ? "Raw HTTP/1 server listening on 0.0.0.0:8080"
-            : $"Raw HTTP/1 server listening on {socketPath}");
+            : fdPassMode ? $"Raw HTTP/1 server listening for fd-pass control on {socketPath}" : $"Raw HTTP/1 server listening on {socketPath}");
 
         int acceptLoopCount = GetPositiveIntEnvironment("ACCEPT_LOOPS", DefaultAcceptLoops);
+        if (fdPassMode)
+        {
+            var receiverLoops = new Task[acceptLoopCount];
+            for (int i = 0; i < receiverLoops.Length; i++)
+                receiverLoops[i] = AcceptFdControlLoopAsync(listener);
+
+            await Task.WhenAll(receiverLoops);
+            return;
+        }
+
         var acceptLoops = new Task[acceptLoopCount];
         for (int i = 0; i < acceptLoops.Length; i++)
             acceptLoops[i] = AcceptLoopAsync(listener);
@@ -83,6 +110,52 @@ internal sealed class RawHttpServer
                 static state => state.Server.HandleConnection(state.Socket),
                 (Server: this, Socket: client),
                 preferLocal: false);
+        }
+    }
+
+    private async Task AcceptFdControlLoopAsync(Socket listener)
+    {
+        while (true)
+        {
+            Socket control = await listener.AcceptAsync();
+            ThreadPool.UnsafeQueueUserWorkItem(
+                static state => state.Server.ReceiveFdLoop(state.Control),
+                (Server: this, Control: control),
+                preferLocal: false);
+        }
+    }
+
+    private void ReceiveFdLoop(Socket control)
+    {
+        using (control)
+        {
+            while (true)
+            {
+                int fd = ReceiveSocketFd(control);
+                if (fd < 0)
+                    return;
+
+                Socket? client = null;
+                try
+                {
+                    client = new Socket(new SafeSocketHandle((IntPtr)fd, ownsHandle: true));
+                    client.Blocking = true;
+                    ThreadPool.UnsafeQueueUserWorkItem(
+                        static state => state.Server.HandleConnection(state.Socket),
+                        (Server: this, Socket: client),
+                        preferLocal: false);
+                    client = null;
+                }
+                catch
+                {
+                    if (client is null)
+                        CloseFd(fd);
+                }
+                finally
+                {
+                    client?.Dispose();
+                }
+            }
         }
     }
 
@@ -190,11 +263,11 @@ internal sealed class RawHttpServer
     /// </summary>
     private ReadOnlyMemory<byte> SelectResponse(ReadOnlySpan<byte> header, ReadOnlySpan<byte> body)
     {
-        if (HttpWire.IsPath(header, "GET "u8, "/ready"u8))
-            return HttpResponses.Ready;
-
         if (HttpWire.IsPath(header, "POST "u8, "/fraud-score"u8))
             return body.IsEmpty ? HttpResponses.BadRequest : scorer.ScoreFraudRequest(body);
+
+        if (HttpWire.IsPath(header, "GET "u8, "/ready"u8))
+            return HttpResponses.Ready;
 
         return HttpResponses.NotFound;
     }
@@ -214,4 +287,81 @@ internal sealed class RawHttpServer
         File.SetUnixFileMode(socketPath, Mode);
 #pragma warning restore CA1416
     }
+
+    private static unsafe int ReceiveSocketFd(Socket control)
+    {
+        int sockfd = (int)control.SafeHandle.DangerousGetHandle();
+        byte data = 0;
+        Span<byte> controlBuffer = stackalloc byte[24];
+
+        fixed (byte* controlPtr = controlBuffer)
+        {
+            var iov = new IOVec
+            {
+                Base = &data,
+                Len = 1
+            };
+            var msg = new MsgHdr
+            {
+                Iov = &iov,
+                IovLen = 1,
+                Control = controlPtr,
+                ControlLen = (nuint)controlBuffer.Length
+            };
+
+            while (true)
+            {
+                nint received = recvmsg(sockfd, &msg, 0);
+                if (received > 0)
+                    break;
+
+                if (received < 0 && Marshal.GetLastPInvokeError() == Eintr)
+                    continue;
+
+                return -1;
+            }
+
+            if (msg.ControlLen < 20)
+                return -1;
+
+            nuint cmsgLen = Unsafe.ReadUnaligned<nuint>(controlPtr);
+            int cmsgLevel = Unsafe.ReadUnaligned<int>(controlPtr + 8);
+            int cmsgType = Unsafe.ReadUnaligned<int>(controlPtr + 12);
+            if (cmsgLen < 20 || cmsgLevel != SolSocket || cmsgType != ScmRights)
+                return -1;
+
+            return Unsafe.ReadUnaligned<int>(controlPtr + 16);
+        }
+    }
+
+    private static void CloseFd(int fd)
+    {
+        if (fd >= 0)
+            _ = close(fd);
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private unsafe struct IOVec
+    {
+        public void* Base;
+        public nuint Len;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private unsafe struct MsgHdr
+    {
+        public void* Name;
+        public uint NameLen;
+        public void* Iov;
+        public nuint IovLen;
+        public void* Control;
+        public nuint ControlLen;
+        public int Flags;
+    }
+
+    [DllImport("*", EntryPoint = "recvmsg", SetLastError = true)]
+    private static extern unsafe nint recvmsg(int sockfd, MsgHdr* msg, int flags);
+
+    [DllImport("*", EntryPoint = "close", SetLastError = true)]
+    private static extern int close(int fd);
 }

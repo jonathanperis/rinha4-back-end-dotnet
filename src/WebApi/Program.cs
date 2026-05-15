@@ -1,4 +1,4 @@
-string? socketPath = Environment.GetEnvironmentVariable("SOCKET_PATH");
+string? socketPath = Environment.GetEnvironmentVariable("BIND_ADDR") ?? Environment.GetEnvironmentVariable("SOCKET_PATH");
 string dataDirectory = Environment.GetEnvironmentVariable("DATA_DIR") ?? "/data";
 SetMinWorkerThreads();
 var scorer = FraudScorer.Load(dataDirectory);

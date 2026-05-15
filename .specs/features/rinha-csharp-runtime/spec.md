@@ -19,12 +19,14 @@
 - RCSR-015: Runtime avoids hot-path logging and avoidable allocation.
 - RCSR-016: Benchmark data records image, commit, config, p99, failure rate, and score.
 - RCSR-017: Accuracy-affecting shortcuts must state FP/FN risk and pass focused validation before promotion.
+- RCSR-018: NativeAOT static runtime interop must not require dynamic library loading; FD-pass syscalls bind to linked symbols.
 
 ## Acceptance
 
 - Vectorization tests pass with `dotnet run --project test/VectorizationTests/VectorizationTests.csproj --no-restore`.
 - Accuracy probe can replay public official data with `0` FP, `0` FN, and `0` HTTP errors for candidate configs.
 - Docker Compose config remains valid under selected LB override.
+- FD-pass compose overlay, when selected, smoke-tests `GET /ready` through LB without API restarts.
 - Build workflow can publish public `linux/amd64` GHCR image from `main`.
 - Benchmark workflow can run official-like k6 from GitHub Actions and archive result.
 - Official preview can be triggered from promoted `submission` branch.
