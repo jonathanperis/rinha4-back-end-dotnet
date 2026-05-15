@@ -2,7 +2,7 @@ name: rinha-2026-jonathanperis
 
 services:
   webapi1: &webapi
-    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-d537e3feb444477ed0fe7e0b33a553e75f0123a2}
+    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-7d98865b358a7f70d94d8fa452e80cd89d42d428}
     pull_policy: always
     platform: linux/amd64
     cpuset: "0"
@@ -15,10 +15,11 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
       DOTNET_PROCESSOR_COUNT: "1"
+      DOTNET_ThreadPool_UnfairSemaphoreSpinLimit: "0"
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "2"
-      MIN_WORKER_THREADS: "64"
+      MIN_WORKER_THREADS: "128"
       SCORER_MODE: hybrid
       SOCKET_PATH: /sockets/api1.sock
       DATA_DIR: /data
@@ -68,10 +69,11 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
       DOTNET_PROCESSOR_COUNT: "1"
+      DOTNET_ThreadPool_UnfairSemaphoreSpinLimit: "0"
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "2"
-      MIN_WORKER_THREADS: "64"
+      MIN_WORKER_THREADS: "128"
       SCORER_MODE: hybrid
       SOCKET_PATH: /sockets/api2.sock
       DATA_DIR: /data
@@ -101,7 +103,7 @@ services:
       BUCKET_AVX_CUTOFF_DIMS: "6"
 
   lb:
-    image: ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-019a1f02e8b840db5ae6391a8df31ec8874e0c84
+    image: ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-b5b0e375ca9c9c39152950ddffbbc5ce6a7bd92e
     pull_policy: always
     platform: linux/amd64
     cpuset: "2,3"
