@@ -16,7 +16,7 @@ services:
           cpus: "0.44"
 
   lb:
-    image: ${LB_IMAGE:-ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-a2de791730f5df352aa90c87e2f1f65406a8d9cc}
+    image: ${LB_IMAGE:-ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-b5b0e375ca9c9c39152950ddffbbc5ce6a7bd92e}
     environment:
       LB_MODE: "fdpass"
       UPSTREAMS: "/sockets/api1.sock.ctrl,/sockets/api2.sock.ctrl"

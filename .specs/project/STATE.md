@@ -14,6 +14,7 @@
 - Pedro same-CI reference: run `25808383580`, p99 `0.42ms`, score `6000`, `0%` failures.
 - Latest known dotnet official preview: issue `#4038`, p99 `1.88ms`, score `5726.08`, `0%` failures.
 - Local FD-pass smoke on 2026-05-15: `docker-compose.fdpass.yml` with `HOST_PORT=10099` returned `/ready` 200 and sample `/fraud-score` 200; no API restarts after `DllImport("*")` fix.
+- CI FD-pass run `25926440708` on old LB image `ci-a2de791...` failed (`5118` HTTP errors, `9.47%` failure); root cause likely nonblocking accepted sockets handed to API before request bytes arrived.
 - Docs `docs/public/official/latest.json` may be stale; re-sync before using as evidence.
 
 ## Decisions
@@ -26,7 +27,7 @@
 - Keep benchmark changes small and reversible.
 - Do not open/request official candidate or preview unless user explicitly asks; official attempts now have per-user/day limits.
 - Dedicated LB repo is `https://github.com/jonathanperis/rinha4-lb-yolo-mode`; LB code changes must happen there and be consumed here only as an image/config update.
-- Current dedicated LB image known to support proxy + fdpass: `ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-a2de791730f5df352aa90c87e2f1f65406a8d9cc` (`linux/amd64`).
+- Current dedicated LB image known to support proxy + fdpass: `ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-b5b0e375ca9c9c39152950ddffbbc5ce6a7bd92e` (`linux/amd64`); fdpass now passes blocking accepted sockets.
 
 ## Active Runtime Defaults
 
