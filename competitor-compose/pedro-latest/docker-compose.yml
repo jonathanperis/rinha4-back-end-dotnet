@@ -1,23 +1,34 @@
-name: rinha-backend-2026-pedro-latest
+name: rinha-backend-2026
+
+# Submission stack — usa imagem pública do GHCR (sem build local).
+# Dataset (~192MB) é baked dentro da imagem; ambas as réplicas compartilham
+# a mesma layer overlayfs → kernel page cache é único.
+#
+# Recursos: 2× api (0.37 vCPU / 150MB) + lb nginx (0.26 vCPU / 50MB).
+# Total: 1.00 vCPU + 350 MB.
+#
+# Eval-2026-05: lb e api comunicam via Unix Domain Socket em tmpfs (sem TCP
+# loopback overhead) e cada container tem cpuset isolado pra eliminar
+# contenção CFS entre lb e api (era o caso quando lb=0,2 sobreposto a
+# api1=0,1 e api2=2,3).
 
 services:
   api1: &api
-    image: ghcr.io/pedrosakuma/rinha-backend-2026-api:wave29-fp2-a58980f
+    image: ghcr.io/pedrosakuma/rinha-backend-2026-api:wave36-final
     pull_policy: always
-    platform: linux/amd64
-    cpuset: "0"
+    cpuset: "0,1"
     security_opt:
       - seccomp=unconfined
     environment:
       UDS_PATH: "/run/uds/api1.sock"
       DOTNET_GCHeapCount: "1"
       DOTNET_PROCESSOR_COUNT: "1"
-      TP_MIN_WORKERS: "16"
-      TP_MAX_WORKERS: "16"
+      TP_MIN_WORKERS: "64"
+      TP_MAX_WORKERS: "64"
       SCORER: "ivf-blocked"
       IVF_NPROBE: "1"
       IVF_BLOCKED_NPROBE: "1"
-      RAW_HTTP: "0"
+      RAW_HTTP: "1"
       RAW_HTTP_WORKERS: "1"
       RAW_HTTP_KEEPALIVE_MAX: "0"
       RAW_HTTP_RECV_TIMEOUT_MS: "0"
@@ -39,22 +50,22 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.40"
+          cpus: "0.425"
           memory: "150MB"
 
   api2:
     <<: *api
-    cpuset: "1"
+    cpuset: "2,3"
     environment:
       UDS_PATH: "/run/uds/api2.sock"
       DOTNET_GCHeapCount: "1"
       DOTNET_PROCESSOR_COUNT: "1"
-      TP_MIN_WORKERS: "16"
-      TP_MAX_WORKERS: "16"
+      TP_MIN_WORKERS: "64"
+      TP_MAX_WORKERS: "64"
       SCORER: "ivf-blocked"
       IVF_NPROBE: "1"
       IVF_BLOCKED_NPROBE: "1"
-      RAW_HTTP: "0"
+      RAW_HTTP: "1"
       RAW_HTTP_WORKERS: "1"
       RAW_HTTP_KEEPALIVE_MAX: "0"
       RAW_HTTP_RECV_TIMEOUT_MS: "0"
@@ -74,8 +85,7 @@ services:
   lb:
     image: jrblatt/so-no-forevis:v0.0.2
     pull_policy: always
-    platform: linux/amd64
-    cpuset: "2,3"
+    cpuset: "0,2"
     security_opt:
       - seccomp=unconfined
     environment:
@@ -94,7 +104,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.20"
+          cpus: "0.15"
           memory: "30MB"
 
 volumes:
