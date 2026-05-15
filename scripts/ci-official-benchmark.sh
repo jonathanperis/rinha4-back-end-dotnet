@@ -249,9 +249,17 @@ if [[ "$BENCHMARK_REPETITIONS" -eq 1 ]]; then
     fi
 else
     selected_repetition="$(jq -s '
-        to_entries
-        | sort_by(.value.scoring.final_score)
-        | .[((length - 1) / 2 | floor)].key + 1
+        def median_index: ((length - 1) / 2 | floor);
+        [to_entries[] | {
+            repetition: (.key + 1),
+            score: .value.scoring.final_score,
+            p99_ms: (.value.p99 | sub("ms"; "") | tonumber)
+        }]
+        | sort_by(.score)
+        | (.[median_index].score) as $median_score
+        | map(select(.score == $median_score))
+        | sort_by(.p99_ms)
+        | .[median_index].repetition
     ' "${repeat_files[@]}")"
     cp "$RESULTS_DIR/results-repetition-$selected_repetition.json" "$RESULTS_DIR/results.json"
     if [[ -f "$RESULTS_DIR/k6-report-repetition-$selected_repetition.html" ]]; then
@@ -260,8 +268,9 @@ else
 
     jq -s --argjson selected_repetition "$selected_repetition" '{
         repetitions: length,
-        selected: "median_by_final_score",
+        selected: "median_score_then_median_p99",
         selected_repetition: $selected_repetition,
+        selected_p99_ms: (.[($selected_repetition - 1)].p99 | sub("ms"; "") | tonumber),
         p99_ms: (map(.p99 | sub("ms"; "") | tonumber) | sort | {min: .[0], median: .[((length - 1) / 2 | floor)], max: .[-1]}),
         final_score: (map(.scoring.final_score) | sort | {min: .[0], median: .[((length - 1) / 2 | floor)], max: .[-1]}),
         failure_rate: map(.scoring.failure_rate)
