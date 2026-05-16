@@ -4,7 +4,7 @@ name: rinha-backend-2026
 # Dataset (~192MB) é baked dentro da imagem; ambas as réplicas compartilham
 # a mesma layer overlayfs → kernel page cache é único.
 #
-# Recursos: 2× api (0.42 vCPU / 150MB) + lb (0.16 vCPU / 30MB).
+# Recursos: 2× api (0.37 vCPU / 150MB) + lb nginx (0.26 vCPU / 50MB).
 # Total: 1.00 vCPU + 350 MB.
 #
 # Eval-2026-05: lb e api comunicam via Unix Domain Socket em tmpfs (sem TCP
@@ -14,22 +14,21 @@ name: rinha-backend-2026
 
 services:
   api1: &api
-    image: ghcr.io/pedrosakuma/rinha-backend-2026-api:wave31-nosm-3eb1fe6
+    image: ghcr.io/pedrosakuma/rinha-backend-2026-api:wave37-compliant
     pull_policy: always
-    cpuset: "0"
+    cpuset: "0,1"
     security_opt:
       - seccomp=unconfined
     environment:
       UDS_PATH: "/run/uds/api1.sock"
       DOTNET_GCHeapCount: "1"
       DOTNET_PROCESSOR_COUNT: "1"
-      DOTNET_ThreadPool_UnfairSemaphoreSpinLimit: "0"
-      TP_MIN_WORKERS: "4"
-      TP_MAX_WORKERS: "4"
+      TP_MIN_WORKERS: "64"
+      TP_MAX_WORKERS: "64"
       SCORER: "ivf-blocked"
       IVF_NPROBE: "1"
       IVF_BLOCKED_NPROBE: "1"
-      RAW_HTTP: "0"
+      RAW_HTTP: "1"
       RAW_HTTP_WORKERS: "1"
       RAW_HTTP_KEEPALIVE_MAX: "0"
       RAW_HTTP_RECV_TIMEOUT_MS: "0"
@@ -51,23 +50,22 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.42"
+          cpus: "0.425"
           memory: "150MB"
 
   api2:
     <<: *api
-    cpuset: "1"
+    cpuset: "2,3"
     environment:
       UDS_PATH: "/run/uds/api2.sock"
       DOTNET_GCHeapCount: "1"
       DOTNET_PROCESSOR_COUNT: "1"
-      DOTNET_ThreadPool_UnfairSemaphoreSpinLimit: "0"
-      TP_MIN_WORKERS: "4"
-      TP_MAX_WORKERS: "4"
+      TP_MIN_WORKERS: "64"
+      TP_MAX_WORKERS: "64"
       SCORER: "ivf-blocked"
       IVF_NPROBE: "1"
       IVF_BLOCKED_NPROBE: "1"
-      RAW_HTTP: "0"
+      RAW_HTTP: "1"
       RAW_HTTP_WORKERS: "1"
       RAW_HTTP_KEEPALIVE_MAX: "0"
       RAW_HTTP_RECV_TIMEOUT_MS: "0"
@@ -85,9 +83,9 @@ services:
       - api1
 
   lb:
-    image: jrblatt/so-no-forevis:v1.0.0
+    image: jrblatt/so-no-forevis:v0.0.2
     pull_policy: always
-    cpuset: "2,3"
+    cpuset: "0,2"
     security_opt:
       - seccomp=unconfined
     environment:
@@ -106,7 +104,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.16"
+          cpus: "0.15"
           memory: "30MB"
 
 volumes:
