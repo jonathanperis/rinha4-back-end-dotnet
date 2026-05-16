@@ -131,6 +131,21 @@ internal sealed class FraudScorer
 
     private void QuantizeBody(ReadOnlySpan<byte> body, Span<short> qv)
     {
+        if (FraudRequestParser.TryParseOfficialShapeAndQuantize(
+                body,
+                qv,
+                scale,
+                maxAmount,
+                maxInstallments,
+                amountVsAvgRatio,
+                maxMinutes,
+                maxKm,
+                maxTxCount24h,
+                maxMerchantAvgAmount,
+                mccRisk,
+                mccRiskKnown))
+            return;
+
         FraudInput req = FraudRequestParser.Parse(body);
         QuantizeRequest(req, qv, scale);
         qv[Dims] = 0;
