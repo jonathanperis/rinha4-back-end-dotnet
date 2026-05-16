@@ -53,7 +53,11 @@
   - `competitor-compose/ronieneubauer-rinha2026/docker-compose.yml`
   - workflow choices and participant selection entries for both.
 - Commit: `3618165 bench: add top global competitors`.
-- Triggered comparison run: `https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25965557948`.
+- Comparison run: `https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25965557948`.
+- Single-run comparison artifacts from that run:
+  - `jonathanperis`: p99 `0.31ms`, score `6000`, `FP=0`, `FN=0`, `HTTP=0`.
+  - `fksegundo-rust`: p99 `0.37ms`, score `6000`, `FP=0`, `FN=0`, `HTTP=0`.
+  - `ronieneubauer-rinha2026`: p99 `0.54ms`, score `6000`, `FP=0`, `FN=0`, `HTTP=0`.
 
 ## Verified Competitor Mechanisms
 
@@ -83,7 +87,7 @@
 
 ## Hypotheses to Validate
 
-1. **Official gap is now mostly stale-submission / official-runner timing, not algorithmic.** Our CI projection is already p99 `0.29ms` and score `6000`; official snapshot is older p99 `1.10ms`.
+1. **Official gap is now mostly stale-submission / official-runner timing, not algorithmic.** Our CI projection is already p99 `0.29ms` and score `6000`; the new direct comparison run also has us ahead locally/projection-wise at p99 `0.31ms` versus fksegundo `0.37ms` and Ronie `0.54ms`. Official snapshot is older p99 `1.10ms`.
 2. **The biggest remaining robust win is reducing .NET hot-path overhead after FD receipt.** Competitors avoid managed socket wrapping and framework dispatch entirely.
 3. **Parser-to-Q16 fusion can reduce p99 variance more than another scorer threshold tweak.** Competitors parse directly into compact vectors; our parser still materializes more intermediate shape than necessary.
 4. **A single mmap index file will improve startup/page-fault behavior and reduce duplicated data loading, but is not the first latency bottleneck.** Useful for stability and memory, higher risk than parser/threading.
@@ -254,7 +258,7 @@
 
 ## Prioritized Recommendation
 
-1. **Do not rewrite the scorer first.** Current CI evidence suggests we may already have a score-6000, sub-top-global candidate that is not reflected in official ranking yet.
-2. **Finish the top-global comparison run and 3-repeat confirmation.** This tells us whether the official gap is stale-submission or real.
+1. **Do not rewrite the scorer first.** Current CI and comparison evidence show we already have a score-6000 candidate ahead of both top global competitors in our projection run; the official leaderboard is likely stale relative to current submission/image state.
+2. **Run 3-repeat confirmation next.** Single-run projection says stale-submission/official-runner gap, but final promotion still needs repeated evidence.
 3. **If real, attack parser/Q16 fusion and fd raw/fixed-worker overhead first.** These match both competitors and carry less correctness risk than approximate scorer changes.
 4. **Then consolidate mmap/index and add threshold sweeper.** These are valuable, but they must remain behind oracle-driven correctness gates.
