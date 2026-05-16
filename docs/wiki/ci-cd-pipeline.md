@@ -13,11 +13,11 @@ Main build flow:
 
 The automatic main-branch benchmark runs against the immutable image tag built in
 the same workflow, not a locally rebuilt image. The canonical submission/runtime
-shape is root `docker-compose.yml`: `webapi1` on cpuset `0`, `webapi2` on `1`,
-and standalone `lb` on `2,3`, while Docker resource limits remain active. The
+shape is root `docker-compose.yml`: `webapi1` on cpuset `0,1`, `webapi2` on
+`2,3`, and standalone `lb` on `0,2`, while Docker resource limits remain active. The
 current default stack uses `SCORER_MODE=hybrid`, fd-pass API handoff with
-`FD_RAW=1`, `MIN_WORKER_THREADS=128`, API CPU quotas of `0.44` each, and LB
-CPU quota `0.12`.
+`FD_RAW=1`, `MIN_WORKER_THREADS=128`, API CPU quotas of `0.42` each, and LB
+CPU quota `0.16`.
 
 The build workflow also archives an `official-calibrated` run after the normal
 candidate run. That lane can override service CPU quotas to screen alternative

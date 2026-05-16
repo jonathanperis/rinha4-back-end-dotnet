@@ -16,7 +16,7 @@ services:
         IVF_ITERATIONS: ${IVF_ITERATIONS:-6}
         IVF_SCALE: ${IVF_SCALE:-10000}
     container_name: webapi-1
-    cpuset: "0"
+    cpuset: "0,1"
     security_opt:
       - seccomp=unconfined
     user: root
@@ -70,7 +70,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.44"
+          cpus: "0.42"
           memory: "160MB"
     ulimits:
       nofile:
@@ -80,7 +80,7 @@ services:
   webapi2:
     <<: *webapi
     container_name: webapi-2
-    cpuset: "1"
+    cpuset: "2,3"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
@@ -130,7 +130,7 @@ services:
     image: ${LB_IMAGE:-ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-b5b0e375ca9c9c39152950ddffbbc5ce6a7bd92e}
     container_name: rinha-lb
     platform: linux/amd64
-    cpuset: "2,3"
+    cpuset: "0,2"
     user: root
     restart: always
     pull_policy: always
@@ -148,7 +148,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.12"
+          cpus: "0.16"
           memory: "30MB"
     ulimits:
       nofile:
