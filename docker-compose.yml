@@ -127,7 +127,7 @@ services:
 
 
   lb:
-    image: ${LB_IMAGE:-ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-b5b0e375ca9c9c39152950ddffbbc5ce6a7bd92e}
+    image: ${LB_IMAGE:-ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-dcc6b89ca9d21c7a8dbb1588a6bfbbc0bd20bb91}
     container_name: rinha-lb
     platform: linux/amd64
     cpuset: "0,2"
@@ -136,6 +136,7 @@ services:
     pull_policy: always
     environment:
       LB_MODE: "fdpass"
+      LB_FDPASS_SOCKET_TYPE: "stream"
       PORT: "9999"
       UPSTREAMS: "/sockets/api1.sock.ctrl,/sockets/api2.sock.ctrl"
     volumes:

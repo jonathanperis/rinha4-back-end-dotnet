@@ -18,9 +18,10 @@ services:
           cpus: "0.44"
 
   lb:
-    image: ${LB_IMAGE:-ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-b5b0e375ca9c9c39152950ddffbbc5ce6a7bd92e}
+    image: ${LB_IMAGE:-ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-dcc6b89ca9d21c7a8dbb1588a6bfbbc0bd20bb91}
     environment:
       LB_MODE: "fdpass"
+      LB_FDPASS_SOCKET_TYPE: "stream"
       UPSTREAMS: "/sockets/api1.sock.ctrl,/sockets/api2.sock.ctrl"
     deploy:
       resources:
