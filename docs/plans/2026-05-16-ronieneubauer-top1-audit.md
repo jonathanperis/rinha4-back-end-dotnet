@@ -188,6 +188,7 @@ The claim is fair: if C can top-1, the .NET candidate can be top-1 too. The stro
      - `0.45/0.45/0.10`
      - current `0.42/0.42/0.16`
    - Keep CI-vs-CI only; run multiple repetitions.
+   - Completed below while official submissions were rate-limited.
 
 3. **Memory residency/warmup experiment.**
    - Add best-effort Linux P/Invokes for `mlockall`, `madvise(MADV_WILLNEED|MADV_HUGEPAGE)` where applicable.
@@ -203,6 +204,26 @@ The claim is fair: if C can top-1, the .NET candidate can be top-1 too. The stro
    - Build a Ronie-like IVF variant: 2048 clusters, bbox lower-bound ordering, fast 5 probes then capped 20 full probes with fraud-class thresholds.
    - Use exact verifier/replay gates before any CI comparison.
    - Do not abandon current bucket path unless IVF beats it in repeated CI with zero correctness failures.
+
+## Controlled experiment: CPU split matrix while official submissions are rate-limited
+
+No official submission issue was opened for this experiment. All runs below are official-like CI only, with immutable candidate image `ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-18f04baa2d52e946ce508892cb247137ac869d95`, `SCORER_MODE=hybrid`, `ACCEPT_LOOPS=1`, `benchmark_repetitions=3`, and `compose_file=docker-compose.yml`.
+
+| Experiment | API CPUs each | LB CPUs | Run | p99 reps | Median p99 | Score/correctness |
+| --- | ---: | ---: | --- | ---: | ---: | --- |
+| current split | `0.42` | `0.16` | [`25969078977`](https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25969078977) | `0.32/0.32/0.31ms` | `0.32ms` | `6000`, `FP=0`, `FN=0`, `HTTP=0` |
+| middle split | `0.45` | `0.10` | [`25969204353`](https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25969204353) | `0.28/0.28/0.29ms` | `0.28ms` | `6000`, `FP=0`, `FN=0`, `HTTP=0` |
+| Ronie-like split | `0.47` | `0.06` | [`25969326745`](https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25969326745) | `0.29/0.29/0.28ms` | `0.29ms` | `6000`, `FP=0`, `FN=0`, `HTTP=0` |
+
+Assessment:
+
+- Moving CPU away from LB and back to APIs improved this controlled CI batch versus the current `0.42/0.42/0.16` split.
+- The best observed split was the middle `0.45/0.45/0.10` split, median `0.28ms`.
+- The Ronie-like `0.47/0.47/0.06` split also beat current, but was slightly behind the middle split in this batch.
+- Since hosted runners are noisy and the difference between `0.28ms` and `0.29ms` is tiny, treat this as promotion evidence for a second confirmation batch before changing all defaults/submission surfaces.
+- Next controlled local/CI experiment should either:
+  1. repeat `0.45/0.45/0.10` vs `0.47/0.47/0.06` head-to-head with another 3 reps, or
+  2. test memory residency/warmup while holding the CPU split at `0.45/0.45/0.10`.
 
 ## Bottom line
 
