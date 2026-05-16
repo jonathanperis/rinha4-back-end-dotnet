@@ -1,0 +1,15 @@
+global using System.Buffers;
+global using System.Buffers.Text;
+global using System.Globalization;
+global using System.IO.MemoryMappedFiles;
+global using System.Net;
+global using System.Net.Sockets;
+global using System.Numerics;
+global using System.Runtime.CompilerServices;
+global using System.Runtime.InteropServices;
+global using System.Runtime.Intrinsics;
+global using System.Runtime.Intrinsics.X86;
+global using System.Runtime.Versioning;
+global using System.Text;
+global using System.Text.Json;
+global using System.Threading;
