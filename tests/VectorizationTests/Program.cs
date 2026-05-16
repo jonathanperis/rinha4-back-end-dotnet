@@ -133,6 +133,16 @@ VectorizationTestRunner.Run("reads one-pass full repair as IVF default", () =>
     VectorizationTestRunner.AssertEqualInt(5, options.RepairMaxFrauds);
 });
 
+VectorizationTestRunner.Run("enables raw fd handoff only through FD_RAW flag", () =>
+{
+    using var disabled = new ScopedEnvironment(("FD_RAW", null));
+    VectorizationTestRunner.AssertEqualInt(0, RawHttpServer.RawFdHandoffEnabledFromEnvironment() ? 1 : 0);
+
+    disabled.Dispose();
+    using var enabled = new ScopedEnvironment(("FD_RAW", "1"));
+    VectorizationTestRunner.AssertEqualInt(1, RawHttpServer.RawFdHandoffEnabledFromEnvironment() ? 1 : 0);
+});
+
 /// <summary>
 /// Minimal test runner and assertion helpers for vectorization behavior.
 /// </summary>

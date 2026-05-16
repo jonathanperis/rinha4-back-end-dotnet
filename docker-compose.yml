@@ -34,7 +34,8 @@ services:
       MAX_WORKER_THREADS: "${MAX_WORKER_THREADS:-}"
       MAX_IO_THREADS: "${MAX_IO_THREADS:-}"
       SCORER_MODE: "${SCORER_MODE:-hybrid}"
-      SOCKET_PATH: /sockets/api1.sock
+      BIND_ADDR: fd:/sockets/api1.sock.ctrl
+      FD_RAW: "${FD_RAW:-1}"
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
       IVF_PATH: /data/references.ivf.bin
@@ -69,7 +70,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.45"
+          cpus: "0.44"
           memory: "160MB"
     ulimits:
       nofile:
@@ -92,7 +93,8 @@ services:
       MAX_WORKER_THREADS: "${MAX_WORKER_THREADS:-}"
       MAX_IO_THREADS: "${MAX_IO_THREADS:-}"
       SCORER_MODE: "${SCORER_MODE:-hybrid}"
-      SOCKET_PATH: /sockets/api2.sock
+      BIND_ADDR: fd:/sockets/api2.sock.ctrl
+      FD_RAW: "${FD_RAW:-1}"
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
       IVF_PATH: /data/references.ivf.bin
@@ -133,9 +135,9 @@ services:
     restart: always
     pull_policy: always
     environment:
-      LB_MODE: "proxy"
+      LB_MODE: "fdpass"
       PORT: "9999"
-      UPSTREAMS: "/sockets/api1.sock,/sockets/api2.sock"
+      UPSTREAMS: "/sockets/api1.sock.ctrl,/sockets/api2.sock.ctrl"
     volumes:
       - sockets:/sockets
     depends_on:
@@ -146,7 +148,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.10"
+          cpus: "0.12"
           memory: "30MB"
     ulimits:
       nofile:

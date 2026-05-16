@@ -12,11 +12,15 @@ internal sealed class RawHttpServer
     private const int SolSocket = 1;
     private const int ScmRights = 1;
     private const int Eintr = 4;
+    private const int FGetFl = 3;
+    private const int FSetFl = 4;
+    private const int ONonBlock = 0x800;
 
     private readonly string? socketPath;
     private readonly FraudScorer scorer;
     private readonly int keepAliveMax;
     private readonly bool fdPassMode;
+    private readonly bool rawFdHandoff;
 
     /// <summary>
     /// Creates a server bound to the configured socket path and fraud scorer.
@@ -40,6 +44,13 @@ internal sealed class RawHttpServer
 
         this.scorer = scorer;
         keepAliveMax = GetNonNegativeIntEnvironment("KEEP_ALIVE_MAX", 0);
+        rawFdHandoff = fdPassMode && RawFdHandoffEnabledFromEnvironment();
+    }
+
+    internal static bool RawFdHandoffEnabledFromEnvironment()
+    {
+        string? value = Environment.GetEnvironmentVariable("FD_RAW");
+        return value is "1" or "true" or "TRUE" or "yes" or "YES";
     }
 
     /// <summary>
@@ -134,6 +145,16 @@ internal sealed class RawHttpServer
                 int fd = ReceiveSocketFd(control);
                 if (fd < 0)
                     return;
+
+                if (rawFdHandoff)
+                {
+                    SetBlocking(fd);
+                    ThreadPool.UnsafeQueueUserWorkItem(
+                        static state => state.Server.HandleConnection(state.Fd),
+                        (Server: this, Fd: fd),
+                        preferLocal: false);
+                    continue;
+                }
 
                 Socket? client = null;
                 try
@@ -257,6 +278,89 @@ internal sealed class RawHttpServer
         }
     }
 
+    [SkipLocalsInit]
+    private void HandleConnection(int fd)
+    {
+        try
+        {
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(ConnectionBufferBytes);
+            int start = 0;
+            int end = 0;
+            int requests = 0;
+
+            try
+            {
+                while (true)
+                {
+                    int headerEnd;
+                    while ((headerEnd = HttpWire.FindHeaderEnd(buffer, start, end)) < 0)
+                    {
+                        if (end == buffer.Length)
+                        {
+                            SendAll(fd, HttpResponses.BadRequest.Span);
+                            return;
+                        }
+
+                        int read = Receive(fd, buffer.AsSpan(end));
+                        if (read <= 0)
+                            return;
+
+                        end += read;
+                    }
+
+                    int contentLength = HttpWire.GetContentLength(buffer.AsSpan(start, headerEnd - start));
+                    if (contentLength < 0 || contentLength > MaxBodyBytes)
+                    {
+                        SendAll(fd, HttpResponses.BadRequest.Span);
+                        return;
+                    }
+
+                    int bodyStart = headerEnd + 4;
+                    int requestEnd = bodyStart + contentLength;
+                    while (end < requestEnd)
+                    {
+                        if (end == buffer.Length)
+                        {
+                            SendAll(fd, HttpResponses.BadRequest.Span);
+                            return;
+                        }
+
+                        int read = Receive(fd, buffer.AsSpan(end));
+                        if (read <= 0)
+                            return;
+
+                        end += read;
+                    }
+
+                    ReadOnlyMemory<byte> response = SelectResponse(buffer.AsSpan(start, headerEnd - start), buffer.AsSpan(bodyStart, contentLength));
+                    SendAll(fd, response.Span);
+                    requests++;
+
+                    int remaining = end - requestEnd;
+                    if (remaining > 0)
+                        Buffer.BlockCopy(buffer, requestEnd, buffer, 0, remaining);
+
+                    start = 0;
+                    end = remaining;
+                    if (keepAliveMax > 0 && requests >= keepAliveMax)
+                        return;
+                }
+            }
+            catch
+            {
+                // Client resets are expected under load; close connection without logging.
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+        finally
+        {
+            CloseFd(fd);
+        }
+    }
+
     /// <summary>
     /// Routes the request line and body to the readiness, fraud-score, or not-found response.
     /// This only inspects byte spans from the pooled buffer and avoids route-table allocations.
@@ -340,6 +444,58 @@ internal sealed class RawHttpServer
             _ = close(fd);
     }
 
+    private static unsafe int Receive(int fd, Span<byte> buffer)
+    {
+        fixed (byte* ptr = buffer)
+        {
+            while (true)
+            {
+                nint received = recv(fd, ptr, (nuint)buffer.Length, 0);
+                if (received >= 0)
+                    return checked((int)received);
+
+                if (Marshal.GetLastPInvokeError() == Eintr)
+                    continue;
+
+                return -1;
+            }
+        }
+    }
+
+    private static void SetBlocking(int fd)
+    {
+        int flags = Fcntl(fd, FGetFl, 0);
+        if (flags >= 0 && (flags & ONonBlock) != 0)
+            _ = Fcntl(fd, FSetFl, flags & ~ONonBlock);
+    }
+
+    private static int Fcntl(int fd, int command, int value)
+    {
+        while (true)
+        {
+            int result = fcntl(fd, command, value);
+            if (result >= 0 || Marshal.GetLastPInvokeError() != Eintr)
+                return result;
+        }
+    }
+
+    private static unsafe void SendAll(int fd, ReadOnlySpan<byte> data)
+    {
+        while (!data.IsEmpty)
+        {
+            fixed (byte* ptr = data)
+            {
+                nint sent = send(fd, ptr, (nuint)data.Length, 0);
+                if (sent < 0 && Marshal.GetLastPInvokeError() == Eintr)
+                    continue;
+                if (sent <= 0)
+                    return;
+
+                data = data[(int)sent..];
+            }
+        }
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     private unsafe struct IOVec
     {
@@ -364,4 +520,13 @@ internal sealed class RawHttpServer
 
     [DllImport("*", EntryPoint = "close", SetLastError = true)]
     private static extern int close(int fd);
+
+    [DllImport("*", EntryPoint = "fcntl", SetLastError = true)]
+    private static extern int fcntl(int fd, int command, int value);
+
+    [DllImport("*", EntryPoint = "recv", SetLastError = true)]
+    private static extern unsafe nint recv(int sockfd, byte* buffer, nuint length, int flags);
+
+    [DllImport("*", EntryPoint = "send", SetLastError = true)]
+    private static extern unsafe nint send(int sockfd, byte* buffer, nuint length, int flags);
 }

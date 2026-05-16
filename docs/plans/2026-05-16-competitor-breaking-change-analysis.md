@@ -28,8 +28,7 @@ Intent: identify **breaking changes** we could accept in our internals/submissio
 
 **What changes**
 
-- Stop treating `docker-compose.fdpass.yml` as an optional overlay.
-- Make `BIND_ADDR=fd:/sockets/apiN.sock.ctrl` and `LB_MODE=fdpass` the default submission path.
+- Implemented: root `docker-compose.yml` now uses `BIND_ADDR=fd:/sockets/apiN.sock.ctrl` and `LB_MODE=fdpass` as the default submission path.
 - Align resource defaults with competitors: APIs around `0.44` each, LB `0.12`-`0.16`, memory roughly `156MB + 156MB + 30/32MB`.
 - Keep UDS proxy compose only as a debug/local compatibility mode.
 
@@ -60,8 +59,7 @@ Intent: identify **breaking changes** we could accept in our internals/submissio
 **What changes**
 
 - Danilo added `FD_RAW=1`: passed fds can be handled by native/low-level fd read/write code instead of `new Socket(new SafeSocketHandle(...))`.
-- Our `ReceiveFdLoop` always wraps the fd into `Socket` and then uses `Socket.Receive`/`Send`.
-- Breaking internal option: introduce `FD_RAW=1` with P/Invoke `read`, `write`/`send`, `close`, and a fd-based `HandleConnection(int fd)` path using the same HTTP parser/scorer.
+- Implemented: `FD_RAW=1` uses P/Invoke `recv`/`send`/`close` and a fd-based `HandleConnection(int fd)` path using the same HTTP parser/scorer; `FD_RAW=0` keeps the managed `Socket` fallback.
 
 **Why it matches competitors**
 
@@ -81,8 +79,8 @@ Intent: identify **breaking changes** we could accept in our internals/submissio
 
 **Validation**
 
-- First implement behind `FD_RAW=0` default, then candidate compare `fdpass+Socket` vs `fdpass+rawfd`.
-- Add a small local fd integration smoke if Docker daemon access is available; otherwise rely on GitHub benchmark workflow.
+- Root compose defaults to `FD_RAW=1`; manual benchmarks can set `FD_RAW=0` to compare `fdpass+Socket` vs `fdpass+rawfd`.
+- Add a local fd integration smoke when Docker daemon access is available; otherwise rely on GitHub benchmark workflow.
 
 ### 3) Break scorer index format into one mmapped, extension-section file
 

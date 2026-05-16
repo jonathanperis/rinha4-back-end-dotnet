@@ -6,7 +6,7 @@ Hot path choices:
 - raw socket HTTP/1
 - one task per client connection
 - pooled read buffers
-- Unix Domain Sockets behind the standalone yolo proxy
+- fd-pass handoff from the standalone yolo load balancer to raw API fds
 - manual request parsing
 - no model binding
 - prebuilt response bytes
@@ -54,9 +54,13 @@ lost to the current standalone-yolo path.
 ## Reverse proxy
 
 The retained load balancer path is the standalone `rinha4-lb-yolo-mode` image in
-`LB_MODE=proxy`. It keeps the proxy byte-oriented on port `9999` and forwards to
-the API containers over Unix Domain Sockets.
+`LB_MODE=fdpass`. The LB accepts the external TCP client on port `9999`, passes
+the accepted socket fd to an API container over a Unix control socket, and lets
+the API serve the client directly. The API default also sets `FD_RAW=1`, which
+keeps the passed fd on a low-level `recv`/`send` path instead of wrapping every
+handoff in a managed `Socket`; set `FD_RAW=0` to fall back to the safer managed
+Socket path for diagnostics.
 
 The benchmark workflow runs the canonical root `docker-compose.yml` used by the
-submission. The compose file allocates `0.45 CPU / 160 MB` to each API container
-and `0.10 CPU / 30 MB` to the proxy while keeping the total at `1.00 CPU / 350 MB`.
+submission. The compose file allocates `0.44 CPU / 160 MB` to each API container
+and `0.12 CPU / 30 MB` to the LB while keeping the total at `1.00 CPU / 350 MB`.
