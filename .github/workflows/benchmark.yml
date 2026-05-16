@@ -16,15 +16,8 @@ on:
         options:
           - all-comparison
           - competitor-compose/jonathanperis/docker-compose.yml
-          - competitor-compose/fksegundo-rust/docker-compose.yml
           - competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
-          - competitor-compose/macedot/docker-compose.yml
-          - competitor-compose/rafaelcoelhox/docker-compose.yml
-          # Dormant comparison targets preserved for future re-enable:
-          # - competitor-compose/silent-index/docker-compose.yml
-          # - competitor-compose/steixeira93/docker-compose.yml
-          # - competitor-compose/hvini/docker-compose.yml
-          # - competitor-compose/luan-latest/docker-compose.yml
+          - competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml
       official_ref:
         description: Rinha official repo ref
         required: true
@@ -55,29 +48,16 @@ jobs:
       max-parallel: 2
       matrix:
         participant:
-          # Active set: Jonathan .NET plus currently tracked top/global competitor
-          # references and the prior comparison set.
-          # Keep the broader refreshed competitor configs dormant unless the
-          # user explicitly asks for a full field round.
-          - name: jonathanperis
-            compose_file: competitor-compose/jonathanperis/docker-compose.yml
-          - name: fksegundo-rust
-            compose_file: competitor-compose/fksegundo-rust/docker-compose.yml
+          # Small active comparison set:
+          # - #1 global: RonieNeubauer/rinha2026, official issue #4682
+          # - #1 .NET competitor: daniloitagyba/rinha-2026-dotnet, official issue #4746
+          # - ours: jonathanperis/rinha4-back-end-dotnet
           - name: ronieneubauer-rinha2026
             compose_file: competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
-          - name: macedot
-            compose_file: competitor-compose/macedot/docker-compose.yml
-          - name: rafaelcoelhox
-            compose_file: competitor-compose/rafaelcoelhox/docker-compose.yml
-          # Dormant comparison targets preserved for future re-enable:
-          # - name: silent-index
-          #   compose_file: competitor-compose/silent-index/docker-compose.yml
-          # - name: steixeira93
-          #   compose_file: competitor-compose/steixeira93/docker-compose.yml
-          # - name: hvini
-          #   compose_file: competitor-compose/hvini/docker-compose.yml
-          # - name: luan-latest
-          #   compose_file: competitor-compose/luan-latest/docker-compose.yml
+          - name: daniloitagyba-rinha-2026-dotnet
+            compose_file: competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml
+          - name: jonathanperis
+            compose_file: competitor-compose/jonathanperis/docker-compose.yml
 
     permissions:
       contents: read
