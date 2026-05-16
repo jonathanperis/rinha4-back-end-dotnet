@@ -3,13 +3,13 @@
   "head_sha": "ae5ddacb7251db25929bb0d27f691dc02ef0fb0f",
   "results": [
     {
-      "artifact": "artifacts",
+      "artifact": "rinha-benchmark-jonathanperis-lb-c-dcc6b89-378",
       "false_negative_detections": 0,
       "false_positive_detections": 0,
       "final_score": 6000,
       "http_errors": 0,
       "p99": "0.32ms",
-      "participant": "artifacts"
+      "participant": "jonathanperis-lb-c-dcc6b89"
     }
   ],
   "run_id": "25972326760",
