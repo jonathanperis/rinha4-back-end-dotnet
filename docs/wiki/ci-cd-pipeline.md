@@ -27,8 +27,10 @@ Manual **Official-like Benchmark** runs can archive experiment reports too. Use
 `report_kind=experiment` for non-default scorer/config tests. The manual workflow
 currently exposes scorer choices `hybrid`, `bucket`, `ivf`, and `exact`; hybrid is
 the default candidate path. It also exposes IVF build/repair knobs, bucket AVX
-cutoff, optional compose override, `FD_RAW` fallback toggles, and repetition count
-for median-p99 screening.
+cutoff, optional compose override, and repetition count for median-p99 screening.
+The `docker-compose.fdpass.yml` override keeps fd-pass topology but sets
+`FD_RAW=0` so manual runs can compare the managed `Socket` fallback against the
+root compose raw-fd default.
 
 Manual contention knobs:
 
