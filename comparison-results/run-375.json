@@ -1,0 +1,53 @@
+{
+  "event_name": "push",
+  "head_sha": "78170fd338d9b22cb085ea226c67dff5b7db2e6b",
+  "results": [
+    {
+      "artifact": "rinha-benchmark-fksegundo-rust-375",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "fksegundo-rust"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathanperis-375",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathanperis"
+    },
+    {
+      "artifact": "rinha-benchmark-macedot-375",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.34ms",
+      "participant": "macedot"
+    },
+    {
+      "artifact": "rinha-benchmark-rafaelcoelhox-375",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "rafaelcoelhox"
+    },
+    {
+      "artifact": "rinha-benchmark-ronieneubauer-rinha2026-375",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "ronieneubauer-rinha2026"
+    }
+  ],
+  "run_id": "25970276979",
+  "run_number": "375"
+}
