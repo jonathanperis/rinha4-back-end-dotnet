@@ -54,7 +54,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.45"
+          cpus: "0.42"
           memory: "160MB"
     ulimits:
       nofile:
@@ -123,7 +123,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.10"
+          cpus: "0.16"
           memory: "30MB"
     ulimits:
       nofile:
