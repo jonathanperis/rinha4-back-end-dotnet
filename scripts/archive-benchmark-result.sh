@@ -37,6 +37,7 @@ BENCHMARK_PROXY_MEMORY="${BENCHMARK_PROXY_MEMORY:-}"
 BENCHMARK_REPETITIONS="${BENCHMARK_REPETITIONS:-1}"
 SCORER_MODE="${SCORER_MODE:-}"
 ACCEPT_LOOPS="${ACCEPT_LOOPS:-}"
+FD_RAW="${FD_RAW:-}"
 MIN_WORKER_THREADS="${MIN_WORKER_THREADS:-}"
 MAX_WORKER_THREADS="${MAX_WORKER_THREADS:-}"
 MAX_IO_THREADS="${MAX_IO_THREADS:-}"
@@ -131,6 +132,7 @@ jq -n \
     --arg benchmark_repetitions "$BENCHMARK_REPETITIONS" \
     --arg scorer_mode "$SCORER_MODE" \
     --arg accept_loops "$ACCEPT_LOOPS" \
+    --arg fd_raw "$FD_RAW" \
     --arg min_worker_threads "$MIN_WORKER_THREADS" \
     --arg max_worker_threads "$MAX_WORKER_THREADS" \
     --arg max_io_threads "$MAX_IO_THREADS" \
@@ -186,6 +188,7 @@ jq -n \
                 ivf_repair_max_frauds: $ivf_repair_max_frauds,
                 scorer_mode: $scorer_mode,
                 accept_loops: $accept_loops,
+                fd_raw: $fd_raw,
                 min_worker_threads: $min_worker_threads,
                 max_worker_threads: $max_worker_threads,
                 max_io_threads: $max_io_threads,
@@ -227,6 +230,7 @@ for report in "$REPORTS_DIR"/${REPORT_PREFIX}-*.json; do
         ivf_scale: (.metadata.benchmark_config.ivf_scale // ""),
         ivf_fast_nprobe: (.metadata.benchmark_config.ivf_fast_nprobe // ""),
         ivf_full_nprobe: (.metadata.benchmark_config.ivf_full_nprobe // ""),
+        fd_raw: (.metadata.benchmark_config.fd_raw // ""),
         html_report: .metadata.html_report,
         p99: .result.p99,
         failure_rate: .result.scoring.failure_rate,
