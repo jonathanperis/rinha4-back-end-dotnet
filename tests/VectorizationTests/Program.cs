@@ -123,6 +123,40 @@ VectorizationTestRunner.Run("official-shape parser quantizes directly like legac
         VectorizationTestRunner.AssertEqualInt(expected[i], actual[i]);
 });
 
+VectorizationTestRunner.Run("official-shape parser quantizes null last transaction like legacy path", () =>
+{
+    ReadOnlySpan<byte> payload = """
+        {"id":"tx-null-last","transaction":{"amount":111.25,"installments":1,"requested_at":"2026-03-11T20:23:35Z"},"customer":{"avg_amount":222.50,"tx_count_24h":7,"known_merchants":["MERC-009"]},"merchant":{"id":"MERC-001","mcc":"7995","avg_amount":1234.50},"terminal":{"is_online":true,"card_present":false,"km_from_home":87.5},"last_transaction":null}
+        """u8;
+    Span<short> expected = stackalloc short[16];
+    Span<short> actual = stackalloc short[16];
+    double[] riskByCode = new double[10000];
+    bool[] knownByCode = new bool[10000];
+    riskByCode[7995] = 0.875;
+    knownByCode[7995] = true;
+
+    bool baseline = FraudScorer.TryParseAndQuantizeForTest(payload, expected, 1024, 10000.0, 12, 10.0, 525600, 20000, 500, 10000, riskByCode, knownByCode);
+    bool direct = FraudRequestParser.TryParseOfficialShapeAndQuantizeForTest(payload, actual, 1024, 10000.0, 12, 10.0, 525600, 20000, 500, 10000, riskByCode, knownByCode);
+
+    if (!baseline || !direct)
+        throw new InvalidOperationException("expected official-shape parser quantization to succeed with null last_transaction");
+    for (int i = 0; i < 16; i++)
+        VectorizationTestRunner.AssertEqualInt(expected[i], actual[i]);
+});
+
+VectorizationTestRunner.Run("official-shape parser rejects reordered top-level shape for fallback", () =>
+{
+    ReadOnlySpan<byte> reordered = """
+        {"transaction":{"amount":384.88,"installments":3,"requested_at":"2026-03-11T20:23:35Z"},"id":"tx-test","customer":{"avg_amount":769.76,"tx_count_24h":3,"known_merchants":["MERC-001"]},"merchant":{"id":"MERC-001","mcc":"5912","avg_amount":298.95},"terminal":{"is_online":false,"card_present":true,"km_from_home":13.7090520965},"last_transaction":null}
+        """u8;
+    Span<short> actual = stackalloc short[16];
+    double[] riskByCode = new double[10000];
+    bool[] knownByCode = new bool[10000];
+
+    if (FraudRequestParser.TryParseOfficialShapeAndQuantizeForTest(reordered, actual, 1024, 10000.0, 12, 10.0, 525600, 20000, 500, 10000, riskByCode, knownByCode))
+        throw new InvalidOperationException("expected exact-shape parser to reject reordered top-level fields");
+});
+
 VectorizationTestRunner.Run("loads exact index and counts top five fraud labels", () =>
 {
     string path = Path.Combine(Path.GetTempPath(), $"rinha-exact-test-{Guid.NewGuid():N}.bin");

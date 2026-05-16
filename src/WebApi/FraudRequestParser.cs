@@ -108,38 +108,37 @@ internal static class FraudRequestParser
         if (!TryStartObject(body, ref pos))
             return false;
 
-        bool first = true;
-        if (!TryReadExpectedProperty(body, ref pos, ref first, "id"u8) || !TrySkipValue(body, ref pos))
+        if (!TryReadExpectedProperty(body, ref pos, "id"u8, needsComma: false) || !TrySkipValue(body, ref pos))
             return false;
 
-        if (!TryReadExpectedProperty(body, ref pos, ref first, "transaction"u8))
+        if (!TryReadExpectedProperty(body, ref pos, "transaction"u8, needsComma: true))
             return false;
         if (!TryReadOfficialTransaction(body, ref pos, qv, scale, maxAmount, maxInstallments, out double amount, out int requestedSecondStamp))
             return false;
 
-        if (!TryReadExpectedProperty(body, ref pos, ref first, "customer"u8))
+        if (!TryReadExpectedProperty(body, ref pos, "customer"u8, needsComma: true))
             return false;
         if (!TryReadOfficialCustomer(body, ref pos, qv, scale, maxTxCount24h, out double customerAvgAmount, out int knownStart, out int knownLength))
             return false;
         qv[2] = QuantizeRounded(Clamp((amount / customerAvgAmount) / amountVsAvgRatio), scale);
 
-        if (!TryReadExpectedProperty(body, ref pos, ref first, "merchant"u8))
+        if (!TryReadExpectedProperty(body, ref pos, "merchant"u8, needsComma: true))
             return false;
         if (!TryReadOfficialMerchant(body, ref pos, qv, scale, maxMerchantAvgAmount, mccRisk, mccRiskKnown, out int merchantStart, out int merchantLength))
             return false;
         qv[11] = KnownMerchantArrayContains(body.Slice(knownStart, knownLength), body.Slice(merchantStart, merchantLength)) ? (short)0 : (short)scale;
 
-        if (!TryReadExpectedProperty(body, ref pos, ref first, "terminal"u8))
+        if (!TryReadExpectedProperty(body, ref pos, "terminal"u8, needsComma: true))
             return false;
         if (!TryReadOfficialTerminal(body, ref pos, qv, scale, maxKm))
             return false;
 
-        if (!TryReadExpectedProperty(body, ref pos, ref first, "last_transaction"u8))
+        if (!TryReadExpectedProperty(body, ref pos, "last_transaction"u8, needsComma: true))
             return false;
         if (!TryReadOfficialLastTransaction(body, ref pos, qv, scale, requestedSecondStamp, maxMinutes, maxKm))
             return false;
 
-        if (!TryReadObjectEnd(body, ref pos, ref first))
+        if (!TryReadObjectEnd(body, ref pos))
             return false;
 
         pos = SkipWhitespace(body, pos);
@@ -158,22 +157,21 @@ internal static class FraudRequestParser
         if (!TryStartObject(source, ref pos))
             return false;
 
-        bool first = true;
-        if (!TryReadExpectedProperty(source, ref pos, ref first, "amount"u8) || !TryReadDoubleValue(source, ref pos, out amount))
+        if (!TryReadExpectedProperty(source, ref pos, "amount"u8, needsComma: false) || !TryReadDoubleValue(source, ref pos, out amount))
             return false;
         qv[0] = QuantizeRounded(Clamp(amount / maxAmount), scale);
 
-        if (!TryReadExpectedProperty(source, ref pos, ref first, "installments"u8) || !TryReadIntValue(source, ref pos, out int installments))
+        if (!TryReadExpectedProperty(source, ref pos, "installments"u8, needsComma: true) || !TryReadIntValue(source, ref pos, out int installments))
             return false;
         qv[1] = QuantizeRounded(Clamp(installments / (double)maxInstallments), scale);
 
-        if (!TryReadExpectedProperty(source, ref pos, ref first, "requested_at"u8) || !TryReadStringValue(source, ref pos, out ReadOnlySpan<byte> requestedAt))
+        if (!TryReadExpectedProperty(source, ref pos, "requested_at"u8, needsComma: true) || !TryReadStringValue(source, ref pos, out ReadOnlySpan<byte> requestedAt))
             return false;
         FraudVectorizer.ParseIsoUtc(requestedAt, out int hour, out int dayOfWeek, out requestedSecondStamp);
         qv[3] = QuantizeRounded(hour / 23.0, scale);
         qv[4] = QuantizeRounded(dayOfWeek / 6.0, scale);
 
-        return TryReadObjectEnd(source, ref pos, ref first);
+        return TryReadObjectEnd(source, ref pos);
     }
 
     private static bool TryReadOfficialCustomer(ReadOnlySpan<byte> source, ref int pos, Span<short> qv, int scale, int maxTxCount24h, out double customerAvgAmount, out int knownStart, out int knownLength)
@@ -184,18 +182,17 @@ internal static class FraudRequestParser
         if (!TryStartObject(source, ref pos))
             return false;
 
-        bool first = true;
-        if (!TryReadExpectedProperty(source, ref pos, ref first, "avg_amount"u8) || !TryReadDoubleValue(source, ref pos, out customerAvgAmount))
+        if (!TryReadExpectedProperty(source, ref pos, "avg_amount"u8, needsComma: false) || !TryReadDoubleValue(source, ref pos, out customerAvgAmount))
             return false;
 
-        if (!TryReadExpectedProperty(source, ref pos, ref first, "tx_count_24h"u8) || !TryReadIntValue(source, ref pos, out int txCount24h))
+        if (!TryReadExpectedProperty(source, ref pos, "tx_count_24h"u8, needsComma: true) || !TryReadIntValue(source, ref pos, out int txCount24h))
             return false;
         qv[8] = QuantizeRounded(Clamp(txCount24h / (double)maxTxCount24h), scale);
 
-        if (!TryReadExpectedProperty(source, ref pos, ref first, "known_merchants"u8) || !TryReadArrayBounds(source, ref pos, out knownStart, out knownLength))
+        if (!TryReadExpectedProperty(source, ref pos, "known_merchants"u8, needsComma: true) || !TryReadArrayBounds(source, ref pos, out knownStart, out knownLength))
             return false;
 
-        return TryReadObjectEnd(source, ref pos, ref first);
+        return TryReadObjectEnd(source, ref pos);
     }
 
     private static bool TryReadOfficialMerchant(ReadOnlySpan<byte> source, ref int pos, Span<short> qv, int scale, int maxMerchantAvgAmount, double[] mccRisk, bool[] mccRiskKnown, out int merchantStart, out int merchantLength)
@@ -205,19 +202,18 @@ internal static class FraudRequestParser
         if (!TryStartObject(source, ref pos))
             return false;
 
-        bool first = true;
-        if (!TryReadExpectedProperty(source, ref pos, ref first, "id"u8) || !TryReadStringBounds(source, ref pos, out merchantStart, out merchantLength))
+        if (!TryReadExpectedProperty(source, ref pos, "id"u8, needsComma: false) || !TryReadStringBounds(source, ref pos, out merchantStart, out merchantLength))
             return false;
 
-        if (!TryReadExpectedProperty(source, ref pos, ref first, "mcc"u8) || !TryReadMccValue(source, ref pos, out int mccCode))
+        if (!TryReadExpectedProperty(source, ref pos, "mcc"u8, needsComma: true) || !TryReadMccValue(source, ref pos, out int mccCode))
             return false;
         qv[12] = QuantizeRounded(mccCode >= 0 && mccCode < mccRisk.Length && mccRiskKnown[mccCode] ? mccRisk[mccCode] : 0.5, scale);
 
-        if (!TryReadExpectedProperty(source, ref pos, ref first, "avg_amount"u8) || !TryReadDoubleValue(source, ref pos, out double merchantAvgAmount))
+        if (!TryReadExpectedProperty(source, ref pos, "avg_amount"u8, needsComma: true) || !TryReadDoubleValue(source, ref pos, out double merchantAvgAmount))
             return false;
         qv[13] = QuantizeRounded(Clamp(merchantAvgAmount / maxMerchantAvgAmount), scale);
 
-        return TryReadObjectEnd(source, ref pos, ref first);
+        return TryReadObjectEnd(source, ref pos);
     }
 
     private static bool TryReadOfficialTerminal(ReadOnlySpan<byte> source, ref int pos, Span<short> qv, int scale, int maxKm)
@@ -225,20 +221,19 @@ internal static class FraudRequestParser
         if (!TryStartObject(source, ref pos))
             return false;
 
-        bool first = true;
-        if (!TryReadExpectedProperty(source, ref pos, ref first, "is_online"u8) || !TryReadBoolValue(source, ref pos, out bool isOnline))
+        if (!TryReadExpectedProperty(source, ref pos, "is_online"u8, needsComma: false) || !TryReadBoolValue(source, ref pos, out bool isOnline))
             return false;
         qv[9] = isOnline ? (short)scale : (short)0;
 
-        if (!TryReadExpectedProperty(source, ref pos, ref first, "card_present"u8) || !TryReadBoolValue(source, ref pos, out bool cardPresent))
+        if (!TryReadExpectedProperty(source, ref pos, "card_present"u8, needsComma: true) || !TryReadBoolValue(source, ref pos, out bool cardPresent))
             return false;
         qv[10] = cardPresent ? (short)scale : (short)0;
 
-        if (!TryReadExpectedProperty(source, ref pos, ref first, "km_from_home"u8) || !TryReadDoubleValue(source, ref pos, out double kmFromHome))
+        if (!TryReadExpectedProperty(source, ref pos, "km_from_home"u8, needsComma: true) || !TryReadDoubleValue(source, ref pos, out double kmFromHome))
             return false;
         qv[7] = QuantizeRounded(Clamp(kmFromHome / maxKm), scale);
 
-        return TryReadObjectEnd(source, ref pos, ref first);
+        return TryReadObjectEnd(source, ref pos);
     }
 
     private static bool TryReadOfficialLastTransaction(ReadOnlySpan<byte> source, ref int pos, Span<short> qv, int scale, int requestedSecondStamp, int maxMinutes, int maxKm)
@@ -255,30 +250,54 @@ internal static class FraudRequestParser
         if (!TryStartObject(source, ref pos))
             return false;
 
-        bool first = true;
-        if (!TryReadExpectedProperty(source, ref pos, ref first, "timestamp"u8) || !TryReadStringValue(source, ref pos, out ReadOnlySpan<byte> timestamp))
+        if (!TryReadExpectedProperty(source, ref pos, "timestamp"u8, needsComma: false) || !TryReadStringValue(source, ref pos, out ReadOnlySpan<byte> timestamp))
             return false;
         FraudVectorizer.ParseIsoUtc(timestamp, out _, out _, out int lastSecondStamp);
         double minutes = (requestedSecondStamp - lastSecondStamp) / 60.0;
         qv[5] = QuantizeRounded(Clamp(minutes / maxMinutes), scale);
 
-        if (!TryReadExpectedProperty(source, ref pos, ref first, "km_from_current"u8) || !TryReadDoubleValue(source, ref pos, out double kmFromCurrent))
+        if (!TryReadExpectedProperty(source, ref pos, "km_from_current"u8, needsComma: true) || !TryReadDoubleValue(source, ref pos, out double kmFromCurrent))
             return false;
         qv[6] = QuantizeRounded(Clamp(kmFromCurrent / maxKm), scale);
 
-        return TryReadObjectEnd(source, ref pos, ref first);
+        return TryReadObjectEnd(source, ref pos);
     }
 
-    private static bool TryReadExpectedProperty(ReadOnlySpan<byte> source, ref int pos, ref bool first, ReadOnlySpan<byte> expected)
+    private static bool TryReadExpectedProperty(ReadOnlySpan<byte> source, ref int pos, ReadOnlySpan<byte> expected, bool needsComma)
     {
-        return TryReadNextProperty(source, ref pos, ref first, out ReadOnlySpan<byte> property, out bool done) &&
-               !done &&
-               property.SequenceEqual(expected);
+        pos = SkipWhitespace(source, pos);
+        if (needsComma)
+        {
+            if (pos >= source.Length || source[pos] != (byte)',')
+                return false;
+            pos = SkipWhitespace(source, pos + 1);
+        }
+
+        if (pos >= source.Length || source[pos] != (byte)'"')
+            return false;
+        pos++;
+
+        if (pos + expected.Length + 1 >= source.Length || !source.Slice(pos, expected.Length).SequenceEqual(expected))
+            return false;
+        pos += expected.Length;
+
+        if (source[pos] != (byte)'"')
+            return false;
+        pos = SkipWhitespace(source, pos + 1);
+
+        if (pos >= source.Length || source[pos] != (byte)':')
+            return false;
+        pos++;
+        return true;
     }
 
-    private static bool TryReadObjectEnd(ReadOnlySpan<byte> source, ref int pos, ref bool first)
+    private static bool TryReadObjectEnd(ReadOnlySpan<byte> source, ref int pos)
     {
-        return TryReadNextProperty(source, ref pos, ref first, out _, out bool done) && done;
+        pos = SkipWhitespace(source, pos);
+        if (pos >= source.Length || source[pos] != (byte)'}')
+            return false;
+        pos++;
+        return true;
     }
 
     private static double Clamp(double value) => value < 0.0 ? 0.0 : (value > 1.0 ? 1.0 : value);
