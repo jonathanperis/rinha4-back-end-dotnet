@@ -4,18 +4,6 @@ services:
   webapi1: &webapi
     image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-7e742aa304825db89735fe3ca0065239a479014c
     pull_policy: always
-    build:
-      context: .
-      dockerfile: ./src/WebApi/Dockerfile
-      args:
-        AOT: true
-        EXTRA_OPTIMIZE: true
-        BUILD_CONFIGURATION: Release
-        EXACT_MAX_REFS: ${EXACT_MAX_REFS:-100000}
-        IVF_CLUSTERS: ${IVF_CLUSTERS:-512}
-        IVF_TRAIN_SAMPLE: ${IVF_TRAIN_SAMPLE:-65536}
-        IVF_ITERATIONS: ${IVF_ITERATIONS:-6}
-        IVF_SCALE: ${IVF_SCALE:-10000}
     container_name: webapi-1
     cpuset: "0"
     security_opt:
