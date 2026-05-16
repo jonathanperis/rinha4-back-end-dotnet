@@ -11,8 +11,8 @@ Goal: official-valid, low-p99 backend under `1 CPU / 350 MB`, with correctness p
 - raw socket HTTP/1 server, not ASP.NET Core
 - manual request parsing with `Utf8JsonReader`
 - prebuilt HTTP responses for fraud decisions
-- build-time conversion from challenge JSON resources to compact IVF binary data
-- int16 IVF search with bounded repair for correctness-sensitive decisions
+- build-time conversion from challenge JSON resources to compact bucket and IVF binary data
+- hybrid scorer: bucket fast path first, IVF fallback for correctness-sensitive decisions
 - GitHub Actions benchmark archive and GitHub Pages report history
 
 ## Contract
@@ -29,6 +29,7 @@ Runtime shape:
 - Docker bridge network
 - public `linux/amd64` images for submission
 - total limits <= `1 CPU / 350 MB`
+- current compose split: `0.45 CPU / 160 MB` per API and `0.10 CPU / 30 MB` for the load balancer
 - load balancer only distributes traffic; it does not inspect fraud payloads
 
 ## Architecture
@@ -52,7 +53,7 @@ Hot path goals:
 - minimal JSON scanning
 - prebuilt response bytes
 - compact int16 vector/index layout
-- correctness-first repair/fallback around approximate nearest-neighbor search
+- fast bucket decisions with IVF fallback/repair when accuracy needs it
 
 ## Data and classifier
 
@@ -62,7 +63,7 @@ Challenge data starts in `data/`:
 - `normalization.json`
 - `mcc_risk.json`
 
-`src/DataConverter` builds `references.ivf.bin` during the Docker image build. Runtime containers use that binary directly; they do not download or transform data before serving.
+`src/DataConverter` builds runtime binary data during the Docker image build. The current hybrid runtime loads `references.bucket.bin` for the bucket fast path and `references.ivf.bin` for fallback search. `references.bin` is still generated for the explicit exact diagnostic mode used by tests and manual benchmark experiments.
 
 The request is normalized into the official 14 fraud-vector dimensions, then classified by top-5 nearest reference labels. The response is:
 
@@ -72,23 +73,34 @@ The request is normalized into the official 14 fraud-vector dimensions, then cla
 
 ## Local
 
-Generate IVF data:
+Restore and build:
 
 ```sh
-dotnet run --project src/DataConverter/DataConverter.csproj -- data/
+dotnet restore src/WebApi/WebApi.csproj
+dotnet build src/WebApi/WebApi.csproj -c Release --no-restore
+```
+
+Generate runtime data:
+
+```sh
+dotnet run --project src/DataConverter/DataConverter.csproj -c Release -- data/
 ```
 
 Run tests:
 
 ```sh
-dotnet run --project tests/VectorizationTests/VectorizationTests.csproj --no-restore
+dotnet restore tests/VectorizationTests/VectorizationTests.csproj
+dotnet run --project tests/VectorizationTests/VectorizationTests.csproj -c Release --no-restore
 ```
 
 Run one API locally over TCP:
 
 ```sh
-DATA_DIR=data IVF_PATH=data/references.ivf.bin \
-  dotnet run --project src/WebApi/WebApi.csproj
+DATA_DIR=data \
+IVF_PATH=data/references.ivf.bin \
+BUCKET_PATH=data/references.bucket.bin \
+SCORER_MODE=hybrid \
+  dotnet run --project src/WebApi/WebApi.csproj -c Release --no-restore
 ```
 
 Run the compose stack:
@@ -97,6 +109,8 @@ Run the compose stack:
 docker compose up --build
 curl -i http://localhost:9999/ready
 ```
+
+Full compose and benchmark validation require Docker daemon access. If local Docker is unavailable, use the GitHub Actions benchmark workflow for official-like checks.
 
 Smoke request:
 

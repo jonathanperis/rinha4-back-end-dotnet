@@ -72,7 +72,7 @@ const detectionScore = Number(result.scoring.detection_score.value).toLocaleStri
   <div class="scenario-card">
     <h3>Fraud Decision</h3>
     <div class="endpoint"><span class="method post">POST</span> /fraud-score</div>
-    <p>Manual JSON parsing extracts only the required fields, vectorizes into 14 dimensions, scores with rounded int16 IVF, and writes one prebuilt HTTP response.</p>
+    <p>Manual JSON parsing extracts only the required fields, vectorizes into 14 dimensions, tries the bucket fast path, falls back to rounded int16 IVF when needed, and writes one prebuilt HTTP response.</p>
     <div class="progress-container">
       <div class="progress-label danger-text">p99 gap [|||||...............] active</div>
     </div>

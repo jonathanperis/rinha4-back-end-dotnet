@@ -14,25 +14,25 @@ Main build flow:
 The automatic main-branch benchmark runs against the immutable image tag built in
 the same workflow, not a locally rebuilt image. The canonical submission/runtime
 shape is root `docker-compose.yml`: `webapi1` on cpuset `0`, `webapi2` on `1`,
-and standalone `lb` on `2,3`, while Docker resource limits remain active. Manual
-runs can add a one-core overlay when diagnosing official mismatch, but that
-stress mode is stricter than the candidate tracking run.
+and standalone `lb` on `2,3`, while Docker resource limits remain active. The
+current default stack uses `SCORER_MODE=hybrid`, API CPU quotas of `0.45` each,
+and proxy CPU quota `0.10`.
 
 The build workflow also archives an `official-calibrated` run after the normal
-candidate run. That lane can override service CPU quotas to screen splits such as
-`api=0.40` and `proxy=0.20`. It is a prediction/screening signal only; the
-candidate/submission compose remains the source for official testing.
+candidate run. That lane can override service CPU quotas to screen alternative
+splits. It is a prediction/screening signal only; the candidate/submission
+compose remains the source for official testing.
 
-Manual **Official-like Benchmark** runs can archive experiment reports too. For
-IVF, dispatch with `report_kind=experiment`, `IVF_FAST_NPROBE=1`,
-`IVF_FULL_NPROBE=1`, bbox repair on, `IVF_BOUNDARY_FULL=false`, repair fraud
-range `0..5`, and the `IVF_SCALE` value under test.
+Manual **Official-like Benchmark** runs can archive experiment reports too. Use
+`report_kind=experiment` for non-default scorer/config tests. The manual workflow
+currently exposes scorer choices `hybrid`, `bucket`, `ivf`, and `exact`; hybrid is
+the default candidate path. It also exposes IVF build/repair knobs, bucket AVX
+cutoff, optional compose override `docker-compose.fdpass.yml`, and repetition
+count for median-p99 screening.
 
 Manual contention knobs:
 
-- `benchmark_stack_cpuset=0`: pin the standalone LB and WebApi containers to one host CPU.
-- `benchmark_k6_cpuset=0`: also pin k6 to that CPU. Use only when diagnosing
-  host contention; it is intentionally harsher than normal candidate tracking.
+- `benchmark_api_cpuset` and `benchmark_proxy_cpuset`: optionally override Docker cpusets for API or proxy containers.
 - `benchmark_api_cpus` and `benchmark_proxy_cpus`: override service CPU quotas
   for calibrated or split-screening runs, for example `0.40` and `0.20`.
 - `benchmark_repetitions`: run k6 multiple times and archive the median-p99
