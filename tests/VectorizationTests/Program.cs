@@ -80,6 +80,28 @@ VectorizationTestRunner.Run("parses full official payload shape", () =>
     VectorizationTestRunner.AssertEqual(18.8626479774, input.KmFromCurrent);
 });
 
+VectorizationTestRunner.Run("direct parse quantization matches legacy request quantization", () =>
+{
+    ReadOnlySpan<byte> payload = """
+        {"id":"tx-test","transaction":{"amount":384.88,"installments":3,"requested_at":"2026-03-11T20:23:35Z"},"customer":{"avg_amount":769.76,"tx_count_24h":3,"known_merchants":["MERC-009","MERC-001","MERC-001"]},"merchant":{"id":"MERC-001","mcc":"5912","avg_amount":298.95},"terminal":{"is_online":false,"card_present":true,"km_from_home":13.7090520965},"last_transaction":{"timestamp":"2026-03-11T14:58:35Z","km_from_current":18.8626479774}}
+        """u8;
+    FraudInput input = FraudRequestParser.Parse(payload);
+    Span<short> expected = stackalloc short[16];
+    Span<short> actual = stackalloc short[16];
+    double[] riskByCode = new double[10000];
+    bool[] knownByCode = new bool[10000];
+    riskByCode[5912] = 0.625;
+    knownByCode[5912] = true;
+
+    FraudScorer.QuantizeRequestForTest(input, expected, 1024, 10000.0, 12, 10.0, 525600, 20000, 500, 10000, riskByCode, knownByCode);
+    bool ok = FraudScorer.TryParseAndQuantizeForTest(payload, actual, 1024, 10000.0, 12, 10.0, 525600, 20000, 500, 10000, riskByCode, knownByCode);
+
+    if (!ok)
+        throw new InvalidOperationException("expected direct parser quantization to succeed");
+    for (int i = 0; i < 16; i++)
+        VectorizationTestRunner.AssertEqualInt(expected[i], actual[i]);
+});
+
 VectorizationTestRunner.Run("loads exact index and counts top five fraud labels", () =>
 {
     string path = Path.Combine(Path.GetTempPath(), $"rinha-exact-test-{Guid.NewGuid():N}.bin");

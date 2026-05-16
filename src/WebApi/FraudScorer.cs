@@ -26,6 +26,8 @@ internal sealed class FraudScorer
     private readonly BucketIndex? bucketIndex;
     private readonly BucketSearchOptions bucketOptions;
     private readonly ScorerMode mode;
+    private readonly int scale;
+    private readonly bool submittedHybridFastPath;
 
     private FraudScorer(
         NormalizationConstants normalization,
@@ -52,6 +54,14 @@ internal sealed class FraudScorer
         this.bucketIndex = bucketIndex;
         this.bucketOptions = bucketOptions;
         this.mode = mode;
+        scale = mode switch
+        {
+            ScorerMode.Exact => exactIndex!.Scale,
+            ScorerMode.Ivf => ivfIndex!.Scale,
+            ScorerMode.Hybrid => bucketIndex!.Scale,
+            _ => bucketIndex!.Scale
+        };
+        submittedHybridFastPath = mode == ScorerMode.Hybrid && !string.Equals(Environment.GetEnvironmentVariable("SUBMITTED_FAST_PATH"), "0", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -91,27 +101,23 @@ internal sealed class FraudScorer
     [SkipLocalsInit]
     public ReadOnlyMemory<byte> ScoreFraudRequest(ReadOnlySpan<byte> body)
     {
-        FraudInput req;
+        Span<short> qv = stackalloc short[PaddedDims];
         try
         {
-            req = FraudRequestParser.Parse(body);
+            QuantizeBody(body, qv);
         }
         catch (JsonException)
         {
             return HttpResponses.BadRequest;
         }
 
-        Span<short> qv = stackalloc short[PaddedDims];
-        int scale = mode switch
+        if (submittedHybridFastPath)
         {
-            ScorerMode.Exact => exactIndex!.Scale,
-            ScorerMode.Ivf => ivfIndex!.Scale,
-            ScorerMode.Hybrid => bucketIndex!.Scale,
-            _ => bucketIndex!.Scale
-        };
-        QuantizeRequest(req, qv, scale);
-        qv[Dims] = 0;
-        qv[Dims + 1] = 0;
+            byte fastFrauds = bucketIndex!.TryFastPathFraudCount(qv, bucketOptions, out byte bucketFrauds)
+                ? bucketFrauds
+                : ivfIndex!.FraudCount(qv, ivfOptions);
+            return HttpResponses.FraudScores[fastFrauds];
+        }
 
         byte frauds = mode switch
         {
@@ -123,7 +129,79 @@ internal sealed class FraudScorer
         return HttpResponses.FraudScores[frauds];
     }
 
+    private void QuantizeBody(ReadOnlySpan<byte> body, Span<short> qv)
+    {
+        FraudInput req = FraudRequestParser.Parse(body);
+        QuantizeRequest(req, qv, scale);
+        qv[Dims] = 0;
+        qv[Dims + 1] = 0;
+    }
+
     private void QuantizeRequest(FraudInput req, Span<short> qv, int scale)
+    {
+        QuantizeRequestCore(req, qv, scale, maxAmount, maxInstallments, amountVsAvgRatio, maxMinutes, maxKm, maxTxCount24h, maxMerchantAvgAmount, mccRisk, mccRiskKnown);
+    }
+
+    internal static bool TryParseAndQuantizeForTest(
+        ReadOnlySpan<byte> body,
+        Span<short> qv,
+        int scale,
+        double maxAmount,
+        int maxInstallments,
+        double amountVsAvgRatio,
+        int maxMinutes,
+        int maxKm,
+        int maxTxCount24h,
+        int maxMerchantAvgAmount,
+        double[] mccRisk,
+        bool[] mccRiskKnown)
+    {
+        try
+        {
+            FraudInput req = FraudRequestParser.Parse(body);
+            QuantizeRequestCore(req, qv, scale, maxAmount, maxInstallments, amountVsAvgRatio, maxMinutes, maxKm, maxTxCount24h, maxMerchantAvgAmount, mccRisk, mccRiskKnown);
+            qv[Dims] = 0;
+            qv[Dims + 1] = 0;
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    internal static void QuantizeRequestForTest(
+        FraudInput req,
+        Span<short> qv,
+        int scale,
+        double maxAmount,
+        int maxInstallments,
+        double amountVsAvgRatio,
+        int maxMinutes,
+        int maxKm,
+        int maxTxCount24h,
+        int maxMerchantAvgAmount,
+        double[] mccRisk,
+        bool[] mccRiskKnown)
+    {
+        QuantizeRequestCore(req, qv, scale, maxAmount, maxInstallments, amountVsAvgRatio, maxMinutes, maxKm, maxTxCount24h, maxMerchantAvgAmount, mccRisk, mccRiskKnown);
+        qv[Dims] = 0;
+        qv[Dims + 1] = 0;
+    }
+
+    private static void QuantizeRequestCore(
+        FraudInput req,
+        Span<short> qv,
+        int scale,
+        double maxAmount,
+        int maxInstallments,
+        double amountVsAvgRatio,
+        int maxMinutes,
+        int maxKm,
+        int maxTxCount24h,
+        int maxMerchantAvgAmount,
+        double[] mccRisk,
+        bool[] mccRiskKnown)
     {
         qv[0] = QuantizeRounded(Clamp(req.Amount / maxAmount), scale);
         qv[1] = QuantizeRounded(Clamp(req.Installments / (double)maxInstallments), scale);
