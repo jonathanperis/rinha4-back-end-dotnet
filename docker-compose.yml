@@ -2,7 +2,7 @@ name: rinha-2026-jonathanperis
 
 services:
   webapi1: &webapi
-    image: ${WEBAPI_IMAGE:-ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-a166a2375254bbe00e80207f56a37c50774e9b63}
+    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-abee80dce83e58a0c1381be6eb75bafd196157c7
     pull_policy: always
     platform: linux/amd64
     cpuset: "0"
@@ -54,7 +54,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.42"
+          cpus: "0.45"
           memory: "160MB"
     ulimits:
       nofile:
@@ -123,7 +123,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.16"
+          cpus: "0.10"
           memory: "30MB"
     ulimits:
       nofile:
