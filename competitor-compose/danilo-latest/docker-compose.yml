@@ -1,7 +1,8 @@
 services:
   lb:
-    image: ghcr.io/daniloitagyba/rinha-2026-dotnet-tcp:8a8954d87dc4fa0b9e784eed2788cc8754888be3
+    image: ghcr.io/daniloitagyba/rinha-2026-dotnet:latest
     platform: linux/amd64
+    cpuset: "0,2"
     entrypoint: ["rinha-lb"]
     environment:
       LB_MODE: fdpass
@@ -25,8 +26,9 @@ services:
           memory: "32MB"
 
   api1:
-    image: ghcr.io/daniloitagyba/rinha-2026-dotnet-tcp:8a8954d87dc4fa0b9e784eed2788cc8754888be3
+    image: ghcr.io/daniloitagyba/rinha-2026-dotnet:latest
     platform: linux/amd64
+    cpuset: "0,1"
     environment:
       BIND_ADDR: fd:/sockets/api1.sock.ctrl
       INDEX_PATH: /app/data/references.idx
@@ -70,8 +72,9 @@ services:
           memory: "156MB"
 
   api2:
-    image: ghcr.io/daniloitagyba/rinha-2026-dotnet-tcp:8a8954d87dc4fa0b9e784eed2788cc8754888be3
+    image: ghcr.io/daniloitagyba/rinha-2026-dotnet:latest
     platform: linux/amd64
+    cpuset: "2,3"
     environment:
       BIND_ADDR: fd:/sockets/api2.sock.ctrl
       INDEX_PATH: /app/data/references.idx
