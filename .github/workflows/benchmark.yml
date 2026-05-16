@@ -1,6 +1,11 @@
 name: Competitor Benchmark
 
 on:
+  push:
+    branches:
+      - comparison
+    paths-ignore:
+      - 'comparison-results/**'
   workflow_dispatch:
     inputs:
       compose_file:
@@ -11,15 +16,17 @@ on:
         options:
           - all-comparison
           - competitor-compose/jonathanperis/docker-compose.yml
-          - competitor-compose/zan-latest/docker-compose.yml
-          - competitor-compose/danilo-latest/docker-compose.yml
-          - competitor-compose/pedro-latest/docker-compose.yml
           - competitor-compose/fksegundo-rust/docker-compose.yml
           - competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
-          - competitor-compose/jordao-latest/docker-compose.yml
-          - competitor-compose/hanake0-latest/docker-compose.yml
+          - competitor-compose/macedot/docker-compose.yml
+          - competitor-compose/rafaelcoelhox/docker-compose.yml
+          # Dormant comparison targets preserved for future re-enable:
+          # - competitor-compose/silent-index/docker-compose.yml
+          # - competitor-compose/steixeira93/docker-compose.yml
+          # - competitor-compose/hvini/docker-compose.yml
+          # - competitor-compose/luan-latest/docker-compose.yml
       official_ref:
-        description: Rinha official repo ref to clone for test/test.js and test-data.json
+        description: Rinha official repo ref
         required: true
         default: main
       k6_image:
@@ -31,7 +38,7 @@ on:
         required: false
         default: ""
       benchmark_repetitions:
-        description: Number of k6 repetitions; median p99 is selected when >1
+        description: Number of k6 repetitions
         required: true
         default: "1"
 
@@ -39,144 +46,62 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  select-participants:
-    name: Select comparison participants
-    runs-on: ubuntu-latest
-    outputs:
-      participants: ${{ steps.participants.outputs.participants }}
-    steps:
-      - id: participants
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          # Cost-control policy for all-comparison:
-          # - Always run Jonathan.
-          # - Prefer the current top global competitors when their official preview
-          #   ranking entries are ahead of us.
-          # - Disabled/older competitors remain selectable explicitly via workflow input.
-          python3 - <<'PY' >> "$GITHUB_OUTPUT"
-          import json
-          import sys
-          import urllib.request
-
-          selected = "${{ inputs.compose_file }}"
-          participants = {
-              "jonathanperis": {
-                  "name": "jonathanperis",
-                  "compose_file": "competitor-compose/jonathanperis/docker-compose.yml",
-                  "repo": "https://github.com/jonathanperis/rinha4-back-end-dotnet",
-              },
-              "danilo-latest": {
-                  "name": "danilo-latest",
-                  "compose_file": "competitor-compose/danilo-latest/docker-compose.yml",
-                  "repo": "https://github.com/daniloitagyba/rinha-2026-dotnet",
-              },
-              "pedro-latest": {
-                  "name": "pedro-latest",
-                  "compose_file": "competitor-compose/pedro-latest/docker-compose.yml",
-                  "repo": "https://github.com/pedrosakuma/rinha-backend-2026",
-              },
-              "fksegundo-rust": {
-                  "name": "fksegundo-rust",
-                  "compose_file": "competitor-compose/fksegundo-rust/docker-compose.yml",
-                  "repo": "https://github.com/fksegundo/rinha-rust",
-              },
-              "ronieneubauer-rinha2026": {
-                  "name": "ronieneubauer-rinha2026",
-                  "compose_file": "competitor-compose/ronieneubauer-rinha2026/docker-compose.yml",
-                  "repo": "https://github.com/RonieNeubauer/rinha2026",
-              },
-              "jordao-latest": {
-                  "name": "jordao-latest",
-                  "compose_file": "competitor-compose/jordao-latest/docker-compose.yml",
-                  "repo": "https://github.com/JordaoGustavo/rinha-backend-2026",
-              },
-              "zan-latest": {
-                  "name": "zan-latest",
-                  "compose_file": "competitor-compose/zan-latest/docker-compose.yml",
-                  "repo": "",
-              },
-              "hanake0-latest": {
-                  "name": "hanake0-latest",
-                  "compose_file": "competitor-compose/hanake0-latest/docker-compose.yml",
-                  "repo": "",
-              },
-          }
-          by_compose = {v["compose_file"]: v for v in participants.values()}
-
-          def emit(rows):
-              print("participants=" + json.dumps(rows, separators=(",", ":")))
-
-          if selected != "all-comparison":
-              row = by_compose.get(selected)
-              if row is None:
-                  print(f"Unsupported compose_file={selected}", file=sys.stderr)
-                  sys.exit(1)
-              emit([{"name": row["name"], "compose_file": row["compose_file"]}])
-              sys.exit(0)
-
-          # Keep the two user-requested top-global competitors pinned in the
-          # default comparison lane. The official leaderboard is volatile, and
-          # changing all-comparison participants mid-investigation makes CI-vs-CI
-          # evidence hard to compare.
-          targets = ["fksegundo-rust", "ronieneubauer-rinha2026"]
-          chosen = [participants["jonathanperis"]] + [participants[key] for key in targets]
-          emit([{"name": row["name"], "compose_file": row["compose_file"]} for row in chosen])
-          PY
-
   benchmark:
     name: ${{ matrix.participant.name }} benchmark
-    needs: select-participants
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
       fail-fast: false
-      max-parallel: 4
+      max-parallel: 2
       matrix:
-        participant: ${{ fromJSON(needs.select-participants.outputs.participants) }}
+        participant:
+          # Active set: Jonathan .NET plus currently tracked top/global competitor
+          # references and the prior comparison set.
+          # Keep the broader refreshed competitor configs dormant unless the
+          # user explicitly asks for a full field round.
+          - name: jonathanperis
+            compose_file: competitor-compose/jonathanperis/docker-compose.yml
+          - name: fksegundo-rust
+            compose_file: competitor-compose/fksegundo-rust/docker-compose.yml
+          - name: ronieneubauer-rinha2026
+            compose_file: competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
+          - name: macedot
+            compose_file: competitor-compose/macedot/docker-compose.yml
+          - name: rafaelcoelhox
+            compose_file: competitor-compose/rafaelcoelhox/docker-compose.yml
+          # Dormant comparison targets preserved for future re-enable:
+          # - name: silent-index
+          #   compose_file: competitor-compose/silent-index/docker-compose.yml
+          # - name: steixeira93
+          #   compose_file: competitor-compose/steixeira93/docker-compose.yml
+          # - name: hvini
+          #   compose_file: competitor-compose/hvini/docker-compose.yml
+          # - name: luan-latest
+          #   compose_file: competitor-compose/luan-latest/docker-compose.yml
 
     permissions:
       contents: read
 
     steps:
       - name: Checkout
-        if: ${{ inputs.compose_file == matrix.participant.compose_file || inputs.compose_file == 'all-comparison' }}
+        if: ${{ github.event_name == 'push' || inputs.compose_file == matrix.participant.compose_file || inputs.compose_file == 'all-comparison' }}
         uses: actions/checkout@v6
 
-      - name: Show runner capacity
-        if: ${{ inputs.compose_file == matrix.participant.compose_file || inputs.compose_file == 'all-comparison' }}
-        run: |
-          uname -a
-          nproc
-          free -h
-          docker version
-          docker compose version
-
       - name: Run benchmark
-        if: ${{ inputs.compose_file == matrix.participant.compose_file || inputs.compose_file == 'all-comparison' }}
+        if: ${{ github.event_name == 'push' || inputs.compose_file == matrix.participant.compose_file || inputs.compose_file == 'all-comparison' }}
         env:
           COMPOSE_FILE: ${{ matrix.participant.compose_file }}
-          OFFICIAL_REF: ${{ inputs.official_ref }}
-          K6_IMAGE: ${{ inputs.k6_image }}
+          OFFICIAL_REF: ${{ inputs.official_ref || 'main' }}
+          K6_IMAGE: ${{ inputs.k6_image || 'grafana/k6:latest' }}
           WEBAPI_IMAGE: ${{ matrix.participant.name == 'jonathanperis' && inputs.webapi_image || '' }}
-          BENCHMARK_PULL_IMAGE: "true"
-          BENCHMARK_NO_BUILD: "true"
-          BENCHMARK_STANDALONE_COMPOSE: "true"
-          BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
+          BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions || '1' }}
           RESULTS_DIR: benchmark-results-${{ matrix.participant.name }}
         run: |
           set -euo pipefail
-
           OFFICIAL_REPO="https://github.com/zanfranceschi/rinha-de-backend-2026.git"
           mkdir -p "$RESULTS_DIR"
           rm -rf "$RESULTS_DIR/official"
-
-          if ! [[ "$BENCHMARK_REPETITIONS" =~ ^[0-9]+$ ]] || [[ "$BENCHMARK_REPETITIONS" -lt 1 ]]; then
-            echo "BENCHMARK_REPETITIONS must be a positive integer" >&2
-            exit 1
-          fi
-
+          git clone --depth 1 --branch "$OFFICIAL_REF" "$OFFICIAL_REPO" "$RESULTS_DIR/official"
           compose_args=(--compatibility -f "$COMPOSE_FILE")
 
           cleanup() {
@@ -185,22 +110,10 @@ jobs:
           }
           trap cleanup EXIT
 
-          echo "==> Fetching official Rinha test"
-          git clone --depth 1 --branch "$OFFICIAL_REF" "$OFFICIAL_REPO" "$RESULTS_DIR/official"
-
-          echo "==> Pulling published images"
           docker compose "${compose_args[@]}" pull
-
-          echo "==> Starting stack"
-          if [[ -n "${WEBAPI_IMAGE:-}" ]]; then
-            echo "Using WEBAPI_IMAGE=$WEBAPI_IMAGE"
-          fi
           docker compose "${compose_args[@]}" up -d --no-build
-
-          echo "==> Waiting for /ready"
           for attempt in {1..20}; do
             if curl -fsS http://localhost:9999/ready > /dev/null 2>&1; then
-              echo "Ready after attempt $attempt"
               break
             fi
             if [[ "$attempt" == "20" ]]; then
@@ -210,11 +123,9 @@ jobs:
             sleep 3
           done
 
-          echo "==> Running official k6 benchmark"
           chmod -R a+rwX "$RESULTS_DIR/official"
           repeat_files=()
           for repetition in $(seq 1 "$BENCHMARK_REPETITIONS"); do
-            echo "==> k6 repetition $repetition/$BENCHMARK_REPETITIONS"
             rm -f "$RESULTS_DIR/official/test/results.json" "$RESULTS_DIR/official/test/k6-report.html"
             docker run --rm \
               --network host \
@@ -226,7 +137,6 @@ jobs:
               -v "$PWD/$RESULTS_DIR/official:/official" \
               -w /official \
               "$K6_IMAGE" run test/test.js
-
             result_file="$RESULTS_DIR/results-repetition-$repetition.json"
             cp "$RESULTS_DIR/official/test/results.json" "$result_file"
             repeat_files+=("$result_file")
@@ -235,44 +145,84 @@ jobs:
             fi
           done
 
-          if [[ "$BENCHMARK_REPETITIONS" -eq 1 ]]; then
-            cp "${repeat_files[0]}" "$RESULTS_DIR/results.json"
-            if [[ -f "$RESULTS_DIR/k6-report-repetition-1.html" ]]; then
-              cp "$RESULTS_DIR/k6-report-repetition-1.html" "$RESULTS_DIR/k6-report.html"
-            fi
-          else
-            selected_repetition="$(jq -s '
-              to_entries
-              | sort_by((.value.p99 | sub("ms"; "") | tonumber))
-              | .[((length - 1) / 2 | floor)].key + 1
-            ' "${repeat_files[@]}")"
-            cp "$RESULTS_DIR/results-repetition-$selected_repetition.json" "$RESULTS_DIR/results.json"
-            if [[ -f "$RESULTS_DIR/k6-report-repetition-$selected_repetition.html" ]]; then
-              cp "$RESULTS_DIR/k6-report-repetition-$selected_repetition.html" "$RESULTS_DIR/k6-report.html"
-            fi
-            jq -s --argjson selected_repetition "$selected_repetition" '{
-              repetitions: length,
-              selected: "median_by_p99",
-              selected_repetition: $selected_repetition,
-              p99_ms: (map(.p99 | sub("ms"; "") | tonumber) | sort | {min: .[0], median: .[((length - 1) / 2 | floor)], max: .[-1]}),
-              final_score: (map(.scoring.final_score) | sort | {min: .[0], median: .[((length - 1) / 2 | floor)], max: .[-1]}),
-              failure_rate: map(.scoring.failure_rate)
-            }' "${repeat_files[@]}" > "$RESULTS_DIR/repetition-summary.json"
-          fi
-
+          cp "${repeat_files[0]}" "$RESULTS_DIR/results.json"
           jq . "$RESULTS_DIR/results.json"
 
       - name: Upload benchmark artifacts
-        if: ${{ always() && (inputs.compose_file == matrix.participant.compose_file || inputs.compose_file == 'all-comparison') }}
+        if: ${{ always() && (github.event_name == 'push' || inputs.compose_file == matrix.participant.compose_file || inputs.compose_file == 'all-comparison') }}
         uses: actions/upload-artifact@v7
         with:
           name: rinha-benchmark-${{ matrix.participant.name }}-${{ github.run_number }}
           path: |
             benchmark-results-${{ matrix.participant.name }}/results.json
-            benchmark-results-${{ matrix.participant.name }}/k6-report.html
-            benchmark-results-${{ matrix.participant.name }}/k6-report-repetition-*.html
             benchmark-results-${{ matrix.participant.name }}/results-repetition-*.json
-            benchmark-results-${{ matrix.participant.name }}/repetition-summary.json
+            benchmark-results-${{ matrix.participant.name }}/k6-report-*.html
             benchmark-results-${{ matrix.participant.name }}/docker-compose.log
-            benchmark-results-${{ matrix.participant.name }}/docker-state-*.txt
           if-no-files-found: ignore
+
+  summarize:
+    name: summarize comparison results
+    runs-on: ubuntu-latest
+    needs: benchmark
+    if: ${{ always() }}
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Checkout comparison branch
+        uses: actions/checkout@v6
+        with:
+          ref: comparison
+
+      - name: Download benchmark artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: comparison-results/artifacts
+
+      - name: Write summary JSON
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, statistics
+          root = pathlib.Path('comparison-results/artifacts')
+          rows = []
+          for p in sorted(root.glob('**/results.json')):
+              try:
+                  d = json.load(open(p))
+              except Exception:
+                  continue
+              r = d.get('result') or d
+              sc = r.get('scoring') or {}
+              bd = sc.get('breakdown') or {}
+              artifact = p.parent.name
+              name = artifact.removeprefix('rinha-benchmark-').rsplit('-', 1)[0]
+              rows.append({
+                  'participant': name,
+                  'p99': r.get('p99'),
+                  'final_score': sc.get('final_score'),
+                  'false_positive_detections': bd.get('false_positive_detections'),
+                  'false_negative_detections': bd.get('false_negative_detections'),
+                  'http_errors': bd.get('http_errors'),
+                  'artifact': artifact,
+              })
+          rows.sort(key=lambda x: x['participant'])
+          out = {
+              'run_id': os.environ.get('GITHUB_RUN_ID'),
+              'run_number': os.environ.get('GITHUB_RUN_NUMBER'),
+              'head_sha': os.environ.get('GITHUB_SHA'),
+              'event_name': os.environ.get('GITHUB_EVENT_NAME'),
+              'results': rows,
+          }
+          pathlib.Path('comparison-results').mkdir(exist_ok=True)
+          pathlib.Path('comparison-results/latest.json').write_text(json.dumps(out, indent=2, sort_keys=True) + '\n')
+          pathlib.Path(f"comparison-results/run-{out['run_number']}.json").write_text(json.dumps(out, indent=2, sort_keys=True) + '\n')
+          print(json.dumps(out, indent=2, sort_keys=True))
+          PY
+
+      - name: Commit summary
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add comparison-results/latest.json comparison-results/run-*.json
+          git commit -m "ci: archive comparison benchmark [skip ci]" || exit 0
+          git push

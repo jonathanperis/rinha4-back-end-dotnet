@@ -1,0 +1,111 @@
+services:
+  lb:
+    platform: linux/amd64
+    image: jrblatt/so-no-forevis:v1.0.0
+    user: root
+    environment:
+      UPSTREAMS: "/sockets/api1.sock,/sockets/api2.sock"
+      PORT: "9999"
+      BUF_SIZE: "4096"
+      WORKERS: "1"
+    ports:
+      - "9999:9999"
+    depends_on:
+      - api1
+      - api2
+    volumes:
+      - sockets:/sockets
+    security_opt:
+      - seccomp:unconfined
+    logging:
+      driver: "none"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    deploy:
+      resources:
+        limits:
+          cpus: "0.16"
+          memory: "30M"
+
+  api1:
+    platform: linux/amd64
+    image: ghcr.io/steixeira93/fraud-api@sha256:49c830d6275984cc67ed2a7f47adefda8b67b0c14bff09ca3be3909aefcf1e63
+    command: ["api"]
+    user: root
+    environment:
+      PORT: "8081"
+      API_FD_SOCK: "/sockets/api1.sock.ctrl"
+      INDEX_PATH: "/app/resources/ivf_kmeans_1280_v2.bin"
+      INDEX_NPROBE: "20"
+      INDEX_NPROBE_FULL: "0"
+      INDEX_REPAIR: "0"
+      FAST_NPROBE: "1"
+      ADAPTIVE_MIN: "99"
+      ADAPTIVE_MAX: "0"
+      EXTREME0_WORST_THRESHOLD: "2837673"
+      EXTREME1_WORST_THRESHOLD: "2158547"
+      EXTREME2_WORST_THRESHOLD: "2475394"
+      EXTREME3_WORST_THRESHOLD: "2231592"
+      EXTREME4_WORST_THRESHOLD: "2035541"
+      EXTREME5_WORST_THRESHOLD: "2816687"
+      MALLOC_ARENA_MAX: "1"
+      API_WORKERS: "1"
+    expose:
+      - "8081"
+    volumes:
+      - sockets:/sockets
+    logging:
+      driver: "none"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    deploy:
+      resources:
+        limits:
+          cpus: "0.42"
+          memory: "160M"
+
+  api2:
+    platform: linux/amd64
+    image: ghcr.io/steixeira93/fraud-api@sha256:49c830d6275984cc67ed2a7f47adefda8b67b0c14bff09ca3be3909aefcf1e63
+    command: ["api"]
+    user: root
+    environment:
+      PORT: "8082"
+      API_FD_SOCK: "/sockets/api2.sock.ctrl"
+      INDEX_PATH: "/app/resources/ivf_kmeans_1280_v2.bin"
+      INDEX_NPROBE: "20"
+      INDEX_NPROBE_FULL: "0"
+      INDEX_REPAIR: "0"
+      FAST_NPROBE: "1"
+      ADAPTIVE_MIN: "99"
+      ADAPTIVE_MAX: "0"
+      EXTREME0_WORST_THRESHOLD: "2837673"
+      EXTREME1_WORST_THRESHOLD: "2158547"
+      EXTREME2_WORST_THRESHOLD: "2475394"
+      EXTREME3_WORST_THRESHOLD: "2231592"
+      EXTREME4_WORST_THRESHOLD: "2035541"
+      EXTREME5_WORST_THRESHOLD: "2816687"
+      MALLOC_ARENA_MAX: "1"
+      API_WORKERS: "1"
+    expose:
+      - "8082"
+    volumes:
+      - sockets:/sockets
+    logging:
+      driver: "none"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    deploy:
+      resources:
+        limits:
+          cpus: "0.42"
+          memory: "160M"
+
+volumes:
+  sockets:
