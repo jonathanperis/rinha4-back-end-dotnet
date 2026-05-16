@@ -4,8 +4,8 @@
 
 - Runtime target: .NET 10 NativeAOT, raw HTTP/1, Unix domain sockets, prebuilt responses.
 - Active scorer target: `SCORER_MODE=hybrid` with bucket fast paths plus IVF repair/fallback.
-- Active LB target for all Jonathan-owned scenarios: standalone `rinha4-lb-yolo-mode` image in root `docker-compose.yml` (`LB_MODE=proxy`).
-- Experimental FD-pass wiring lives in `docker-compose.fdpass.yml`; it consumes dedicated LB image `rinha4-lb-yolo-mode` with `LB_MODE=fdpass`.
+- Active LB target for all Jonathan-owned scenarios: standalone ASM `rinha4-lb-yolo-mode` image in root `docker-compose.yml` (`LB_MODE=fdpass`, `LB_FDPASS_SOCKET_TYPE=stream`).
+- FD-pass is now the default runtime wiring in `docker-compose.yml`; the old `docker-compose.fdpass.yml` overlay was removed.
 - Correctness first; p99 second.
 
 ## Known Results
@@ -27,7 +27,7 @@
 - Keep benchmark changes small and reversible.
 - Do not open/request official candidate or preview unless user explicitly asks; official attempts now have per-user/day limits.
 - Dedicated LB repo is `https://github.com/jonathanperis/rinha4-lb-yolo-mode`; LB code changes must happen there and be consumed here only as an image/config update.
-- Current dedicated LB image known to support proxy + fdpass: `ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-b5b0e375ca9c9c39152950ddffbbc5ce6a7bd92e` (`linux/amd64`); fdpass now passes blocking accepted sockets.
+- Current dedicated LB image: `ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-dcc6b89ca9d21c7a8dbb1588a6bfbbc0bd20bb91` (`linux/amd64` ASM LB); .NET uses stream fd-pass control sockets.
 
 ## Active Runtime Defaults
 

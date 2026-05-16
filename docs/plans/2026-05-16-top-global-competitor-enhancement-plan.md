@@ -83,7 +83,7 @@ This CI lane says the current Jonathan candidate is competitive with Ronie and s
 
 ### Submission freshness audit
 
-- Official leaderboard entry `#4665` tested API image `ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-7e742aa304825db89735fe3ca0065239a479014c` with LB image `ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-b5b0e375ca9c9c39152950ddffbbc5ce6a7bd92e` and produced p99 `1.10ms`, score `5959.7`, `FP=0`, `FN=0`, `HTTP=0`.
+- Official leaderboard entry `#4665` is stale relative to the current ASM LB target. It tested API image `ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-7e742aa304825db89735fe3ca0065239a479014c` before the current LB promotion and produced p99 `1.10ms`, score `5959.7`, `FP=0`, `FN=0`, `HTTP=0`.
 - Current `origin/submission` compose pins a newer API image, `ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-56ef21b156f7b5f89385c2638a36d5173f1e6720`, with the same LB image and `0.42/0.42/0.16` CPU split.
 - Latest CI candidate evidence is newer again: `ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-18f04baa2d52e946ce508892cb247137ac869d95` from run `25962498048`, p99 `0.29ms`, score `6000`, `FP=0`, `FN=0`, `HTTP=0`.
 - Recent official issue `#4688` exists but had no parseable bot result during this audit, so the public leaderboard remains stale relative to the latest CI candidate.
@@ -296,7 +296,7 @@ This CI lane says the current Jonathan candidate is competitive with Ronie and s
 
 - Submission branch promoted and pushed commit `7055929b23f2bebdfea8a79824355ee436eaf6d7`.
 - API image promoted: `ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-18f04baa2d52e946ce508892cb247137ac869d95`.
-- LB image unchanged: `ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-b5b0e375ca9c9c39152950ddffbbc5ce6a7bd92e`.
+- Current LB image target: `ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-dcc6b89ca9d21c7a8dbb1588a6bfbbc0bd20bb91`.
 - Validation before push: no `build:` entries, immutable API image, immutable LB image, current CPU split `0.42/0.42/0.16`, memory `160MB/160MB/30MB`.
 - Official issue opened: <https://github.com/zanfranceschi/rinha-de-backend-2026/issues/4748>.
 - Bot closed without running due daily submission limit: `Limite de submissoes por dia atingido (5/5). Tente novamente amanha.`

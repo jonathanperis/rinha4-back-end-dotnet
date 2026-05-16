@@ -6,7 +6,7 @@ Repos inspected:
 
 | repo | inspected head | role |
 |---|---|---|
-| `rinha4-back-end-dotnet` | `6be6980` | .NET NativeAOT API candidate using `rinha4-lb-yolo-mode` in proxy mode by default |
+| `rinha4-back-end-dotnet` | `6be6980` | .NET NativeAOT API candidate using ASM `rinha4-lb-yolo-mode` in fd-pass stream mode by default |
 | `rinha4-back-end-c` | `d0c29a4` | C API candidate using `rinha4-lb-yolo-mode` in fd-pass mode |
 | `rinha4-lb-yolo-mode` | `b5b0e37` | custom C load balancer shared by the candidates |
 
@@ -21,7 +21,7 @@ This document is a working map of the approaches we can take next. It separates 
 - Runtime: two .NET NativeAOT `WebApi` containers behind `rinha4-lb-yolo-mode`.
 - Default transport: LB proxying TCP client traffic to API Unix sockets.
 - Current compose split: API `0.45` each, LB `0.10`; total `1.00` CPU.
-- Current LB image: `ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-b5b0e375ca9c9c39152950ddffbbc5ce6a7bd92e`.
+- Current LB image: `ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-dcc6b89ca9d21c7a8dbb1588a6bfbbc0bd20bb91`.
 - Current scorer: `hybrid`, using bucket fast path first and IVF fallback.
 - Hot files:
   - `docker-compose.yml`

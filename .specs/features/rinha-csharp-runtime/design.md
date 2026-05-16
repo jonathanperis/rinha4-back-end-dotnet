@@ -39,7 +39,7 @@ client/k6 -> LB :9999 -> unix:/sockets/apiN.sock -> RawHttpServer -> parse -> ve
 ## Load Balancers
 
 - Base compose defines two API services and shared socket volume.
-- Jonathan-owned scenarios use only the standalone `rinha4-lb-yolo-mode` image in `LB_MODE=proxy`.
+- Jonathan-owned scenarios use only the standalone ASM `rinha4-lb-yolo-mode` image in `LB_MODE=fdpass` with `LB_FDPASS_SOCKET_TYPE=stream`.
 - The active standalone-yolo split is `0.16 CPU / 30 MB` for the LB and `0.42 CPU / 160 MB` per API.
 - LB must not inspect fraud payload or answer `/fraud-score`.
 

@@ -26,7 +26,7 @@ Official runtime information for the current leaderboard entry:
 
 - official tested submission commit: `1d15593`
 - WebApi image: `ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-a166a2375254bbe00e80207f56a37c50774e9b63`
-- LB image: `ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-b5b0e375ca9c9c39152950ddffbbc5ce6a7bd92e`
+- LB image: `ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-dcc6b89ca9d21c7a8dbb1588a6bfbbc0bd20bb91`
 - API CPU: `0.42` each
 - LB CPU: `0.16`
 - API memory: `160MB`
@@ -39,7 +39,7 @@ Current repo state before this plan:
 - `main` HEAD at inspection time: `fb80d11 docs: archive rinha benchmark`
 - latest performance code commit: `46c98c8 perf: shift cpu budget back to api`
 - current compose split: API `0.46` each, LB `0.08`
-- current LB image: `ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-b5b0e375ca9c9c39152950ddffbbc5ce6a7bd92e`
+- current LB image: `ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-dcc6b89ca9d21c7a8dbb1588a6bfbbc0bd20bb91`
 
 Current local evidence for `0.46 / 0.08`:
 
