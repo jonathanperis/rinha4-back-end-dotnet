@@ -189,7 +189,7 @@ jobs:
           IVF_REPAIR_MIN_FRAUDS: "0"
           IVF_REPAIR_MAX_FRAUDS: "5"
           SCORER_MODE: hybrid
-          ACCEPT_LOOPS: "2"
+          ACCEPT_LOOPS: "1"
           FD_RAW: "1"
           BENCHMARK_STACK_CPUSET: ""
         run: bash scripts/ci-official-benchmark.sh
@@ -218,7 +218,7 @@ jobs:
           IVF_REPAIR_MIN_FRAUDS: "0"
           IVF_REPAIR_MAX_FRAUDS: "5"
           SCORER_MODE: hybrid
-          ACCEPT_LOOPS: "2"
+          ACCEPT_LOOPS: "1"
           FD_RAW: "1"
           BENCHMARK_STACK_CPUSET: ""
         run: |
@@ -247,7 +247,7 @@ jobs:
           IVF_REPAIR_MIN_FRAUDS: "0"
           IVF_REPAIR_MAX_FRAUDS: "5"
           SCORER_MODE: hybrid
-          ACCEPT_LOOPS: "2"
+          ACCEPT_LOOPS: "1"
           FD_RAW: "1"
           BENCHMARK_API_CPUS: "0.40"
           BENCHMARK_PROXY_CPUS: "0.20"
@@ -279,7 +279,7 @@ jobs:
           IVF_REPAIR_MIN_FRAUDS: "0"
           IVF_REPAIR_MAX_FRAUDS: "5"
           SCORER_MODE: hybrid
-          ACCEPT_LOOPS: "2"
+          ACCEPT_LOOPS: "1"
           FD_RAW: "1"
           BENCHMARK_API_CPUS: "0.40"
           BENCHMARK_PROXY_CPUS: "0.20"
