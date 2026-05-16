@@ -292,3 +292,12 @@ This CI lane says the current Jonathan candidate is competitive with Ronie and s
 2. **Promote/test the latest `ci-18f04b...` candidate through the official lane next.** Verify the `submission` branch compose uses immutable API/LB images, no `build:`, and the intended `0.42/0.42/0.16` split before filing/presenting the official issue.
 3. **If a fresh official run still lands behind the leaderboard targets, attack parser/Q16 fusion and fd raw/fixed-worker overhead first.** These match both competitors and carry less correctness risk than approximate scorer changes.
 4. **Then consolidate mmap/index and add threshold sweeper.** These are valuable, but they must remain behind oracle-driven correctness gates.
+### Official promotion attempt `#4748`
+
+- Submission branch promoted and pushed commit `7055929b23f2bebdfea8a79824355ee436eaf6d7`.
+- API image promoted: `ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-18f04baa2d52e946ce508892cb247137ac869d95`.
+- LB image unchanged: `ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-b5b0e375ca9c9c39152950ddffbbc5ce6a7bd92e`.
+- Validation before push: no `build:` entries, immutable API image, immutable LB image, current CPU split `0.42/0.42/0.16`, memory `160MB/160MB/30MB`.
+- Official issue opened: <https://github.com/zanfranceschi/rinha-de-backend-2026/issues/4748>.
+- Bot closed without running due daily submission limit: `Limite de submissoes por dia atingido (5/5). Tente novamente amanha.`
+- Result: no official-vs-official datapoint for `ci-18f04b...` yet; retry tomorrow instead of interpreting this as a benchmark failure.
