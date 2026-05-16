@@ -184,6 +184,7 @@ static int RunBucketProfileProbe(string testDataPath, string dataDirectory)
     Console.WriteLine("fraud_counts=" + string.Join(",", fraudCounts.Select(static (count, frauds) => $"{frauds}:{count}")));
     PrintFraudMatrix("initial_to_final", initialToFinalFrauds);
     Console.WriteLine("fallback_by_initial=" + string.Join(",", fallbackByInitialFrauds.Select(static (count, frauds) => $"{frauds}:{count}")));
+    Console.WriteLine("fast_path_stages=" + FormatStageCounts(Enum.GetValues<BucketFastPathStage>().Select(stage => samples.Count(sample => sample.FastPathStage == stage)).ToArray()));
     Console.WriteLine($"profile_fast_path={samples.Count(static sample => sample.ProfileFastPath)} fallback={samples.Count(static sample => sample.UsedFallback)} risky={samples.Count(static sample => sample.UsedRiskyFallback)} exact={samples.Count(static sample => sample.UsedExactFallback)} full_tiebreak={samples.Count(static sample => sample.UsedFullRiskyTiebreak)} corrections={samples.Count(static sample => sample.InitialFrauds != sample.Frauds)}");
     PrintBucketPercentiles("candidate_visits", samples, static sample => sample.CandidateVisits);
     PrintBucketPercentiles("scanned_candidates", samples, static sample => sample.ScannedCandidates);
@@ -222,12 +223,17 @@ static int RunHybridProfileProbe(string testDataPath, string dataDirectory)
     var fallbackFraudCounts = new int[6];
     var fallbackInitialCounts = new int[6];
     var initialToFinalFrauds = new int[6, 6];
+    var fastPathStages = new int[4];
+    var replayFraudDrifts = new int[4];
+    var replayApprovalDrifts = new int[4];
     var missFraudScores = new SortedDictionary<double, int>();
     var missIds = new List<string>(32);
+    bool replayCascade = EnvBool("CASCADE_REPLAY", false);
 
     int total = 0;
     int fast = 0;
     int fallback = 0;
+    int replayed = 0;
     int fp = 0;
     int fn = 0;
     int tp = 0;
@@ -246,11 +252,21 @@ static int RunHybridProfileProbe(string testDataPath, string dataDirectory)
         qv[15] = 0;
 
         int frauds;
-        if (bucketIndex.TryFastPathFraudCount(qv, bucketOptions, out byte fastFrauds))
+        if (bucketIndex.TryFastPathFraudCount(qv, bucketOptions, out byte fastFrauds, out BucketFastPathStage stage))
         {
             fast++;
             frauds = fastFrauds;
             fastFraudCounts[frauds]++;
+            fastPathStages[(int)stage]++;
+            if (replayCascade)
+            {
+                replayed++;
+                ProfileSample replay = ivfIndex.Profile(qv);
+                if (replay.Frauds != frauds)
+                    replayFraudDrifts[(int)stage]++;
+                if ((replay.Frauds < 3) != (frauds < 3))
+                    replayApprovalDrifts[(int)stage]++;
+            }
         }
         else
         {
@@ -285,8 +301,15 @@ static int RunHybridProfileProbe(string testDataPath, string dataDirectory)
     int weighted = fp + (fn * 3);
     double failureRate = total == 0 ? 0.0 : (fp + fn) * 100.0 / total;
     samples.Sort(static (left, right) => left.TotalBlocks.CompareTo(right.TotalBlocks));
-    Console.WriteLine($"mode=hybrid-profile total={total} fast={fast} fallback={fallback} fallback_rate={(fallback * 100.0 / Math.Max(total, 1)).ToString("F2", CultureInfo.InvariantCulture)}%");
+    Console.WriteLine($"mode=hybrid-profile total={total} fast={fast} fallback={fallback} fallback_rate={(fallback * 100.0 / Math.Max(total, 1)).ToString("F2", CultureInfo.InvariantCulture)}% cascade_replay={replayCascade}");
     Console.WriteLine($"total={total} tp={tp} tn={tn} fp={fp} fn={fn} weighted={weighted} failure_rate={failureRate.ToString("F4", CultureInfo.InvariantCulture)}%");
+    Console.WriteLine("fast_path_stages=" + FormatStageCounts(fastPathStages));
+    if (replayCascade)
+    {
+        Console.WriteLine($"cascade_replay_total={replayed}");
+        Console.WriteLine("cascade_replay_fraud_drifts=" + FormatStageCounts(replayFraudDrifts));
+        Console.WriteLine("cascade_replay_approval_drifts=" + FormatStageCounts(replayApprovalDrifts));
+    }
     Console.WriteLine("fast_fraud_counts=" + string.Join(",", fastFraudCounts.Select(static (count, frauds) => $"{frauds}:{count}")));
     Console.WriteLine("fallback_initial_counts=" + string.Join(",", fallbackInitialCounts.Select(static (count, frauds) => $"{frauds}:{count}")));
     Console.WriteLine("fallback_fraud_counts=" + string.Join(",", fallbackFraudCounts.Select(static (count, frauds) => $"{frauds}:{count}")));
@@ -379,6 +402,21 @@ static void PrintLongPercentiles(string name, List<long> values)
         $"{name}=avg:{sorted.Average().ToString("F2", CultureInfo.InvariantCulture)} " +
         $"p50:{PercentileLong(sorted, 0.50)} p90:{PercentileLong(sorted, 0.90)} " +
         $"p95:{PercentileLong(sorted, 0.95)} p99:{PercentileLong(sorted, 0.99)} max:{sorted[^1]}");
+}
+
+static string FormatStageCounts(int[] counts)
+{
+    return string.Join(",", Enum.GetValues<BucketFastPathStage>().Select(stage => $"{stage}:{counts[(int)stage]}"));
+}
+
+static bool EnvBool(string name, bool fallback)
+{
+    string? value = Environment.GetEnvironmentVariable(name);
+    if (string.IsNullOrEmpty(value))
+        return fallback;
+
+    return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
 }
 
 static void PrintFraudMatrix(string name, int[,] matrix)

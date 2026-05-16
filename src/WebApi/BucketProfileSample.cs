@@ -1,7 +1,7 @@
 internal readonly record struct BucketProfileSample(
     byte Frauds,
     byte InitialFrauds,
-    bool ProfileFastPath,
+    BucketFastPathStage FastPathStage,
     bool UsedFallback,
     bool UsedExactFallback,
     bool UsedRiskyFallback,
@@ -12,4 +12,7 @@ internal readonly record struct BucketProfileSample(
     int RiskyScannedCandidates,
     int ExactScannedCandidates,
     int NeighborBuckets,
-    int RiskyFineBuckets);
+    int RiskyFineBuckets)
+{
+    public bool ProfileFastPath => FastPathStage != BucketFastPathStage.None;
+}

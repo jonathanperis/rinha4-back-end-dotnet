@@ -10,6 +10,7 @@
 data/references.bin
 data/references.exact.bin
 data/references.ivf.bin
+data/references.bucket.bin
 
 # IDE
 .vs/

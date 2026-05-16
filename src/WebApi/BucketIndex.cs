@@ -275,20 +275,29 @@ internal sealed unsafe class BucketIndex : IDisposable
 
     public bool TryFastPathFraudCount(ReadOnlySpan<short> query, BucketSearchOptions options, out byte frauds)
     {
-        if (options.ProfileFastPath && TryProfileFastDecision(query, options, out frauds))
-            return true;
+        return TryFastPathFraudCount(query, options, out frauds, out _);
+    }
 
-        if (options.ReferenceFastPath && TryReferenceFastDecision(query, options, out frauds))
+    public bool TryFastPathFraudCount(ReadOnlySpan<short> query, BucketSearchOptions options, out byte frauds, out BucketFastPathStage stage)
+    {
+        if (options.ProfileFastPath && TryProfileFastDecision(query, options, out frauds))
+        {
+            stage = BucketFastPathStage.Profile;
+            return true;
+        }
+
+        if (options.ReferenceFastPath && TryReferenceFastDecision(query, options, out frauds, out stage))
             return true;
 
         frauds = 0;
+        stage = BucketFastPathStage.None;
         return false;
     }
 
     public BucketProfileSample Profile(ReadOnlySpan<short> query, BucketSearchOptions options)
     {
-        if (TryFastPathFraudCount(query, options, out byte fastFrauds))
-            return new BucketProfileSample(fastFrauds, fastFrauds, true, false, false, false, false, 0, 0, 0, 0, 0, 0, 0);
+        if (TryFastPathFraudCount(query, options, out byte fastFrauds, out BucketFastPathStage stage))
+            return new BucketProfileSample(fastFrauds, fastFrauds, stage, false, false, false, false, 0, 0, 0, 0, 0, 0, 0);
 
         Span<long> topDist = stackalloc long[K];
         Span<int> topIds = stackalloc int[K];
@@ -348,7 +357,7 @@ internal sealed unsafe class BucketIndex : IDisposable
         if (candidates < K)
         {
             byte exactFrauds = ExactFraudCountProfile(query, options.AvxCutoffDims, out int exactScannedCandidates);
-            return new BucketProfileSample(exactFrauds, frauds, false, true, true, false, false, candidates, scannedCandidates, skippedCandidates, 0, exactScannedCandidates, neighborBuckets, 0);
+            return new BucketProfileSample(exactFrauds, frauds, BucketFastPathStage.None, true, true, false, false, candidates, scannedCandidates, skippedCandidates, 0, exactScannedCandidates, neighborBuckets, 0);
         }
 
         if (ShouldUseExactFallback(query, frauds, options))
@@ -356,14 +365,14 @@ internal sealed unsafe class BucketIndex : IDisposable
             if (options.RiskyFallback)
             {
                 byte riskyFrauds = RiskyFraudCountProfile(query, true, options.AvxCutoffDims, out int riskyScannedCandidates, out int exactScannedCandidates, out int riskyFineBuckets, out bool fullTiebreak);
-                return new BucketProfileSample(riskyFrauds, frauds, false, true, exactScannedCandidates > 0, true, fullTiebreak, candidates, scannedCandidates, skippedCandidates, riskyScannedCandidates, exactScannedCandidates, neighborBuckets, riskyFineBuckets);
+                return new BucketProfileSample(riskyFrauds, frauds, BucketFastPathStage.None, true, exactScannedCandidates > 0, true, fullTiebreak, candidates, scannedCandidates, skippedCandidates, riskyScannedCandidates, exactScannedCandidates, neighborBuckets, riskyFineBuckets);
             }
 
             byte exactFrauds = ExactFraudCountProfile(query, options.AvxCutoffDims, out int exactScannedCandidatesOnly);
-            return new BucketProfileSample(exactFrauds, frauds, false, true, true, false, false, candidates, scannedCandidates, skippedCandidates, 0, exactScannedCandidatesOnly, neighborBuckets, 0);
+            return new BucketProfileSample(exactFrauds, frauds, BucketFastPathStage.None, true, true, false, false, candidates, scannedCandidates, skippedCandidates, 0, exactScannedCandidatesOnly, neighborBuckets, 0);
         }
 
-        return new BucketProfileSample(frauds, frauds, false, false, false, false, false, candidates, scannedCandidates, skippedCandidates, 0, 0, neighborBuckets, 0);
+        return new BucketProfileSample(frauds, frauds, BucketFastPathStage.None, false, false, false, false, candidates, scannedCandidates, skippedCandidates, 0, 0, neighborBuckets, 0);
     }
 
     [SkipLocalsInit]
@@ -560,18 +569,23 @@ internal sealed unsafe class BucketIndex : IDisposable
         return false;
     }
 
-    private bool TryReferenceFastDecision(ReadOnlySpan<short> query, BucketSearchOptions options, out byte frauds)
+    private bool TryReferenceFastDecision(ReadOnlySpan<short> query, BucketSearchOptions options, out byte frauds, out BucketFastPathStage stage)
     {
         frauds = 0;
+        stage = BucketFastPathStage.None;
         if (referenceFastPath1 == null)
             return false;
 
         byte result = referenceFastPath1[ReferenceFastPath1Key(query)];
         if (result == LegitMask && options.ReferenceFastPathLegit)
+        {
+            stage = BucketFastPathStage.Reference1;
             return true;
+        }
         if (result == FraudMask && options.ReferenceFastPathFraud)
         {
             frauds = K;
+            stage = BucketFastPathStage.Reference1;
             return true;
         }
 
@@ -580,10 +594,14 @@ internal sealed unsafe class BucketIndex : IDisposable
 
         result = referenceFastPath2[ReferenceFastPath2Key(query)];
         if (result == LegitMask && options.ReferenceFastPath2Legit)
+        {
+            stage = BucketFastPathStage.Reference2;
             return true;
+        }
         if (result == FraudMask && options.ReferenceFastPath2Fraud)
         {
             frauds = K;
+            stage = BucketFastPathStage.Reference2;
             return true;
         }
 
