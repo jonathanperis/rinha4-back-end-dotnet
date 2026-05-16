@@ -14,6 +14,8 @@ on:
           - competitor-compose/zan-latest/docker-compose.yml
           - competitor-compose/danilo-latest/docker-compose.yml
           - competitor-compose/pedro-latest/docker-compose.yml
+          - competitor-compose/fksegundo-rust/docker-compose.yml
+          - competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
           - competitor-compose/jordao-latest/docker-compose.yml
           - competitor-compose/hanake0-latest/docker-compose.yml
       official_ref:
@@ -50,8 +52,9 @@ jobs:
 
           # Cost-control policy for all-comparison:
           # - Always run Jonathan.
-          # - Add the top two known .NET competitors ahead of us in the official preview ranking.
-          # - Disabled competitors remain selectable explicitly via workflow input.
+          # - Prefer the current top global competitors when their official preview
+          #   ranking entries are ahead of us.
+          # - Disabled/older competitors remain selectable explicitly via workflow input.
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import json
           import sys
@@ -73,6 +76,16 @@ jobs:
                   "name": "pedro-latest",
                   "compose_file": "competitor-compose/pedro-latest/docker-compose.yml",
                   "repo": "https://github.com/pedrosakuma/rinha-backend-2026",
+              },
+              "fksegundo-rust": {
+                  "name": "fksegundo-rust",
+                  "compose_file": "competitor-compose/fksegundo-rust/docker-compose.yml",
+                  "repo": "https://github.com/fksegundo/rinha-rust",
+              },
+              "ronieneubauer-rinha2026": {
+                  "name": "ronieneubauer-rinha2026",
+                  "compose_file": "competitor-compose/ronieneubauer-rinha2026/docker-compose.yml",
+                  "repo": "https://github.com/RonieNeubauer/rinha2026",
               },
               "jordao-latest": {
                   "name": "jordao-latest",
@@ -104,7 +117,7 @@ jobs:
               sys.exit(0)
 
           url = "https://raw.githubusercontent.com/arinhadebackend/arinhadebackend.github.io/2026-preview/results-preview.json"
-          fallback = ["danilo-latest", "pedro-latest"]
+          fallback = ["fksegundo-rust", "ronieneubauer-rinha2026"]
           try:
               req = urllib.request.Request(url, headers={"User-Agent": "rinha4-back-end-dotnet-ci"})
               data = json.load(urllib.request.urlopen(req, timeout=30))
