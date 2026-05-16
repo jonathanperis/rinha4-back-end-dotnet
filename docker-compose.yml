@@ -5,7 +5,7 @@ services:
     image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-7e742aa304825db89735fe3ca0065239a479014c
     pull_policy: always
     container_name: webapi-1
-    cpuset: "0"
+    cpuset: "0,1"
     security_opt:
       - seccomp=unconfined
     user: root
@@ -69,7 +69,7 @@ services:
   webapi2:
     <<: *webapi
     container_name: webapi-2
-    cpuset: "1"
+    cpuset: "2,3"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
@@ -119,7 +119,7 @@ services:
     image: ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-b5b0e375ca9c9c39152950ddffbbc5ce6a7bd92e
     container_name: rinha-lb
     platform: linux/amd64
-    cpuset: "2,3"
+    cpuset: "0,2"
     user: root
     restart: always
     pull_policy: always
