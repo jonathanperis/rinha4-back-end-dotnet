@@ -16,6 +16,8 @@ on:
         options:
           - all-comparison
           - competitor-compose/jonathanperis/docker-compose.yml
+          - competitor-compose/jonathanperis-lb-c-dcc6b89/docker-compose.yml
+          - competitor-compose/jonathanperis-lb-asm-dcc6b89/docker-compose.yml
           - competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
           - competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml
       official_ref:
@@ -58,6 +60,10 @@ jobs:
             compose_file: competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml
           - name: jonathanperis
             compose_file: competitor-compose/jonathanperis/docker-compose.yml
+          - name: jonathanperis-lb-c-dcc6b89
+            compose_file: competitor-compose/jonathanperis-lb-c-dcc6b89/docker-compose.yml
+          - name: jonathanperis-lb-asm-dcc6b89
+            compose_file: competitor-compose/jonathanperis-lb-asm-dcc6b89/docker-compose.yml
 
     permissions:
       contents: read
