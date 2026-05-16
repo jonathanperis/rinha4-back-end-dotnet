@@ -24,13 +24,13 @@ Use CI as a projection and regression harness, not as a replacement for official
 ### Our current state
 
 - Repo: `jonathanperis/rinha4-back-end-dotnet`
-- `origin/main`: `04d8798356...` after benchmark archive; latest scorer commit `18f04ba test: add cascade replay instrumentation`.
+- `origin/main`: `ee77711 docs: clarify ci versus leaderboard comparisons`; latest scorer commit remains `18f04ba test: add cascade replay instrumentation`.
 - `origin/submission`: `35cb18c bench: promote single accept loop submission`.
-- Official preview ranking snapshot fetched `2026-05-16`:
-  - Jonathan: score `5959.7`, p99 `1.10ms`, `FP=0`, `FN=0`, `HTTP=0`.
+- Official preview ranking live re-check at `2026-05-16T16:48:30Z`:
+  - Jonathan official leaderboard entry: issue `#4665`, score `5959.7`, p99 `1.10ms`, `FP=0`, `FN=0`, `HTTP=0`.
   - This is only comparable to other official leaderboard entries.
 - Latest CI/local projection after cascade replay instrumentation:
-  - official-like CI p99 `0.29ms`, score `6000`, `FP=0`, `FN=0`, `HTTP=0`.
+  - official-like CI run `25962498048`, image `ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-18f04baa2d52e946ce508892cb247137ac869d95`, p99 `0.29ms`, score `6000`, `FP=0`, `FN=0`, `HTTP=0`.
   - This is only directly comparable to other CI runs from the same workflow/runner family.
   - Treat as projection until a new official submission confirms the runner gap.
 
@@ -39,7 +39,7 @@ Use CI as a projection and regression harness, not as a replacement for official
 - `origin/main`: `9ea539e84101d2c871cc6dde6af1ac404246b32e`.
 - `origin/submission`: `0ef144fbeda3aecdcbfd94f924ed0db71152543f`.
 - Official issue: `zanfranceschi/rinha-de-backend-2026#4641`.
-- Official result: score `6000`, p99 `0.83ms`, `FP=0`, `FN=0`, `HTTP=0`.
+- Official leaderboard live re-check at `2026-05-16T16:48:30Z`: score `5968.52`, p99 `1.08ms`, `FP=0`, `FN=0`, `HTTP=0`.
 - Submission images/resources:
   - `ghcr.io/fksegundo/rinha-rust-api:latest`: `api1/api2`, each `0.42 CPU / 165M`.
   - `ghcr.io/fksegundo/rinha-api-lb:latest`: `lb`, `0.16 CPU / 20M`.
@@ -63,12 +63,31 @@ Use CI as a projection and regression harness, not as a replacement for official
   - `competitor-compose/fksegundo-rust/docker-compose.yml`
   - `competitor-compose/ronieneubauer-rinha2026/docker-compose.yml`
   - workflow choices and participant selection entries for both.
-- Commit: `3618165 bench: add top global competitors`.
-- Comparison run: `https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25965557948`.
-- Single-run comparison artifacts from that run:
+- Comparison branch commits:
+  - `3618165 bench: add top global competitors`
+  - `b12721a bench: pin top global comparison targets` — keeps `all-comparison` stable as Jonathan + fksegundo + Ronie instead of allowing live leaderboard volatility to change the CI lane mid-investigation.
+  - `27cc5d4 bench: refresh jonathan top-global candidate image` — updates Jonathan's comparison compose to the current `ci-18f04b...` image; the previous comparison compose still had stale `ci-a353770...`.
+- Single-run smoke comparison: `https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25965557948`.
   - `jonathanperis`: p99 `0.31ms`, score `6000`, `FP=0`, `FN=0`, `HTTP=0`.
   - `fksegundo-rust`: p99 `0.37ms`, score `6000`, `FP=0`, `FN=0`, `HTTP=0`.
   - `ronieneubauer-rinha2026`: p99 `0.54ms`, score `6000`, `FP=0`, `FN=0`, `HTTP=0`.
+- Corrected 3-repetition comparison with pinned participants and refreshed Jonathan image: `https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25967304281`.
+
+| Participant | Image/config note | p99 reps | Median p99 | Score | FP/FN/HTTP |
+|---|---|---:|---:|---:|---:|
+| `jonathanperis` | API `ci-18f04baa2d52e946ce508892cb247137ac869d95`; LB `ci-b5b0e375ca9c9c39152950ddffbbc5ce6a7bd92e` | `0.30/0.34/0.31ms` | `0.31ms` | `6000` | `0/0/0` |
+| `ronieneubauer-rinha2026` | `ronieneubauer/rinha2026:2.0.0-preview13` | `0.33/0.30/0.31ms` | `0.31ms` | `6000` | `0/0/0` |
+| `fksegundo-rust` | submitted `latest` API/LB tags | `0.34/0.36/0.34ms` | `0.34ms` | `6000` | `0/0/0` |
+
+This CI lane says the current Jonathan candidate is competitive with Ronie and slightly ahead of fksegundo in this specific GitHub Actions comparison family, but not by a margin large enough to ignore runner noise.
+
+### Submission freshness audit
+
+- Official leaderboard entry `#4665` tested API image `ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-7e742aa304825db89735fe3ca0065239a479014c` with LB image `ghcr.io/jonathanperis/rinha4-lb-yolo-mode:ci-b5b0e375ca9c9c39152950ddffbbc5ce6a7bd92e` and produced p99 `1.10ms`, score `5959.7`, `FP=0`, `FN=0`, `HTTP=0`.
+- Current `origin/submission` compose pins a newer API image, `ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-56ef21b156f7b5f89385c2638a36d5173f1e6720`, with the same LB image and `0.42/0.42/0.16` CPU split.
+- Latest CI candidate evidence is newer again: `ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-18f04baa2d52e946ce508892cb247137ac869d95` from run `25962498048`, p99 `0.29ms`, score `6000`, `FP=0`, `FN=0`, `HTTP=0`.
+- Recent official issue `#4688` exists but had no parseable bot result during this audit, so the public leaderboard remains stale relative to the latest CI candidate.
+- Conclusion: before invasive scorer rewrites, promote or otherwise test the latest `ci-18f04b...` candidate through the official submission lane with immutable image verification.
 
 ## Verified Competitor Mechanisms
 
@@ -98,7 +117,7 @@ Use CI as a projection and regression harness, not as a replacement for official
 
 ## Hypotheses to Validate
 
-1. **CI lane says the current candidate is strong; leaderboard lane still says our official entry is behind.** Our CI projection is p99 `0.29ms` and score `6000`; the same CI comparison lane has us at p99 `0.31ms` versus fksegundo `0.37ms` and Ronie `0.54ms`. Separately, the official leaderboard lane has us at p99 `1.10ms`, behind fksegundo `0.83ms` and Ronie `0.86ms`. Treat the mismatch as a stale-submission/config/runner-delta hypothesis until official evidence confirms it.
+1. **CI lane says the current candidate is competitive; leaderboard lane still says the public official entry is stale/behind.** Our single official-like CI projection is p99 `0.29ms` and score `6000`; the corrected 3-repetition top-global CI lane has Jonathan at median p99 `0.31ms`, Ronie at `0.31ms`, and fksegundo at `0.34ms`, all with score `6000` and `0/0/0` correctness. Separately, the official leaderboard lane has Jonathan at p99 `1.10ms` from issue `#4665`, Ronie at p99 `0.86ms`, and fksegundo at p99 `1.08ms` in the live re-check. Treat the mismatch as stale official evidence/config/runner delta until a fresh official submission result confirms it.
 2. **The biggest remaining robust win is reducing .NET hot-path overhead after FD receipt.** Competitors avoid managed socket wrapping and framework dispatch entirely.
 3. **Parser-to-Q16 fusion can reduce p99 variance more than another scorer threshold tweak.** Competitors parse directly into compact vectors; our parser still materializes more intermediate shape than necessary.
 4. **A single mmap index file will improve startup/page-fault behavior and reduce duplicated data loading, but is not the first latency bottleneck.** Useful for stability and memory, higher risk than parser/threading.
@@ -123,13 +142,13 @@ Use CI as a projection and regression harness, not as a replacement for official
 - Read artifacts from run `25965557948`
 
 **Steps:**
-1. Wait for run `25965557948` to finish.
-2. Download artifacts for `jonathanperis`, `fksegundo-rust`, and `ronieneubauer-rinha2026`.
-3. Extract p99, final score, FP, FN, HTTP errors.
-4. If any participant fails readiness/image pull, fix compose/workflow and rerun only that participant explicitly.
-5. Run a 3-repetition `all-comparison` after the single-run smoke passes.
+1. Completed: run `25965557948` provided a single-run smoke for `jonathanperis`, `fksegundo-rust`, and `ronieneubauer-rinha2026`.
+2. Completed: `all-comparison` participant selection is now pinned to the two audited competitors so live leaderboard changes cannot silently change the CI lane.
+3. Completed: Jonathan's comparison compose was refreshed from stale API image `ci-a353770...` to current candidate image `ci-18f04baa2d52e946ce508892cb247137ac869d95`.
+4. Completed: corrected 3-repetition run `25967304281` produced clean `6000` scores and `0/0/0` correctness for all three participants.
+5. Use run `25967304281` as the current CI-vs-CI evidence baseline; ignore run `25967132426` for Jonathan promotion decisions because it used the stale `ci-a353770...` comparison image.
 
-**Verification:** Report min/median/latest p99 for all three participants and include run URLs.
+**Verification:** Current artifact-backed CI table is recorded above with exact run URL, image notes, min/median/max p99, score, and correctness counts.
 
 ## Task 2: Verify official promotion freshness before changing scorer
 
@@ -269,7 +288,7 @@ Use CI as a projection and regression harness, not as a replacement for official
 
 ## Prioritized Recommendation
 
-1. **Do not rewrite the scorer first.** Current CI-vs-CI evidence shows a strong score-6000 candidate, while leaderboard-vs-leaderboard still has our official entry behind both top global competitors. Resolve that mismatch through submission freshness and official promotion evidence before assuming an algorithmic gap.
-2. **Run 3-repeat confirmation next.** Single-run projection says stale-submission/official-runner gap, but final promotion still needs repeated evidence.
-3. **If real, attack parser/Q16 fusion and fd raw/fixed-worker overhead first.** These match both competitors and carry less correctness risk than approximate scorer changes.
+1. **Do not rewrite the scorer first.** Current CI-vs-CI evidence shows a score-6000 candidate that ties Ronie's median and beats fksegundo's median in the corrected 3-repetition run, while leaderboard-vs-leaderboard still reflects an older official Jonathan result. Resolve the official freshness gap before assuming an algorithmic gap.
+2. **Promote/test the latest `ci-18f04b...` candidate through the official lane next.** Verify the `submission` branch compose uses immutable API/LB images, no `build:`, and the intended `0.42/0.42/0.16` split before filing/presenting the official issue.
+3. **If a fresh official run still lands behind the leaderboard targets, attack parser/Q16 fusion and fd raw/fixed-worker overhead first.** These match both competitors and carry less correctness risk than approximate scorer changes.
 4. **Then consolidate mmap/index and add threshold sweeper.** These are valuable, but they must remain behind oracle-driven correctness gates.
