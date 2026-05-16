@@ -12,6 +12,15 @@
 
 ## Evidence Baseline
 
+### Apples-to-apples comparison rule
+
+Do **not** compare our CI p99 directly against official leaderboard p99 as if they share the same runner. Use two separate lanes:
+
+1. **CI vs CI:** compare participants only inside the same GitHub Actions comparison workflow/run family.
+2. **Leaderboard vs leaderboard:** compare official Rinha ranking entries only against other official Rinha ranking entries.
+
+Use CI as a projection and regression harness, not as a replacement for official leaderboard evidence. If CI and leaderboard disagree, first check stale submission image/config, official runtime resource split, and runner/environment delta before inferring an algorithmic win or loss.
+
 ### Our current state
 
 - Repo: `jonathanperis/rinha4-back-end-dotnet`
@@ -19,8 +28,10 @@
 - `origin/submission`: `35cb18c bench: promote single accept loop submission`.
 - Official preview ranking snapshot fetched `2026-05-16`:
   - Jonathan: score `5959.7`, p99 `1.10ms`, `FP=0`, `FN=0`, `HTTP=0`.
+  - This is only comparable to other official leaderboard entries.
 - Latest CI/local projection after cascade replay instrumentation:
   - official-like CI p99 `0.29ms`, score `6000`, `FP=0`, `FN=0`, `HTTP=0`.
+  - This is only directly comparable to other CI runs from the same workflow/runner family.
   - Treat as projection until a new official submission confirms the runner gap.
 
 ### Competitor #1: `fksegundo/rinha-rust`
@@ -87,7 +98,7 @@
 
 ## Hypotheses to Validate
 
-1. **Official gap is now mostly stale-submission / official-runner timing, not algorithmic.** Our CI projection is already p99 `0.29ms` and score `6000`; the new direct comparison run also has us ahead locally/projection-wise at p99 `0.31ms` versus fksegundo `0.37ms` and Ronie `0.54ms`. Official snapshot is older p99 `1.10ms`.
+1. **CI lane says the current candidate is strong; leaderboard lane still says our official entry is behind.** Our CI projection is p99 `0.29ms` and score `6000`; the same CI comparison lane has us at p99 `0.31ms` versus fksegundo `0.37ms` and Ronie `0.54ms`. Separately, the official leaderboard lane has us at p99 `1.10ms`, behind fksegundo `0.83ms` and Ronie `0.86ms`. Treat the mismatch as a stale-submission/config/runner-delta hypothesis until official evidence confirms it.
 2. **The biggest remaining robust win is reducing .NET hot-path overhead after FD receipt.** Competitors avoid managed socket wrapping and framework dispatch entirely.
 3. **Parser-to-Q16 fusion can reduce p99 variance more than another scorer threshold tweak.** Competitors parse directly into compact vectors; our parser still materializes more intermediate shape than necessary.
 4. **A single mmap index file will improve startup/page-fault behavior and reduce duplicated data loading, but is not the first latency bottleneck.** Useful for stability and memory, higher risk than parser/threading.
@@ -98,7 +109,7 @@
 - Correctness: `0 FP`, `0 FN`, `0 HTTP errors`; approval drift against exact/IVF oracle must be `0` for promoted fast paths.
 - Resource: total compose limits <= `1 CPU / 350 MB`.
 - Transport rule: LB must only distribute sockets/traffic; no fraud payload scoring in the LB.
-- Benchmark: do not promote from a single noisy comparison if gap is small; use at least 3 comparison repetitions for final promotion.
+- Benchmark: do not promote from a single noisy comparison if gap is small; use at least 3 comparison repetitions for final promotion. Keep CI-vs-CI and leaderboard-vs-leaderboard evidence separate.
 - Official submission: verify immutable image tags and submission branch compose before opening/presenting official issue.
 
 ---
@@ -258,7 +269,7 @@
 
 ## Prioritized Recommendation
 
-1. **Do not rewrite the scorer first.** Current CI and comparison evidence show we already have a score-6000 candidate ahead of both top global competitors in our projection run; the official leaderboard is likely stale relative to current submission/image state.
+1. **Do not rewrite the scorer first.** Current CI-vs-CI evidence shows a strong score-6000 candidate, while leaderboard-vs-leaderboard still has our official entry behind both top global competitors. Resolve that mismatch through submission freshness and official promotion evidence before assuming an algorithmic gap.
 2. **Run 3-repeat confirmation next.** Single-run projection says stale-submission/official-runner gap, but final promotion still needs repeated evidence.
 3. **If real, attack parser/Q16 fusion and fd raw/fixed-worker overhead first.** These match both competitors and carry less correctness risk than approximate scorer changes.
 4. **Then consolidate mmap/index and add threshold sweeper.** These are valuable, but they must remain behind oracle-driven correctness gates.
