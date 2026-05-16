@@ -117,7 +117,7 @@ on:
       accept_loops:
         description: WebApi ACCEPT_LOOPS value
         required: true
-        default: "2"
+        default: "1"
       benchmark_repetitions:
         description: Number of k6 repetitions; median p99 is archived when >1
         required: true
