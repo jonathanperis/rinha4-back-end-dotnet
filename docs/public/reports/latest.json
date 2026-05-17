@@ -1,11 +1,11 @@
 {
   "metadata": {
-    "timestamp": "2026-05-17T16:12:26Z",
-    "sha": "087e77c77ba35c75d4d265663a802cdbece8ea6c",
-    "short_sha": "087e77c77ba3",
-    "run_id": "25995997993",
-    "run_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25995997993",
-    "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-087e77c77ba35c75d4d265663a802cdbece8ea6c",
+    "timestamp": "2026-05-17T18:56:43Z",
+    "sha": "b1f9cebef4e3426941ef45e8d137085ea0810bf4",
+    "short_sha": "b1f9cebef4e3",
+    "run_id": "25999764486",
+    "run_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25999764486",
+    "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-b1f9cebef4e3426941ef45e8d137085ea0810bf4",
     "compose_file": "docker-compose.yml",
     "report_kind": "candidate",
     "html_report": null,
@@ -59,7 +59,7 @@
       "edge_case_count": 797,
       "edge_case_rate": 0.0147
     },
-    "p99": "0.32ms",
+    "p99": "0.31ms",
     "scoring": {
       "breakdown": {
         "false_positive_detections": 0,
