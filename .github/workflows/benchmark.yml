@@ -3,13 +3,6 @@ name: Official-like Benchmark
 on:
   workflow_dispatch:
     inputs:
-      compose_file:
-        description: Docker Compose LB override to benchmark
-        required: true
-        default: docker-compose.yml
-        type: choice
-        options:
-          - docker-compose.yml
       official_ref:
         description: Rinha official repo ref to clone for test/test.js and test-data.json
         required: true
@@ -159,13 +152,11 @@ jobs:
 
     steps:
       - name: Checkout
-        if: ${{ inputs.compose_file == matrix.lb.compose_file }}
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Show runner capacity
-        if: ${{ inputs.compose_file == matrix.lb.compose_file }}
         run: |
           uname -a
           nproc
@@ -174,7 +165,6 @@ jobs:
           docker compose version
 
       - name: Run benchmark
-        if: ${{ inputs.compose_file == matrix.lb.compose_file }}
         env:
           COMPOSE_FILE: ${{ matrix.lb.compose_file }}
           OFFICIAL_REF: ${{ inputs.official_ref }}
@@ -213,7 +203,7 @@ jobs:
         run: bash scripts/ci-official-benchmark.sh
 
       - name: Write benchmark metadata
-        if: ${{ always() && inputs.compose_file == matrix.lb.compose_file }}
+        if: ${{ always() }}
         run: |
           mkdir -p benchmark-results-${{ matrix.lb.name }}
           cat > benchmark-results-${{ matrix.lb.name }}/metadata.env <<'EOF'
@@ -222,7 +212,7 @@ jobs:
           EOF
 
       - name: Upload benchmark artifacts
-        if: ${{ always() && inputs.compose_file == matrix.lb.compose_file }}
+        if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
           name: rinha-benchmark-results-${{ matrix.lb.name }}-${{ github.run_number }}

@@ -90,7 +90,7 @@ Takeaway: on this local single-thread harness, `HttpWire` header parsing is not 
 
 ## CI A/B enablement
 
-The manual `Official-like Benchmark` workflow now exposes an `fd_raw` input (`1`/`0`) and records that value through the archive path. The workflow also no longer advertises the deleted `docker-compose.fdpass.yml`; `docker-compose.yml` is the current fd-pass topology. This makes a clean managed-socket vs raw-fd official-like A/B possible against the same immutable WebApi image.
+The manual `Official-like Benchmark` workflow now exposes an `fd_raw` input (`1`/`0`) and records that value through the archive path. Because `docker-compose.yml` is now the only current fd-pass topology, the workflow no longer exposes the deleted `docker-compose.fdpass.yml`/compose override path. This makes a clean managed-socket vs raw-fd official-like A/B possible against the same immutable WebApi image.
 
 ## Proposed next actions
 
