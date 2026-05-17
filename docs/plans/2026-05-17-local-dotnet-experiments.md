@@ -88,13 +88,24 @@ Takeaway: on this local single-thread harness, `HttpWire` header parsing is not 
 5. **`SUBMITTED_FAST_PATH=0` deserves only a cheap CI A/B, not a code change yet.** Local timing did not prove the submitted hybrid branch is faster; however, the difference is small enough that hosted noise may dominate.
 6. **The local HTTP parser layer is below scorer/tail noise.** `wire-bench` was essentially tied with scorer-only timing, so the next transport experiments need real fd/socket/concurrency evidence.
 
-## CI A/B enablement
+## CI fd raw A/B
 
 The manual `Official-like Benchmark` workflow now exposes an `fd_raw` input (`1`/`0`) and records that value through the archive path. Because `docker-compose.yml` is now the only current fd-pass topology, the workflow no longer exposes the deleted `docker-compose.fdpass.yml`/compose override path. This makes a clean managed-socket vs raw-fd official-like A/B possible against the same immutable WebApi image.
 
+The first A/B used the same immutable image (`ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-c23ff7ad4b2911b59342dfbcd4f08770305b7088`) and calibrated CPU quotas (`benchmark_api_cpus=0.40`, `benchmark_proxy_cpus=0.20`) with three repetitions per arm:
+
+| Workflow run | Toggle | p99 min | p99 median | p99 max | Final score | Failure rate |
+|---:|---|---:|---:|---:|---:|---|
+| `25981537579` | `FD_RAW=1` | 0.31ms | 0.32ms | 0.35ms | 6000 / 6000 / 6000 | 0% / 0% / 0% |
+| `25981537926` | `FD_RAW=0` | 0.31ms | 0.34ms | 0.34ms | 6000 / 6000 / 6000 | 0% / 0% / 0% |
+
+Takeaway: raw fd was slightly better on median p99 in this small hosted-runner sample, but the ranges overlap. Keep `FD_RAW=1` as the default because it is at least not worse and was marginally ahead here; do not claim a large advantage without more repeated rounds.
+
+The push run for the workflow-input fix (`25981532396`) also passed candidate and calibrated official-like benchmarks at score `6000`, with `FD_RAW=1` recorded in the archived metadata.
+
 ## Proposed next actions
 
-- Keep current runtime defaults unchanged.
-- Use `score-bench` before future local scorer refactors.
-- If spending CI, run a small official-like A/B for current default vs `SUBMITTED_FAST_PATH=0` only after the current official/submission freshness question is resolved.
-- Prioritize a transport microbenchmark or fixed-worker experiment over more bucket threshold sweeps.
+- Keep current runtime defaults unchanged (`FD_RAW=1`, `SCORER_MODE=hybrid`, current bucket thresholds).
+- Use `score-bench` before future local scorer refactors and `wire-bench` before parser/request-shape refactors.
+- If spending more CI, repeat `FD_RAW=1` vs `FD_RAW=0` in additional same-image pairs before making stronger transport claims.
+- Prioritize a real concurrency/worker experiment over more bucket threshold sweeps; the parser-only local layer was below scorer/tail noise.
