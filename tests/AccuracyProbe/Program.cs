@@ -5,6 +5,7 @@ if (args.Length < 2)
     Console.Error.WriteLine("       AccuracyProbe <test-data.json> <data-dir> profile");
     Console.Error.WriteLine("       AccuracyProbe <test-data.json> <data-dir> hybrid-profile");
     Console.Error.WriteLine("       AccuracyProbe <test-data.json> <data-dir> bucket-profile");
+    Console.Error.WriteLine("       AccuracyProbe <test-data.json> <data-dir> score-bench [loops]");
     return 2;
 }
 
@@ -19,6 +20,9 @@ if (args.Length >= 3 && string.Equals(args[2], "hybrid-profile", StringCompariso
 
 if (args.Length >= 3 && string.Equals(args[2], "bucket-profile", StringComparison.OrdinalIgnoreCase))
     return RunBucketProfileProbe(testDataPath, dataDirectory);
+
+if (args.Length >= 3 && string.Equals(args[2], "score-bench", StringComparison.OrdinalIgnoreCase))
+    return RunScoreBench(testDataPath, dataDirectory, args.Length >= 4 ? args[3] : null);
 
 if (args.Length >= 4 && string.Equals(args[2], "exact", StringComparison.OrdinalIgnoreCase))
     return RunExactProbe(testDataPath, dataDirectory, args[3]);
@@ -77,6 +81,75 @@ Console.WriteLine($"total={total} tp={tp} tn={tn} fp={fp} fn={fn} weighted={weig
 Console.WriteLine("miss_fraud_scores=" + string.Join(",", missFraudScores.Select(static item => $"{item.Key.ToString(CultureInfo.InvariantCulture)}:{item.Value}")));
 Console.WriteLine("sample_misses=" + string.Join(",", missIds));
 return 0;
+
+static int RunScoreBench(string testDataPath, string dataDirectory, string? loopArg)
+{
+    int loops = int.TryParse(loopArg, CultureInfo.InvariantCulture, out int parsedLoops) && parsedLoops > 0 ? parsedLoops : 3;
+    Environment.SetEnvironmentVariable("DATA_DIR", dataDirectory);
+    FraudScorer scorer = FraudScorer.Load(dataDirectory);
+    using JsonDocument doc = JsonDocument.Parse(File.ReadAllBytes(testDataPath));
+    byte[][] requests = doc.RootElement.GetProperty("entries")
+        .EnumerateArray()
+        .Select(static entry => Encoding.UTF8.GetBytes(entry.GetProperty("request").GetRawText()))
+        .ToArray();
+    bool[] expectedApproved = doc.RootElement.GetProperty("entries")
+        .EnumerateArray()
+        .Select(static entry => entry.GetProperty("expected_approved").GetBoolean())
+        .ToArray();
+
+    // Warm one full corpus pass so JIT/tiered compilation and index page faults do not dominate.
+    int warmChecksum = 0;
+    for (int i = 0; i < requests.Length; i++)
+        warmChecksum += scorer.ScoreFraudRequest(requests[i]).Span[^1];
+
+    long[] elapsedNanos = new long[requests.Length * loops];
+    int total = 0;
+    int fp = 0;
+    int fn = 0;
+    int tp = 0;
+    int tn = 0;
+    int checksum = warmChecksum;
+    for (int loop = 0; loop < loops; loop++)
+    {
+        for (int i = 0; i < requests.Length; i++)
+        {
+            long start = System.Diagnostics.Stopwatch.GetTimestamp();
+            ReadOnlyMemory<byte> response = scorer.ScoreFraudRequest(requests[i]);
+            long elapsed = System.Diagnostics.Stopwatch.GetTimestamp() - start;
+            elapsedNanos[(loop * requests.Length) + i] = elapsed * 1_000_000_000L / System.Diagnostics.Stopwatch.Frequency;
+            checksum += response.Span[^1];
+
+            bool approved = ParseApproved(response.Span, out _);
+            if (approved == expectedApproved[i])
+            {
+                if (approved) tn++;
+                else tp++;
+            }
+            else if (approved)
+            {
+                fn++;
+            }
+            else
+            {
+                fp++;
+            }
+
+            total++;
+        }
+    }
+
+    Array.Sort(elapsedNanos);
+    int weighted = fp + (fn * 3);
+    double failureRate = total == 0 ? 0.0 : (fp + fn) * 100.0 / total;
+    double avg = elapsedNanos.Average();
+    Console.WriteLine($"mode=score-bench loops={loops} requests={requests.Length} checksum={checksum}");
+    Console.WriteLine($"total={total} tp={tp} tn={tn} fp={fp} fn={fn} weighted={weighted} failure_rate={failureRate.ToString("F4", CultureInfo.InvariantCulture)}%");
+    Console.WriteLine(
+        $"score_elapsed_ns=avg:{avg.ToString("F2", CultureInfo.InvariantCulture)} " +
+        $"p50:{PercentileLong(elapsedNanos, 0.50)} p90:{PercentileLong(elapsedNanos, 0.90)} " +
+        $"p95:{PercentileLong(elapsedNanos, 0.95)} p99:{PercentileLong(elapsedNanos, 0.99)} max:{elapsedNanos[^1]}");
+    return 0;
+}
 
 static bool ParseApproved(ReadOnlySpan<byte> response, out double fraudScore)
 {
