@@ -9,6 +9,11 @@ const candidates = rows.filter((row) => row.report_kind === 'candidate');
 const calibrated = rows.filter((row) => row.report_kind === 'official-calibrated');
 const experiments = rows.filter((row) => row.report_kind === 'experiment');
 const latest = candidates[0];
+const latestCalibrated = calibrated[0];
+const cleanCandidates = candidates.filter((row) => row.http_errors === 0 && row.false_positive_detections === 0 && row.false_negative_detections === 0);
+const p99Number = (value: string) => Number(String(value).replace('ms', ''));
+const bestCandidate = [...cleanCandidates].sort((a, b) => p99Number(a.p99) - p99Number(b.p99))[0] ?? latest;
+const latestExperiment = experiments[0];
 const pageSize = 5;
 const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 ---
@@ -22,6 +27,41 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
       <p class="tagline">
         Candidate runs track the default submission stack. Experiment runs stay visible with their own error data.
       </p>
+    </section>
+
+    <section class="report-lane-summary" aria-label="Report lane summary">
+      {latest && (
+        <article>
+          <span class="status-pill clean">[latest candidate]</span>
+          <h2>{latest.p99}</h2>
+          <p>{latest.failure_rate} failures // score {fmtScore(latest.final_score)}</p>
+          <a href={latest.run_url} target="_blank" rel="noopener noreferrer">run {latest.run_id} ↗</a>
+        </article>
+      )}
+      {bestCandidate && (
+        <article>
+          <span class="status-pill clean">[best clean]</span>
+          <h2>{bestCandidate.p99}</h2>
+          <p>{bestCandidate.failure_rate} failures // <code>{bestCandidate.short_sha}</code></p>
+          <a href={`../reports/${bestCandidate.file}`} target="_blank" rel="noopener noreferrer">open json ↗</a>
+        </article>
+      )}
+      {latestCalibrated && (
+        <article>
+          <span class="status-pill ci">[calibrated-ci]</span>
+          <h2>{latestCalibrated.p99}</h2>
+          <p>api {latestCalibrated.benchmark_api_cpus || 'default'} / proxy {latestCalibrated.benchmark_proxy_cpus || 'default'} // score {fmtScore(latestCalibrated.final_score)}</p>
+          <a href={latestCalibrated.run_url} target="_blank" rel="noopener noreferrer">inspect calibration ↗</a>
+        </article>
+      )}
+      {latestExperiment && (
+        <article>
+          <span class="status-pill warn">[latest experiment]</span>
+          <h2>{latestExperiment.p99}</h2>
+          <p>{latestExperiment.failure_rate} failures // retained as non-candidate evidence</p>
+          <a href={`../reports/${latestExperiment.file}`} target="_blank" rel="noopener noreferrer">open artifact ↗</a>
+        </article>
+      )}
     </section>
 
     {latest && (
@@ -248,6 +288,36 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
     padding: 0.1rem 0.35rem;
   }
   .compact { margin-bottom: 3rem; }
+  .report-lane-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    margin: -1rem 0 3rem;
+  }
+  .report-lane-summary article {
+    border: 1px solid var(--term-green-dim);
+    background: linear-gradient(180deg, rgba(23, 134, 0, 0.08), rgba(0, 0, 0, 0.42));
+    padding: 1rem;
+  }
+  .report-lane-summary h2 {
+    color: var(--term-green-soft);
+    margin: 0.75rem 0 0.25rem;
+    font-size: clamp(1.7rem, 3vw, 2.3rem);
+  }
+  .report-lane-summary p {
+    color: var(--text-muted);
+    min-height: 3.2rem;
+  }
+  .report-lane-summary code { color: var(--term-green-soft); }
+  .report-lane-summary a {
+    color: var(--warn-amber);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    font-size: 0.82rem;
+  }
+  @media (max-width: 1000px) { .report-lane-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 640px) { .report-lane-summary { grid-template-columns: 1fr; } }
   .report-table-wrap {
     border: 1px solid var(--term-green-dim);
     background: rgba(0, 8, 0, 0.72);

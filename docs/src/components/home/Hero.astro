@@ -1,31 +1,48 @@
 ---
 const official = await import('../../../public/official/latest.json');
-const result = official.default.result;
+const latest = await import('../../../public/reports/latest-candidate.json');
+const calibrated = await import('../../../public/reports/latest-calibrated.json');
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const officialResult = official.default.result;
 const issue = official.default.issue;
+const candidate = latest.default;
+const calibratedRun = calibrated.default;
+const candidateResult = candidate.result;
+const candidateMeta = candidate.metadata;
+const calibratedResult = calibratedRun.result;
+const docsHref = `${base}/docs/architecture/`;
 ---
 
-<section class="hero">
+<section class="hero" aria-labelledby="hero-title">
   <div class="hero-content">
     <p class="eyebrow">RINHA 2026 // .NET 10 NATIVEAOT</p>
-    <h1>FRAUD SIGNAL<br />UNDER LOAD.</h1>
+    <h1 id="hero-title">FRAUD SIGNAL<br />UNDER LOAD.</h1>
     <p class="tagline">
-      Raw HTTP/1 over Unix sockets, precomputed byte responses, and hybrid bucket/IVF scoring while chasing 0% failures.
+      A public proof dossier for a raw HTTP/1 fraud scorer: official upstream history, current CI candidate evidence, and the runtime path that keeps the hot loop small.
     </p>
+
+    <div class="proof-rail" aria-label="Current evidence summary">
+      <span><strong>[official]</strong> issue #{issue.number}</span>
+      <span><strong>[candidate]</strong> {candidateResult.scoring.failure_rate} failures</span>
+      <span><strong>[calibrated]</strong> {calibratedResult.p99} p99</span>
+    </div>
+
     <div class="cta-group">
-      <a href={issue.url} class="btn-fire" target="_blank" rel="noopener noreferrer">OFFICIAL RESULT</a>
-      <a href="./docs/" class="btn-secondary">READ SYSTEM NOTES</a>
+      <a href={issue.url} class="btn-fire" target="_blank" rel="noopener noreferrer">VERIFY UPSTREAM RESULT</a>
+      <a href={candidateMeta.run_url} class="btn-secondary" target="_blank" rel="noopener noreferrer">OPEN LATEST CI RUN</a>
+      <a href={docsHref} class="btn-inline">TRACE RUNTIME PATH</a>
     </div>
   </div>
 
-  <div class="terminal-panel">
+  <div class="terminal-panel" aria-label="Benchmark provenance console">
     <div class="terminal-content">
-      <div class="term-line">&gt; docker pull ghcr.io/jonathanperis/rinha4-back-end-dotnet:latest</div>
-      <div class="term-line">&gt; reverse_proxy: yolo_mode // uds</div>
-      <div class="term-line">&gt; native_aot: ready // parser: raw_http</div>
-      <div class="term-line">&gt; official.issue = #{issue.number}</div>
-      <div class="term-line">&gt; official.p99 = {result.p99}</div>
-      <div class="term-line">&gt; official.failures = {result.scoring.failure_rate}</div>
-      <div class="term-line">&gt; target: 0% failures, p99 near 1ms</div>
+      <div class="term-line">&gt; lane.official&nbsp;&nbsp;&nbsp; issue #{issue.number} // p99 {officialResult.p99} // failures {officialResult.scoring.failure_rate}</div>
+      <div class="term-line">&gt; lane.candidate&nbsp; run {candidateMeta.run_id} // p99 {candidateResult.p99} // failures {candidateResult.scoring.failure_rate}</div>
+      <div class="term-line">&gt; lane.calibrated api={calibratedRun.metadata.benchmark_api_cpus || 'default'} proxy={calibratedRun.metadata.benchmark_proxy_cpus || 'default'} // p99 {calibratedResult.p99}</div>
+      <div class="term-line">&gt; runtime&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; native_aot // raw_http // uds // prebuilt_bytes</div>
+      <div class="term-line">&gt; topology&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; yolo_lb:9999 -&gt; api[2] over unix sockets</div>
+      <div class="term-line">&gt; target&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; official resubmission with 0% failures</div>
+      <div class="term-line">&gt; caveat&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ci numbers are evidence, not official hardware</div>
       <div class="term-line">&gt; <span class="cursor"></span></div>
     </div>
   </div>

@@ -1,0 +1,43 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Navbar from '@/components/home/Navbar.astro';
+import Hero from '@/components/home/Hero.astro';
+import Dashboard from '@/components/home/Dashboard.astro';
+import Footer from '@/components/home/Footer.astro';
+---
+
+<BaseLayout title="A/B Evidence Terminal | rinha4-back-end-dotnet">
+  <Navbar />
+  <main>
+    <section class="ab-hero-note" aria-label="A/B variant note">
+      <p class="eyebrow">A/B VARIANT // EVIDENCE TERMINAL</p>
+      <h1>PROVENANCE-FIRST HERO.</h1>
+      <p>
+        This static variant keeps the same brand system while testing denser proof above the fold: official upstream,
+        current candidate CI, calibrated CI, runtime path, and source links before the archive.
+      </p>
+    </section>
+    <Hero />
+    <Dashboard />
+  </main>
+  <Footer />
+</BaseLayout>
+
+<style>
+  .ab-hero-note {
+    border: 1px solid rgba(255, 179, 0, 0.3);
+    background: linear-gradient(135deg, rgba(255, 179, 0, 0.08), rgba(23, 134, 0, 0.055));
+    padding: 1.5rem;
+    margin-bottom: 4rem;
+  }
+  .ab-hero-note h1 {
+    color: var(--term-green);
+    font-size: clamp(2rem, 4vw, 3.6rem);
+    line-height: 1;
+    text-shadow: 1px 1px 0 var(--kill-red);
+  }
+  .ab-hero-note p:not(.eyebrow) {
+    color: var(--text-muted);
+    max-width: 76ch;
+  }
+</style>
