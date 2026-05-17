@@ -20,12 +20,14 @@ shown `0` HTTP errors; p99 work is now mostly inside bucket fast-path coverage,
 fallback frequency, IVF repair/vector scan cost, and CPU split between the API
 containers and the standalone proxy.
 
-The latest archived candidate benchmark at the time of this audit used image
-`ci-ead329a626dec7a605145fd278655dfd0fa63a51` and produced p99 `0.34ms`,
-score `6000`, `0` false positives, `0` false negatives, and `0` HTTP errors in
-the automatic benchmark lane. The paired official-calibrated prediction run on
-the same commit reported p99 `0.35ms`, score `6000`, and `0` HTTP errors. These
-are archived CI results, not official Rinha hardware results.
+The reports page is the source of truth for the newest archived candidate and
+calibrated runs because every main build can append fresh benchmark artifacts.
+One recent clean pre-audit candidate image,
+`ci-ead329a626dec7a605145fd278655dfd0fa63a51`, produced p99 `0.34ms`, score
+`6000`, `0` false positives, `0` false negatives, and `0` HTTP errors in the
+automatic benchmark lane; its paired official-calibrated prediction run reported
+p99 `0.35ms`, score `6000`, and `0` HTTP errors. These are archived CI results,
+not official Rinha hardware results.
 
 ## Accuracy experiments
 
