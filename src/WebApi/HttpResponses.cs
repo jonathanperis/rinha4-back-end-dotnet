@@ -7,7 +7,8 @@ internal static class HttpResponses
 {
     /// <summary>
     /// Complete HTTP 200 JSON responses indexed by fraud count from 0 through 5.
-    /// Each body matches the competition response shape and keeps the connection alive.
+    /// Each body matches the competition response shape. HTTP/1.1 keeps the
+    /// connection alive implicitly, so the hot responses omit that header.
     /// </summary>
     public static readonly ReadOnlyMemory<byte>[] FraudScores = BuildFraudScoreResponses();
 
@@ -46,13 +47,13 @@ internal static class HttpResponses
     }
 
     /// <summary>
-    /// Builds a complete keep-alive HTTP 200 response for a fixed body and content type.
+    /// Builds a complete HTTP 200 response for a fixed body and content type.
     /// The returned byte array is immutable by convention and can be reused safely.
     /// </summary>
     private static byte[] BuildHttpResponse(ReadOnlySpan<byte> body, string contentType)
     {
         byte[] header = Encoding.ASCII.GetBytes(
-            $"HTTP/1.1 200 OK\r\nContent-Type: {contentType}\r\nContent-Length: {body.Length}\r\nConnection: keep-alive\r\n\r\n");
+            $"HTTP/1.1 200 OK\r\nContent-Type: {contentType}\r\nContent-Length: {body.Length}\r\n\r\n");
         byte[] response = GC.AllocateUninitializedArray<byte>(header.Length + body.Length);
         header.CopyTo(response, 0);
         body.CopyTo(response.AsSpan(header.Length));

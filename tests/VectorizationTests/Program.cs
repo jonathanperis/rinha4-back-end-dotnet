@@ -210,6 +210,16 @@ VectorizationTestRunner.Run("reads one-pass full repair as IVF default", () =>
     VectorizationTestRunner.AssertEqualInt(5, options.RepairMaxFrauds);
 });
 
+VectorizationTestRunner.Run("omits explicit keep-alive header from hot fraud responses", () =>
+{
+    foreach (ReadOnlyMemory<byte> response in HttpResponses.FraudScores)
+    {
+        string text = Encoding.ASCII.GetString(response.Span);
+        if (text.Contains("Connection: keep-alive", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("hot fraud response should rely on HTTP/1.1 implicit keep-alive to reduce send bytes");
+    }
+});
+
 VectorizationTestRunner.Run("enables raw fd handoff only through FD_RAW flag", () =>
 {
     using var disabled = new ScopedEnvironment(("FD_RAW", null));
