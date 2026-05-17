@@ -21,6 +21,9 @@ on:
           - competitor-compose/jonathan-dotnet-asm-minworker256/docker-compose.yml
           - competitor-compose/jonathan-dotnet-asm-fdraw0/docker-compose.yml
           - competitor-compose/jonathan-dotnet-asm-nocpuset/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-asm-preferlocal/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-asm-proc2/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-asm-proc2-min256/docker-compose.yml
           - competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
       official_ref:
         description: Rinha official repo ref
@@ -62,15 +65,18 @@ jobs:
         participant:
           # Active Ronie chase matrix requested by Jonathan:
           # - only external competitor: RonieNeubauer/rinha2026, official issue #4682
-          # - baseline: current .NET API behind known-good same-source ASM LB
-          # - keep two cheap sanity variants that were not catastrophic in run 408
-          #   while dropping losing apiheavy/minworker64/fdraw0 lanes from all-comparison.
+          # - baseline + best previous config sanity lane
+          # - cheap .NET scheduler knobs inspired by Ronie's thread-per-connection design
           - name: jonathan-dotnet-asm-lb
             compose_file: competitor-compose/jonathan-dotnet-asm-lb/docker-compose.yml
           - name: jonathan-dotnet-asm-minworker256
             compose_file: competitor-compose/jonathan-dotnet-asm-minworker256/docker-compose.yml
-          - name: jonathan-dotnet-asm-nocpuset
-            compose_file: competitor-compose/jonathan-dotnet-asm-nocpuset/docker-compose.yml
+          - name: jonathan-dotnet-asm-preferlocal
+            compose_file: competitor-compose/jonathan-dotnet-asm-preferlocal/docker-compose.yml
+          - name: jonathan-dotnet-asm-proc2
+            compose_file: competitor-compose/jonathan-dotnet-asm-proc2/docker-compose.yml
+          - name: jonathan-dotnet-asm-proc2-min256
+            compose_file: competitor-compose/jonathan-dotnet-asm-proc2-min256/docker-compose.yml
           - name: ronieneubauer-rinha2026
             compose_file: competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
 
