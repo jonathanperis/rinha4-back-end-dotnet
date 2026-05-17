@@ -1,25 +1,25 @@
 {
-  "synced_at": "2026-05-08T02:48:41.881Z",
+  "synced_at": "2026-05-17T15:43:07.605Z",
   "source": {
     "repo": "zanfranceschi/rinha-de-backend-2026",
     "author": "jonathanperis",
     "search": "is:issue state:closed author:jonathanperis reason:completed sort:updated-desc"
   },
   "issue": {
-    "number": 2088,
+    "number": 5000,
     "title": "rinha/test jonathanperis-dotnet",
-    "url": "https://github.com/zanfranceschi/rinha-de-backend-2026/issues/2088",
-    "updated_at": "2026-05-07T23:35:03Z",
-    "closed_at": "2026-05-07T23:35:03Z"
+    "url": "https://github.com/zanfranceschi/rinha-de-backend-2026/issues/5000",
+    "updated_at": "2026-05-17T15:40:30Z",
+    "closed_at": "2026-05-17T15:40:30Z"
   },
   "comment": {
-    "url": "https://github.com/zanfranceschi/rinha-de-backend-2026/issues/2088#issuecomment-4401930421",
-    "created_at": "2026-05-07T23:35:03Z",
+    "url": "https://github.com/zanfranceschi/rinha-de-backend-2026/issues/5000#issuecomment-4471252459",
+    "created_at": "2026-05-17T15:40:29Z",
     "author": "arinhadebackend"
   },
   "repo_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet",
-  "commit": "4275396",
-  "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-2546b8a3bfbcbedc318e4326b0824c94f18c744a",
+  "commit": "897122c",
+  "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-f2eb4a0eecd897948cacc2a5dfefc93a8f5379e1",
   "result": {
     "expected": {
       "total": 54100,
@@ -30,35 +30,35 @@
       "edge_case_count": 797,
       "edge_case_rate": 0.0147
     },
-    "p99": "2.01ms",
+    "p99": "1.12ms",
     "scoring": {
       "breakdown": {
-        "false_positive_detections": 697,
-        "false_negative_detections": 574,
-        "true_positive_detections": 23463,
-        "true_negative_detections": 29325,
+        "false_positive_detections": 0,
+        "false_negative_detections": 0,
+        "true_positive_detections": 24037,
+        "true_negative_detections": 30022,
         "http_errors": 0
       },
-      "failure_rate": "2.35%",
-      "weighted_errors_E": 2419,
-      "error_rate_epsilon": 0.044747,
+      "failure_rate": "0%",
+      "weighted_errors_E": 0,
+      "error_rate_epsilon": 0,
       "p99_score": {
-        "value": 2697.15,
+        "value": 2950.41,
         "cut_triggered": false
       },
       "detection_score": {
-        "value": 334.09,
-        "rate_component": 1349.23,
-        "absolute_penalty": -1015.14,
+        "value": 3000,
+        "rate_component": 3000,
+        "absolute_penalty": 0,
         "cut_triggered": false
       },
-      "final_score": 3031.24
+      "final_score": 5950.41
     }
   },
   "runtime_info": {
     "mem": 350,
     "cpu": 1,
-    "commit": "4275396",
+    "commit": "897122c",
     "instances_number_ok": true,
     "unlimited_services": null
   }
