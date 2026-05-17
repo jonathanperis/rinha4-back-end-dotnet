@@ -24,7 +24,7 @@ on:
         required: true
         default: main
       k6_image:
-        description: k6 Docker image
+        description: k6 Docker image used when benchmark_k6_mode=docker
         required: true
         default: grafana/k6:latest
       webapi_image:
@@ -35,6 +35,14 @@ on:
         description: Number of k6 repetitions
         required: true
         default: "1"
+      benchmark_k6_mode:
+        description: k6 execution mode
+        required: true
+        default: native
+        type: choice
+        options:
+          - native
+          - docker
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -71,12 +79,21 @@ jobs:
         if: ${{ github.event_name == 'push' || inputs.compose_file == matrix.participant.compose_file || inputs.compose_file == 'all-comparison' }}
         uses: actions/checkout@v6
 
+      - name: Install native k6
+        run: |
+          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+          k6 version
+
       - name: Run benchmark
         if: ${{ github.event_name == 'push' || inputs.compose_file == matrix.participant.compose_file || inputs.compose_file == 'all-comparison' }}
         env:
           COMPOSE_FILE: ${{ matrix.participant.compose_file }}
           OFFICIAL_REF: ${{ inputs.official_ref || 'main' }}
           K6_IMAGE: ${{ inputs.k6_image || 'grafana/k6:latest' }}
+          BENCHMARK_K6_MODE: ${{ inputs.benchmark_k6_mode || 'native' }}
           WEBAPI_IMAGE: ${{ matrix.participant.name == 'jonathanperis' && inputs.webapi_image || '' }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions || '1' }}
           RESULTS_DIR: benchmark-results-${{ matrix.participant.name }}
@@ -111,21 +128,38 @@ jobs:
           repeat_files=()
           for repetition in $(seq 1 "$BENCHMARK_REPETITIONS"); do
             rm -f "$RESULTS_DIR/official/test/results.json" "$RESULTS_DIR/official/test/k6-report.html"
-            docker run --rm \
-              --network host \
-              --user "$(id -u):$(id -g)" \
-              -e K6_NO_USAGE_REPORT=true \
-              -e K6_WEB_DASHBOARD=true \
-              -e K6_WEB_DASHBOARD_PORT=-1 \
-              -e K6_WEB_DASHBOARD_EXPORT=test/k6-report.html \
-              -v "$PWD/$RESULTS_DIR/official:/official" \
-              -w /official \
-              "$K6_IMAGE" run test/test.js
+            case "$BENCHMARK_K6_MODE" in
+              native)
+                if ! command -v k6 >/dev/null 2>&1; then
+                  echo "BENCHMARK_K6_MODE=native requires k6 on PATH" >&2
+                  exit 1
+                fi
+                (cd "$RESULTS_DIR/official" && bash ./run.sh > "../k6-output-repetition-$repetition.json")
+                ;;
+              docker)
+                docker run --rm \
+                  --network host \
+                  --user "$(id -u):$(id -g)" \
+                  -e K6_NO_USAGE_REPORT=true \
+                  -e K6_WEB_DASHBOARD=true \
+                  -e K6_WEB_DASHBOARD_PORT=-1 \
+                  -e K6_WEB_DASHBOARD_EXPORT=test/k6-report.html \
+                  -v "$PWD/$RESULTS_DIR/official:/official" \
+                  -w /official \
+                  "$K6_IMAGE" run test/test.js
+                ;;
+              *)
+                echo "Unsupported BENCHMARK_K6_MODE=$BENCHMARK_K6_MODE (expected native or docker)" >&2
+                exit 1
+                ;;
+            esac
             result_file="$RESULTS_DIR/results-repetition-$repetition.json"
             cp "$RESULTS_DIR/official/test/results.json" "$result_file"
             repeat_files+=("$result_file")
             if [[ -f "$RESULTS_DIR/official/test/k6-report.html" ]]; then
               cp "$RESULTS_DIR/official/test/k6-report.html" "$RESULTS_DIR/k6-report-repetition-$repetition.html"
+            elif [[ "$BENCHMARK_K6_MODE" == "docker" ]]; then
+              echo "k6 HTML report was not generated for repetition $repetition" >&2
             fi
           done
 
@@ -140,6 +174,7 @@ jobs:
           path: |
             benchmark-results-${{ matrix.participant.name }}/results.json
             benchmark-results-${{ matrix.participant.name }}/results-repetition-*.json
+            benchmark-results-${{ matrix.participant.name }}/k6-output-repetition-*.json
             benchmark-results-${{ matrix.participant.name }}/k6-report-*.html
             benchmark-results-${{ matrix.participant.name }}/docker-compose.log
           if-no-files-found: ignore

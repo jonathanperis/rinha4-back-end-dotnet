@@ -2,7 +2,7 @@ name: 'rinha-2026-dotnet'
 
 services:
   webapi1: &webapi
-    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-f2eb4a0eecd897948cacc2a5dfefc93a8f5379e1
+    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-087e77c77ba35c75d4d265663a802cdbece8ea6c
     container_name: webapi-1
     cpuset: "0,1"
     security_opt:
