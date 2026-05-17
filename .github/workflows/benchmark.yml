@@ -16,9 +16,11 @@ on:
         options:
           - all-comparison
           - competitor-compose/jonathan-dotnet-asm-lb/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-c-lb/docker-compose.yml
           - competitor-compose/jonathan-dotnet-asm-apiheavy-lb006/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-asm-balanced-lb010/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-asm-minworker64/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-asm-minworker256/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-asm-fdraw0/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-asm-nocpuset/docker-compose.yml
           - competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
       official_ref:
         description: Rinha official repo ref
@@ -59,19 +61,24 @@ jobs:
       matrix:
         participant:
           # Ronie chase matrix requested by Jonathan:
-          # - ours: current .NET API image behind known-good same-source ASM LB
-          # - ours: same .NET API image behind known-good same-source C LB
-          # - ours: ASM LB with Ronie-style API-heavy CPU split (0.47/0.47 API, 0.06 LB)
-          # - ours: ASM LB with balanced CPU split (0.45/0.45 API, 0.10 LB)
+          # - baseline: current .NET API behind known-good same-source ASM LB
+          # - CPU split: Ronie-style API-heavy 0.47/0.47 API, 0.06 LB
+          # - ThreadPool knobs: MIN_WORKER_THREADS 64 and 256
+          # - FD path: FD_RAW=0 managed Socket wrapper sanity check
+          # - cpuset topology: no explicit cpuset pinning, quotas only
           # - only external competitor: RonieNeubauer/rinha2026, official issue #4682
           - name: jonathan-dotnet-asm-lb
             compose_file: competitor-compose/jonathan-dotnet-asm-lb/docker-compose.yml
-          - name: jonathan-dotnet-c-lb
-            compose_file: competitor-compose/jonathan-dotnet-c-lb/docker-compose.yml
           - name: jonathan-dotnet-asm-apiheavy-lb006
             compose_file: competitor-compose/jonathan-dotnet-asm-apiheavy-lb006/docker-compose.yml
-          - name: jonathan-dotnet-asm-balanced-lb010
-            compose_file: competitor-compose/jonathan-dotnet-asm-balanced-lb010/docker-compose.yml
+          - name: jonathan-dotnet-asm-minworker64
+            compose_file: competitor-compose/jonathan-dotnet-asm-minworker64/docker-compose.yml
+          - name: jonathan-dotnet-asm-minworker256
+            compose_file: competitor-compose/jonathan-dotnet-asm-minworker256/docker-compose.yml
+          - name: jonathan-dotnet-asm-fdraw0
+            compose_file: competitor-compose/jonathan-dotnet-asm-fdraw0/docker-compose.yml
+          - name: jonathan-dotnet-asm-nocpuset
+            compose_file: competitor-compose/jonathan-dotnet-asm-nocpuset/docker-compose.yml
           - name: ronieneubauer-rinha2026
             compose_file: competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
 
