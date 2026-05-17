@@ -35,7 +35,7 @@ These users arrive in a skeptical, technical state of mind. They want proof, pro
 - Runtime: .NET 10 NativeAOT, Docker, Linux amd64, raw socket HTTP/1.
 - Public endpoint contract: `GET /ready`, `POST /fraud-score`.
 - Current source docs state the default runtime shape as load balancer on `9999`, two API instances, Docker bridge network, public submission images, and total limits at or below `1 CPU / 350 MB`.
-- Current README states the compose split as `0.42 CPU / 160 MB` per API and `0.16 CPU / 30 MB` for the load balancer.
+- Current README states the compose split as `0.425 CPU / 165 MB` per API and `0.15 CPU / 20 MB` for the load balancer.
 - Site accent is GitHub Linguist C# green `#178600`.
 - Latest synced official issue in `docs/public/official/latest.json`: issue `#2088`, official p99 `2.01ms`, failures `2.35%`, score `3031.24`, image `ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-2546b8a3bfbcbedc318e4326b0824c94f18c744a`.
 - Latest CI candidate in `docs/public/reports/latest-candidate.json`: run `25981532396`, image `ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-ead329a626dec7a605145fd278655dfd0fa63a51`, p99 `0.34ms`, failures `0%`, score `6000`.

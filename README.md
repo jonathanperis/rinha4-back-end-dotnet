@@ -29,7 +29,7 @@ Runtime shape:
 - Docker bridge network
 - public `linux/amd64` images for submission
 - total limits <= `1 CPU / 350 MB`
-- current compose split: `0.42 CPU / 160 MB` per API and `0.16 CPU / 30 MB` for the load balancer
+- current compose split: `0.425 CPU / 165 MB` per API and `0.15 CPU / 20 MB` for the load balancer
 - load balancer only distributes traffic; it does not inspect fraud payloads
 
 ## Architecture
