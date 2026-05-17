@@ -13,8 +13,17 @@ const {
 } = Astro.props;
 
 const pageUrl = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : `https://jonathanperis.github.io${Astro.url.pathname}`;
-const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-const asset = (path: string) => `${base}${path}`;
+const basePath = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+const assetPath = (path: string) => `${basePath}${path.replace(/^\//, '')}`;
+const absoluteAsset = (path: string) => new URL(assetPath(path), Astro.site ?? 'https://jonathanperis.github.io').href;
+const faviconHref = assetPath('favicon.ico');
+const faviconSvgHref = assetPath('title-mark.svg');
+const faviconPngHref = assetPath('favicon.png');
+const favicon32Href = assetPath('favicon-32x32.png');
+const appleTouchIconHref = assetPath('apple-touch-icon.png');
+const socialImageHref = absoluteAsset('social-preview.png');
+const thumbnailHref = assetPath('thumbnail.png');
+const socialImageAlt = 'Dark CRT benchmark preview for rinha4-back-end-dotnet with R4 fraud signal mark, p99 evidence cards, and NativeAOT runtime labels.';
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -42,7 +51,13 @@ const jsonLd = {
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
-    <link rel="icon" type="image/svg+xml" href={asset('/title-mark.svg')} />
+    <link rel="icon" href={faviconHref} sizes="any" />
+    <link rel="icon" type="image/svg+xml" href={faviconSvgHref} />
+    <link rel="icon" type="image/png" href={faviconPngHref} />
+    <link rel="icon" type="image/png" sizes="32x32" href={favicon32Href} />
+    <link rel="apple-touch-icon" href={appleTouchIconHref} />
+    <link rel="image_src" href={socialImageHref} />
+    <meta name="thumbnail" content={thumbnailHref} />
     <meta name="description" content={description} />
     <meta name="keywords" content="Rinha de Backend, .NET, NativeAOT, fraud detection, k6, performance, benchmark" />
     <link rel="canonical" href={pageUrl} />
@@ -52,9 +67,17 @@ const jsonLd = {
     <meta property="og:description" content={description} />
     <meta property="og:url" content={pageUrl} />
     <meta property="og:site_name" content="rinha4-back-end-dotnet" />
+    <meta property="og:image" content={socialImageHref} />
+    <meta property="og:image:secure_url" content={socialImageHref} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={socialImageAlt} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImageHref} />
+    <meta name="twitter:image:alt" content={socialImageAlt} />
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
     <title>{title}</title>
     <Analytics />
