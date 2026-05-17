@@ -103,6 +103,66 @@ Takeaway: raw fd was slightly better on median p99 in this small hosted-runner s
 
 The push run for the workflow-input fix (`25981532396`) also passed candidate and calibrated official-like benchmarks at score `6000`, with `FD_RAW=1` recorded in the archived metadata.
 
+
+## Competitor comparison campaign — 2026-05-17
+
+Active comparison branch participants:
+
+- `jonathanperis` — our .NET implementation with shared ASM fd-pass LB.
+- `daniloitagyba-rinha-2026-dotnet` — strongest tracked .NET competitor, fd-pass C LB + raw .NET server + mmap/native AVX2 scorer.
+- `ronieneubauer-rinha2026` — tracked #1 global/native reference, fd-pass C stack + tuned IVF/pthread runtime.
+
+Competitor audit findings:
+
+- Danilo uses the same broad transport shape we already copied: fd-pass, raw fd handling, pre-rendered responses, `WORKERS=2`, `TP_MIN_THREADS=64`, and tuned risky fallback bounds. The remaining transferable ideas are lower bucket candidate counts, dominant profile fast paths, native AVX2 scans, and continued thread/worker scheduling sweeps. Lower thresholds remain correctness-sensitive in our local replay.
+- Ronie spends more CPU on API and little on LB (`0.47 + 0.47 + 0.06`), uses blocking worker threads, `mlock`/`madvise`/warmup, and a tuned IVF/bbox path. The nearest safe .NET experiments are worker/scheduling and memory-residency warmups, not a wholesale IVF rewrite.
+- Local `wire-bench` already showed header parsing is not the bottleneck, so the next safe knob was ThreadPool dispatch behavior.
+
+### Direct 5-repetition comparison evidence
+
+A fresh all-comparison run against an older image override (`ci-ead329a...`) lost to the current .NET competitor, which confirms hosted-runner windows are noisy and that image/config selection must be explicit:
+
+| Workflow run | Participant | p99 values | Median | Clean |
+|---:|---|---:|---:|---|
+| `25981848905` | Danilo .NET | 0.32, 0.33, 0.32, 0.32, 0.34ms | 0.32ms | yes |
+| `25981848905` | Jonathan (`ci-ead329a...`) | 0.37, 0.38, 0.37, 0.37, 0.36ms | 0.37ms | yes |
+| `25981848905` | Ronie | 0.34, 0.32, 0.32, 0.31, 0.32ms | 0.32ms | yes |
+
+A same-workflow 5-repetition run using the comparison branch's pinned Jonathan image (`ci-0c5241fb8959386b7200a10752d34b325b59c7ef`) achieved the requested five consecutive wins over the tracked #1 .NET competitor:
+
+| Workflow run | Participant | p99 values | Median | Clean |
+|---:|---|---:|---:|---|
+| `25982265696` | Jonathan (`ci-0c5241...`) | 0.28, 0.28, 0.28, 0.28, 0.28ms | 0.28ms | yes |
+| `25982265696` | Danilo .NET | 0.31, 0.31, 0.31, 0.31, 0.31ms | 0.31ms | yes |
+| `25982265696` | Ronie | 0.32, 0.32, 0.31, 0.33, 0.33ms | 0.32ms | yes |
+
+Interpretation: the comparison branch's pinned Jonathan lane beat Danilo in all five repetitions with score 6000 and zero FP/FN/HTTP errors. Keep this run as the current comparison gate evidence; do not replace the comparison pin blindly with a noisier image without rerunning the same 5-rep gate.
+
+### ThreadPool dispatch experiment
+
+Implemented a guarded `THREADPOOL_PREFER_LOCAL` env toggle in `RawHttpServer` so future images can A/B `ThreadPool.UnsafeQueueUserWorkItem(..., preferLocal: ...)` without changing scoring logic. Runtime default remains `0`, preserving current global-queue behavior. `docker-compose.yml` also now exposes `SUBMITTED_FAST_PATH` explicitly with default `1` so scorer-branch A/Bs are visible in compose.
+
+Local verification for the toggle:
+
+```sh
+dotnet build tests/AccuracyProbe/AccuracyProbe.csproj -c Release --no-restore
+dotnet run --project tests/VectorizationTests/VectorizationTests.csproj -c Release --no-restore
+git diff --check
+docker compose --compatibility -f docker-compose.yml config --quiet
+```
+
+All passed.
+
+A temp comparison branch A/B with `THREADPOOL_PREFER_LOCAL=1` on image `ci-2c5af0699f40f41ce0745b6a5f2efa3d4e21ced7` was rejected:
+
+| Workflow run | Participant | p99 values | Median | Clean |
+|---:|---|---:|---:|---|
+| `25982405056` | Jonathan, prefer-local on | 0.42, 0.43, 0.43, 0.44, 0.43ms | 0.43ms | yes |
+| `25982405056` | Danilo .NET | 0.32, 0.33, 0.36, 0.35, 0.37ms | 0.35ms | yes |
+| `25982405056` | Ronie | 0.30, 0.29, 0.31, 0.30, 0.30ms | 0.30ms | yes |
+
+Takeaway: `preferLocal=true` hurts the fd-pass/raw-fd workload tail badly. Keep `THREADPOOL_PREFER_LOCAL=0` as the default and do not promote local-queue dispatch.
+
 ## Proposed next actions
 
 - Keep current runtime defaults unchanged (`FD_RAW=1`, `SCORER_MODE=hybrid`, current bucket thresholds).
