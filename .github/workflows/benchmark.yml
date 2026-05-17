@@ -16,6 +16,7 @@ on:
         options:
           - all-comparison
           - competitor-compose/jonathanperis/docker-compose.yml
+          - competitor-compose/mxlange-c-api-rinha2026/docker-compose.yml
           - competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
           - competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml
       official_ref:
@@ -49,9 +50,12 @@ jobs:
       matrix:
         participant:
           # Small active comparison set:
-          # - #1 global: RonieNeubauer/rinha2026, official issue #4682
+          # - current #1 global target: MXLange/c-api-rinha2026, pinned Docker Hub digest
+          # - tracked fast C competitor: RonieNeubauer/rinha2026, official issue #4682
           # - #1 .NET competitor: daniloitagyba/rinha-2026-dotnet, official issue #4746
           # - ours: jonathanperis/rinha4-back-end-dotnet
+          - name: mxlange-c-api-rinha2026
+            compose_file: competitor-compose/mxlange-c-api-rinha2026/docker-compose.yml
           - name: ronieneubauer-rinha2026
             compose_file: competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
           - name: daniloitagyba-rinha-2026-dotnet
