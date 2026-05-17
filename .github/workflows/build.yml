@@ -169,6 +169,14 @@ jobs:
           docker version
           docker compose version
 
+      - name: Install native k6
+        run: |
+          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+          k6 version
+
       - name: Run official-like benchmark against built image
         env:
           WEBAPI_IMAGE: ${{ needs.build-amd64.outputs.benchmark_image }}
@@ -177,6 +185,7 @@ jobs:
           COMPOSE_FILE: docker-compose.yml
           OFFICIAL_REF: main
           K6_IMAGE: grafana/k6:latest
+          BENCHMARK_K6_MODE: native
           RESULTS_DIR: benchmark-results
           IVF_CLUSTERS: "512"
           IVF_TRAIN_SAMPLE: "65536"
@@ -188,6 +197,8 @@ jobs:
           IVF_BBOX_REPAIR: "true"
           IVF_REPAIR_MIN_FRAUDS: "0"
           IVF_REPAIR_MAX_FRAUDS: "5"
+          IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "5000000"
+          IVF_FIVE_FAST_DENY_WORST_DISTANCE: "2000000"
           SCORER_MODE: hybrid
           ACCEPT_LOOPS: "1"
           FD_RAW: "1"
@@ -207,6 +218,7 @@ jobs:
           COMPOSE_FILE: docker-compose.yml
           OFFICIAL_REF: main
           K6_IMAGE: grafana/k6:latest
+          BENCHMARK_K6_MODE: native
           IVF_CLUSTERS: "512"
           IVF_TRAIN_SAMPLE: "65536"
           IVF_ITERATIONS: "6"
@@ -217,6 +229,8 @@ jobs:
           IVF_BBOX_REPAIR: "true"
           IVF_REPAIR_MIN_FRAUDS: "0"
           IVF_REPAIR_MAX_FRAUDS: "5"
+          IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "5000000"
+          IVF_FIVE_FAST_DENY_WORST_DISTANCE: "2000000"
           SCORER_MODE: hybrid
           ACCEPT_LOOPS: "1"
           FD_RAW: "1"
@@ -235,6 +249,7 @@ jobs:
           COMPOSE_FILE: docker-compose.yml
           OFFICIAL_REF: main
           K6_IMAGE: grafana/k6:latest
+          BENCHMARK_K6_MODE: native
           RESULTS_DIR: benchmark-results-calibrated
           IVF_CLUSTERS: "512"
           IVF_TRAIN_SAMPLE: "65536"
@@ -246,11 +261,13 @@ jobs:
           IVF_BBOX_REPAIR: "true"
           IVF_REPAIR_MIN_FRAUDS: "0"
           IVF_REPAIR_MAX_FRAUDS: "5"
+          IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "5000000"
+          IVF_FIVE_FAST_DENY_WORST_DISTANCE: "2000000"
           SCORER_MODE: hybrid
           ACCEPT_LOOPS: "1"
           FD_RAW: "1"
-          BENCHMARK_API_CPUS: "0.40"
-          BENCHMARK_PROXY_CPUS: "0.20"
+          BENCHMARK_API_CPUS: "0.425"
+          BENCHMARK_PROXY_CPUS: "0.15"
           BENCHMARK_REPETITIONS: "1"
         run: bash scripts/ci-official-benchmark.sh
 
@@ -268,6 +285,7 @@ jobs:
           COMPOSE_FILE: docker-compose.yml
           OFFICIAL_REF: main
           K6_IMAGE: grafana/k6:latest
+          BENCHMARK_K6_MODE: native
           IVF_CLUSTERS: "512"
           IVF_TRAIN_SAMPLE: "65536"
           IVF_ITERATIONS: "6"
@@ -278,11 +296,13 @@ jobs:
           IVF_BBOX_REPAIR: "true"
           IVF_REPAIR_MIN_FRAUDS: "0"
           IVF_REPAIR_MAX_FRAUDS: "5"
+          IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "5000000"
+          IVF_FIVE_FAST_DENY_WORST_DISTANCE: "2000000"
           SCORER_MODE: hybrid
           ACCEPT_LOOPS: "1"
           FD_RAW: "1"
-          BENCHMARK_API_CPUS: "0.40"
-          BENCHMARK_PROXY_CPUS: "0.20"
+          BENCHMARK_API_CPUS: "0.425"
+          BENCHMARK_PROXY_CPUS: "0.15"
           BENCHMARK_REPETITIONS: "1"
         run: bash scripts/archive-benchmark-result.sh
 
@@ -315,6 +335,7 @@ jobs:
           path: |
             benchmark-results/results.json
             benchmark-results/k6-report.html
+            benchmark-results/k6-output-repetition-*.json
             benchmark-results/results-repetition-*.json
             benchmark-results/k6-report-repetition-*.html
             benchmark-results/repetition-summary.json
@@ -323,6 +344,7 @@ jobs:
             benchmark-results/docker-compose.calibration.yml
             benchmark-results-calibrated/results.json
             benchmark-results-calibrated/k6-report.html
+            benchmark-results-calibrated/k6-output-repetition-*.json
             benchmark-results-calibrated/results-repetition-*.json
             benchmark-results-calibrated/k6-report-repetition-*.html
             benchmark-results-calibrated/repetition-summary.json

@@ -7,6 +7,7 @@ OFFICIAL_REF="${OFFICIAL_REF:-main}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 RESULTS_DIR="${RESULTS_DIR:-benchmark-results}"
 K6_IMAGE="${K6_IMAGE:-grafana/k6:latest}"
+BENCHMARK_K6_MODE="${BENCHMARK_K6_MODE:-docker}"
 BENCHMARK_PULL_IMAGE="${BENCHMARK_PULL_IMAGE:-false}"
 BENCHMARK_NO_BUILD="${BENCHMARK_NO_BUILD:-false}"
 BENCHMARK_STACK_CPUSET="${BENCHMARK_STACK_CPUSET:-}"
@@ -114,6 +115,7 @@ capture_docker_state() {
         echo "benchmark_stack_cpuset=$BENCHMARK_STACK_CPUSET"
         echo "benchmark_api_cpuset=$BENCHMARK_API_CPUSET"
         echo "benchmark_proxy_cpuset=$BENCHMARK_PROXY_CPUSET"
+        echo "benchmark_k6_mode=$BENCHMARK_K6_MODE"
         echo "benchmark_k6_cpuset=$BENCHMARK_K6_CPUSET"
         echo "benchmark_api_cpus=$BENCHMARK_API_CPUS"
         echo "benchmark_proxy_cpus=$BENCHMARK_PROXY_CPUS"
@@ -215,24 +217,39 @@ echo "==> Running official k6 benchmark"
 chmod -R a+rwX "$RESULTS_DIR/official"
 repeat_files=()
 for repetition in $(seq 1 "$BENCHMARK_REPETITIONS"); do
-    echo "==> k6 repetition $repetition/$BENCHMARK_REPETITIONS"
+    echo "==> k6 repetition $repetition/$BENCHMARK_REPETITIONS ($BENCHMARK_K6_MODE)"
     rm -f "$RESULTS_DIR/official/test/results.json" "$RESULTS_DIR/official/test/k6-report.html"
-    k6_args=(run --rm)
-    if [[ -n "$BENCHMARK_K6_CPUSET" ]]; then
-        k6_args+=(--cpuset-cpus "$BENCHMARK_K6_CPUSET")
-    fi
-    k6_args+=(
-        --network host
-        --user "$(id -u):$(id -g)"
-        -e K6_NO_USAGE_REPORT=true
-        -e K6_WEB_DASHBOARD=true
-        -e K6_WEB_DASHBOARD_PORT=-1
-        -e K6_WEB_DASHBOARD_EXPORT=test/k6-report.html
-        -v "$ROOT_DIR/$RESULTS_DIR/official:/official"
-        -w /official
-        "$K6_IMAGE" run test/test.js
-    )
-    docker "${k6_args[@]}"
+    case "$BENCHMARK_K6_MODE" in
+        native)
+            if ! command -v k6 >/dev/null 2>&1; then
+                echo "BENCHMARK_K6_MODE=native requires k6 on PATH" >&2
+                exit 1
+            fi
+            (cd "$RESULTS_DIR/official" && bash ./run.sh > "../k6-output-repetition-$repetition.json")
+            ;;
+        docker)
+            k6_args=(run --rm)
+            if [[ -n "$BENCHMARK_K6_CPUSET" ]]; then
+                k6_args+=(--cpuset-cpus "$BENCHMARK_K6_CPUSET")
+            fi
+            k6_args+=(
+                --network host
+                --user "$(id -u):$(id -g)"
+                -e K6_NO_USAGE_REPORT=true
+                -e K6_WEB_DASHBOARD=true
+                -e K6_WEB_DASHBOARD_PORT=-1
+                -e K6_WEB_DASHBOARD_EXPORT=test/k6-report.html
+                -v "$ROOT_DIR/$RESULTS_DIR/official:/official"
+                -w /official
+                "$K6_IMAGE" run test/test.js
+            )
+            docker "${k6_args[@]}"
+            ;;
+        *)
+            echo "Unsupported BENCHMARK_K6_MODE=$BENCHMARK_K6_MODE (expected native or docker)" >&2
+            exit 1
+            ;;
+    esac
     capture_docker_state "after-$repetition"
 
     result_file="$RESULTS_DIR/results-repetition-$repetition.json"
@@ -240,7 +257,7 @@ for repetition in $(seq 1 "$BENCHMARK_REPETITIONS"); do
     repeat_files+=("$result_file")
     if [[ -f "$RESULTS_DIR/official/test/k6-report.html" ]]; then
         cp "$RESULTS_DIR/official/test/k6-report.html" "$RESULTS_DIR/k6-report-repetition-$repetition.html"
-    else
+    elif [[ "$BENCHMARK_K6_MODE" == "docker" ]]; then
         echo "k6 HTML report was not generated for repetition $repetition" >&2
     fi
 done
@@ -292,6 +309,7 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
             echo "- WebApi image: \`$WEBAPI_IMAGE\`"
         fi
         echo "- Official ref: \`$OFFICIAL_REF\`"
+        echo "- k6 mode: \`$BENCHMARK_K6_MODE\`"
         echo "- k6 image: \`$K6_IMAGE\`"
         if [[ -n "$BENCHMARK_STACK_CPUSET" ]]; then
             echo "- Stack cpuset: \`$BENCHMARK_STACK_CPUSET\`"

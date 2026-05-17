@@ -89,7 +89,7 @@ on:
       ivf_five_fast_deny_worst_distance:
         description: Five-fraud top-five distance threshold that skips repair
         required: true
-        default: "4000000"
+        default: "2000000"
       benchmark_api_cpuset:
         description: Optional Docker cpuset for WebApi containers; overrides stack cpuset for API only
         required: false
@@ -164,11 +164,20 @@ jobs:
           docker version
           docker compose version
 
+      - name: Install native k6
+        run: |
+          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+          k6 version
+
       - name: Run benchmark
         env:
           COMPOSE_FILE: ${{ matrix.lb.compose_file }}
           OFFICIAL_REF: ${{ inputs.official_ref }}
           K6_IMAGE: ${{ inputs.k6_image }}
+          BENCHMARK_K6_MODE: native
           WEBAPI_IMAGE: ${{ inputs.webapi_image }}
           BENCHMARK_PULL_IMAGE: ${{ inputs.webapi_image != '' && 'true' || 'false' }}
           BENCHMARK_NO_BUILD: ${{ inputs.webapi_image != '' && 'true' || 'false' }}
@@ -221,6 +230,7 @@ jobs:
             benchmark-results-${{ matrix.lb.name }}/results.json
             benchmark-results-${{ matrix.lb.name }}/k6-report.html
             benchmark-results-${{ matrix.lb.name }}/k6-report-repetition-*.html
+            benchmark-results-${{ matrix.lb.name }}/k6-output-repetition-*.json
             benchmark-results-${{ matrix.lb.name }}/results-repetition-*.json
             benchmark-results-${{ matrix.lb.name }}/repetition-summary.json
             benchmark-results-${{ matrix.lb.name }}/docker-compose.log
@@ -260,6 +270,7 @@ jobs:
           BENCHMARK_REPORT_KIND: ${{ inputs.report_kind }}
           OFFICIAL_REF: ${{ inputs.official_ref }}
           K6_IMAGE: ${{ inputs.k6_image }}
+          BENCHMARK_K6_MODE: native
           IVF_CLUSTERS: ${{ inputs.ivf_clusters }}
           IVF_TRAIN_SAMPLE: ${{ inputs.ivf_train_sample }}
           IVF_ITERATIONS: ${{ inputs.ivf_iterations }}

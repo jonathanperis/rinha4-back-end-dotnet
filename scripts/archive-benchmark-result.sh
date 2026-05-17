@@ -15,6 +15,7 @@ IMAGE="${BENCHMARK_IMAGE:-${WEBAPI_IMAGE:-}}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 OFFICIAL_REF="${OFFICIAL_REF:-main}"
 K6_IMAGE="${K6_IMAGE:-grafana/k6:latest}"
+BENCHMARK_K6_MODE="${BENCHMARK_K6_MODE:-docker}"
 REPORT_KIND="${BENCHMARK_REPORT_KIND:-}"
 IVF_CLUSTERS="${IVF_CLUSTERS:-}"
 IVF_TRAIN_SAMPLE="${IVF_TRAIN_SAMPLE:-}"
@@ -109,6 +110,7 @@ jq -n \
     --arg compose_file "$COMPOSE_FILE" \
     --arg official_ref "$OFFICIAL_REF" \
     --arg k6_image "$K6_IMAGE" \
+    --arg benchmark_k6_mode "$BENCHMARK_K6_MODE" \
     --arg report_kind "$REPORT_KIND" \
     --arg html_report "$html_report_file" \
     --arg ivf_clusters "$IVF_CLUSTERS" \
@@ -158,6 +160,7 @@ jq -n \
             html_report: (if $html_report == "" then null else $html_report end),
             official_ref: $official_ref,
             k6_image: $k6_image,
+            benchmark_k6_mode: $benchmark_k6_mode,
             source: $source,
             environment: (if ($benchmark_api_cpus + $benchmark_proxy_cpus) != "" then
                 "GitHub Actions ubuntu-latest; calibrated CPU limits api=" + (if $benchmark_api_cpus == "" then "default" else $benchmark_api_cpus end) + ", proxy=" + (if $benchmark_proxy_cpus == "" then "default" else $benchmark_proxy_cpus end) + "; not official Rinha hardware"
@@ -219,6 +222,7 @@ for report in "$REPORTS_DIR"/${REPORT_PREFIX}-*.json; do
         compose_file: .metadata.compose_file,
         report_kind: (.metadata.report_kind // (if (.metadata.compose_file == "docker-compose.yml") then "candidate" else "experiment" end)),
         benchmark_stack_cpuset: (.metadata.benchmark_stack_cpuset // ""),
+        benchmark_k6_mode: (.metadata.benchmark_k6_mode // "docker"),
         benchmark_k6_cpuset: (.metadata.benchmark_k6_cpuset // ""),
         benchmark_api_cpuset: (.metadata.benchmark_api_cpuset // ""),
         benchmark_proxy_cpuset: (.metadata.benchmark_proxy_cpuset // ""),
