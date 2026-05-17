@@ -2,6 +2,7 @@ string? socketPath = Environment.GetEnvironmentVariable("BIND_ADDR") ?? Environm
 string dataDirectory = Environment.GetEnvironmentVariable("DATA_DIR") ?? "/data";
 SetMinWorkerThreads();
 var scorer = FraudScorer.Load(dataDirectory);
+NativeProcessTuning.TryLockMemoryFromEnvironment();
 var server = new RawHttpServer(socketPath, scorer);
 
 await server.RunAsync();

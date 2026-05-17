@@ -15,6 +15,9 @@ internal sealed class RawHttpServer
     private const int FGetFl = 3;
     private const int FSetFl = 4;
     private const int ONonBlock = 0x800;
+    private const int IpProtoTcp = 6;
+    private const int TcpNoDelay = 1;
+    private const int TcpQuickAck = 12;
 
     private readonly string? socketPath;
     private readonly FraudScorer scorer;
@@ -22,6 +25,7 @@ internal sealed class RawHttpServer
     private readonly bool fdPassMode;
     private readonly bool rawFdHandoff;
     private readonly bool threadPoolPreferLocal;
+    private readonly bool tunePassedTcpFd;
 
     /// <summary>
     /// Creates a server bound to the configured socket path and fraud scorer.
@@ -47,6 +51,7 @@ internal sealed class RawHttpServer
         keepAliveMax = GetNonNegativeIntEnvironment("KEEP_ALIVE_MAX", 0);
         rawFdHandoff = fdPassMode && RawFdHandoffEnabledFromEnvironment();
         threadPoolPreferLocal = BooleanEnvironmentEnabled("THREADPOOL_PREFER_LOCAL");
+        tunePassedTcpFd = fdPassMode && BooleanEnvironmentEnabled("FD_TCP_TUNE");
     }
 
     internal static bool RawFdHandoffEnabledFromEnvironment()
@@ -156,6 +161,7 @@ internal sealed class RawHttpServer
                 if (rawFdHandoff)
                 {
                     SetBlocking(fd);
+                    TunePassedTcpFd(fd);
                     ThreadPool.UnsafeQueueUserWorkItem(
                         static state => state.Server.HandleConnection(state.Fd),
                         (Server: this, Fd: fd),
@@ -476,6 +482,16 @@ internal sealed class RawHttpServer
             _ = Fcntl(fd, FSetFl, flags & ~ONonBlock);
     }
 
+    private void TunePassedTcpFd(int fd)
+    {
+        if (!tunePassedTcpFd)
+            return;
+
+        int enabled = 1;
+        _ = setsockopt(fd, IpProtoTcp, TcpNoDelay, in enabled, sizeof(int));
+        _ = setsockopt(fd, IpProtoTcp, TcpQuickAck, in enabled, sizeof(int));
+    }
+
     private static int Fcntl(int fd, int command, int value)
     {
         while (true)
@@ -530,6 +546,9 @@ internal sealed class RawHttpServer
 
     [DllImport("*", EntryPoint = "fcntl", SetLastError = true)]
     private static extern int fcntl(int fd, int command, int value);
+
+    [DllImport("*", EntryPoint = "setsockopt", SetLastError = true)]
+    private static extern int setsockopt(int fd, int level, int optname, in int optval, uint optlen);
 
     [DllImport("*", EntryPoint = "recv", SetLastError = true)]
     private static extern unsafe nint recv(int sockfd, byte* buffer, nuint length, int flags);
