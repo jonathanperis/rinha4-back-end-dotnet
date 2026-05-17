@@ -19,7 +19,7 @@ export const DOC_META: Record<string, { label: string; intent: string; signal: s
   },
   architecture: {
     label: 'Architecture',
-    intent: 'Trace traffic from k6 to yolo load balancer to UDS NativeAOT APIs.',
+    intent: 'Trace traffic from k6 to the yolo load balancer and fd-pass NativeAOT APIs.',
     signal: 'runtime path',
   },
   rules: {

@@ -20,12 +20,12 @@ shown `0` HTTP errors; p99 work is now mostly inside bucket fast-path coverage,
 fallback frequency, IVF repair/vector scan cost, and CPU split between the API
 containers and the standalone proxy.
 
-The latest validated main build before this cleanup used image
-`ci-ecdcc3f1b0059842489ae32102763ac957cc2a36` and produced p99 `0.40ms`,
+The latest archived candidate benchmark at the time of this audit used image
+`ci-ead329a626dec7a605145fd278655dfd0fa63a51` and produced p99 `0.34ms`,
 score `6000`, `0` false positives, `0` false negatives, and `0` HTTP errors in
-the automatic benchmark lane. A same-matrix comparison with that image was also
-correct but narrowly trailed Danilo in that run (`0.39ms` vs `0.37ms`). These are
-archived CI results, not official Rinha hardware results.
+the automatic benchmark lane. The paired official-calibrated prediction run on
+the same commit reported p99 `0.35ms`, score `6000`, and `0` HTTP errors. These
+are archived CI results, not official Rinha hardware results.
 
 ## Accuracy experiments
 
@@ -62,5 +62,5 @@ handoff in a managed `Socket`; set `FD_RAW=0` to fall back to the safer managed
 Socket path for diagnostics.
 
 The benchmark workflow runs the canonical root `docker-compose.yml` used by the
-submission. The compose file allocates `0.44 CPU / 160 MB` to each API container
-and `0.12 CPU / 30 MB` to the LB while keeping the total at `1.00 CPU / 350 MB`.
+submission. The compose file allocates `0.42 CPU / 160 MB` to each API container
+and `0.16 CPU / 30 MB` to the LB while keeping the total at `1.00 CPU / 350 MB`.

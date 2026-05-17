@@ -6,19 +6,18 @@ k6 / judge
     v
 rinha4-lb-yolo-mode :9999
     |
-    +-- unix:/sockets/api1.sock -> WebApi NativeAOT
+    +-- fdpass:/sockets/api1.sock.ctrl -> WebApi NativeAOT
     |
-    +-- unix:/sockets/api2.sock -> WebApi NativeAOT
+    +-- fdpass:/sockets/api2.sock.ctrl -> WebApi NativeAOT
 ```
 
 ## Request path
 
-1. The standalone yolo load balancer accepts TCP on port `9999` in `proxy` mode.
-2. It forwards bytes to API instances over Unix Domain Sockets.
-   The compose file pins `webapi1` to cpuset `0`, `webapi2` to `1`, and
-   `lb` to `2,3`. CPU quotas still total `1.00`; cpuset reduces scheduler
-   contention under the official host.
-3. `RawHttpServer` accepts the socket connection.
+1. The standalone yolo load balancer accepts TCP on port `9999` in `fdpass` mode.
+2. It selects an API instance and passes the accepted client fd over a Unix control socket.
+   The compose file pins `webapi1` to cpuset `0,1`, `webapi2` to `2,3`, and
+   `lb` to `0,2`. CPU quotas still total `1.00`; the overlapping cpuset keeps the proxy close to both API lanes.
+3. `RawHttpServer` accepts the fd-pass control message and serves the client fd directly when `FD_RAW=1`.
 4. `HttpWire` parses method, path, headers, and `Content-Length`.
 5. `FraudRequestParser` reads only required JSON fields.
 6. `FraudScorer` builds a normalized 14-dimensional vector.
@@ -60,6 +59,7 @@ Runtime implementation is split into focused files:
 
 ## Startup readiness
 
-Each API process recreates its Unix socket file on startup in the shared
-`sockets` tmpfs volume. The standalone LB consumes `/sockets/api1.sock` and
-`/sockets/api2.sock` and keeps the proxy layer byte-oriented.
+Each API process recreates its fd-pass control socket on startup in the shared
+`sockets` tmpfs volume. The standalone LB consumes `/sockets/api1.sock.ctrl` and
+`/sockets/api2.sock.ctrl`, then stays out of the fraud payload path after handing
+off the accepted client fd.

@@ -15,8 +15,9 @@ curl -i http://localhost:9999/ready
 ```
 
 The default compose stack runs `SCORER_MODE=hybrid`: bucket fast path first,
-then IVF fallback when needed. It allocates `0.45` CPU to each WebApi container
-and `0.10` CPU to the standalone proxy.
+then IVF fallback when needed. It allocates `0.42` CPU to each WebApi container
+and `0.16` CPU to the standalone proxy, with fd-pass control sockets and
+`FD_RAW=1` enabled by default.
 
 Tune IVF image-build parameters with `IVF_CLUSTERS`, `IVF_TRAIN_SAMPLE`,
 `IVF_ITERATIONS`, and `IVF_SCALE` when testing alternatives. Runtime IVF repair

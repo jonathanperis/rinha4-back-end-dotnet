@@ -7,7 +7,7 @@ Goal: official-valid, low-p99 backend under `1 CPU / 350 MB`, with correctness p
 ## Current stack
 
 - standalone `rinha4-lb-yolo-mode` reverse proxy on port `9999`
-- two .NET 10 NativeAOT API instances over Unix Domain Sockets
+- two .NET 10 NativeAOT API instances reached through fd-pass control sockets
 - raw socket HTTP/1 server, not ASP.NET Core
 - manual request parsing with `Utf8JsonReader`
 - prebuilt HTTP responses for fraud decisions
@@ -29,7 +29,7 @@ Runtime shape:
 - Docker bridge network
 - public `linux/amd64` images for submission
 - total limits <= `1 CPU / 350 MB`
-- current compose split: `0.45 CPU / 160 MB` per API and `0.10 CPU / 30 MB` for the load balancer
+- current compose split: `0.42 CPU / 160 MB` per API and `0.16 CPU / 30 MB` for the load balancer
 - load balancer only distributes traffic; it does not inspect fraud payloads
 
 ## Architecture
@@ -40,10 +40,12 @@ k6 / judge
     v
 rinha4-lb-yolo-mode :9999
     |
-    +-- unix:/sockets/api1.sock -> .NET NativeAOT raw HTTP server
+    +-- fdpass:/sockets/api1.sock.ctrl -> .NET NativeAOT raw HTTP server
     |
-    +-- unix:/sockets/api2.sock -> .NET NativeAOT raw HTTP server
+    +-- fdpass:/sockets/api2.sock.ctrl -> .NET NativeAOT raw HTTP server
 ```
+
+The load balancer listens on TCP `:9999`, chooses an upstream, and passes the accepted client file descriptor over a Unix control socket. With `FD_RAW=1`, the API keeps that fd on a low-level `recv`/`send` path instead of wrapping each handoff in a managed `Socket`.
 
 Hot path goals:
 

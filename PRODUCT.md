@@ -4,7 +4,7 @@
 
 `rinha4-back-end-dotnet` is Jonathan Peris's .NET 10 NativeAOT implementation for Rinha de Backend 2026 fraud detection. The public website is a performance proof surface: it explains the runtime, exposes official and official-like benchmark evidence, and gives technical visitors fast routes to docs, reports, source, and upstream result provenance.
 
-The implementation competes under a `1 CPU / 350 MB` envelope with a standalone `rinha4-lb-yolo-mode` load balancer, two .NET NativeAOT API instances, Unix Domain Socket transport, raw HTTP/1 parsing, prebuilt HTTP responses, and a hybrid bucket plus IVF scorer.
+The implementation competes under a `1 CPU / 350 MB` envelope with a standalone `rinha4-lb-yolo-mode` load balancer, two .NET NativeAOT API instances, fd-pass control sockets, raw HTTP/1 parsing, prebuilt HTTP responses, and a hybrid bucket plus IVF scorer.
 
 ## Register
 
@@ -25,8 +25,8 @@ These users arrive in a skeptical, technical state of mind. They want proof, pro
 
 - .NET can compete in a low-latency fraud-scoring benchmark when the runtime path avoids framework overhead.
 - The implementation is transparent: architecture, benchmark reports, official issue links, and CI history are exposed instead of hidden behind marketing copy.
-- Current candidate evidence is stronger than the stale official issue: latest CI candidate reports show `0.32ms` p99, `0%` failure rate, and `6000` score, while latest calibrated CI shows `0.31ms` p99 and `6000` score.
-- The public docs preserve implementation knowledge: raw HTTP server, UDS transport, bucket fast path, IVF fallback, benchmark workflow, and report archive.
+- Current candidate evidence is stronger than the stale official issue: latest CI candidate reports show `0.34ms` p99, `0%` failure rate, and `6000` score, while latest calibrated CI shows `0.35ms` p99 and `6000` score.
+- The public docs preserve implementation knowledge: raw HTTP server, fd-pass transport, bucket fast path, IVF fallback, benchmark workflow, and report archive.
 
 ## Canonical facts for design and copy
 
@@ -35,11 +35,11 @@ These users arrive in a skeptical, technical state of mind. They want proof, pro
 - Runtime: .NET 10 NativeAOT, Docker, Linux amd64, raw socket HTTP/1.
 - Public endpoint contract: `GET /ready`, `POST /fraud-score`.
 - Current source docs state the default runtime shape as load balancer on `9999`, two API instances, Docker bridge network, public submission images, and total limits at or below `1 CPU / 350 MB`.
-- Current README states the compose split as `0.45 CPU / 160 MB` per API and `0.10 CPU / 30 MB` for the load balancer.
+- Current README states the compose split as `0.42 CPU / 160 MB` per API and `0.16 CPU / 30 MB` for the load balancer.
 - Site accent is GitHub Linguist C# green `#178600`.
 - Latest synced official issue in `docs/public/official/latest.json`: issue `#2088`, official p99 `2.01ms`, failures `2.35%`, score `3031.24`, image `ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-2546b8a3bfbcbedc318e4326b0824c94f18c744a`.
-- Latest CI candidate in `docs/public/reports/latest-candidate.json`: run `25973947437`, image `ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-4a8e42b94e491818d37c008758aae8e1d65e9026`, p99 `0.32ms`, failures `0%`, score `6000`.
-- Latest calibrated CI in `docs/public/reports/latest-calibrated.json`: p99 `0.31ms`, failures `0%`, score `6000`, CPU limits api `0.40`, proxy `0.20`, not official Rinha hardware.
+- Latest CI candidate in `docs/public/reports/latest-candidate.json`: run `25981532396`, image `ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-ead329a626dec7a605145fd278655dfd0fa63a51`, p99 `0.34ms`, failures `0%`, score `6000`.
+- Latest calibrated CI in `docs/public/reports/latest-calibrated.json`: run `25981532396`, image `ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-ead329a626dec7a605145fd278655dfd0fa63a51`, p99 `0.35ms`, failures `0%`, score `6000`, CPU limits api `0.40`, proxy `0.20`, not official Rinha hardware.
 - Report index currently contains over two hundred archived runs. It is evidence, not decoration.
 
 ## Brand voice

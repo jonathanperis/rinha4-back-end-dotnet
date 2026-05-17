@@ -24,6 +24,6 @@ Ranking pressure:
 - HTTP errors destroy score quickly
 
 This repository currently keeps transport errors at `0` in CI-like runs. The
-candidate IVF2 path also replays the public payload with `0` false positives and
-`0` false negatives locally. Remaining ranking work is p99 reduction without
-giving back correctness.
+current candidate hybrid bucket/IVF path replays the public payload with `0`
+false positives and `0` false negatives in archived CI benchmarks. Remaining
+ranking work is p99 reduction without giving back correctness.

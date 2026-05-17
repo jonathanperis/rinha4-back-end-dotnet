@@ -201,7 +201,7 @@ main @ 4a8e42b // candidate run 25973947437
 Current two cards are good. Add a thin visual connector or ordered labels:
 
 1. `ingress` — yolo load balancer accepts `:9999`.
-2. `transport` — Unix Domain Sockets to two APIs.
+2. `transport` — fd-pass control sockets to two APIs.
 3. `parse` — raw HTTP/1 plus manual JSON field extraction.
 4. `score` — bucket fast path plus rounded int16 IVF fallback.
 5. `respond` — prebuilt response bytes.
