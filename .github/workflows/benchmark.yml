@@ -63,20 +63,14 @@ jobs:
       max-parallel: 2
       matrix:
         participant:
-          # Active Ronie chase matrix requested by Jonathan:
+          # Active Ronie chase confirmation requested by Jonathan:
           # - only external competitor: RonieNeubauer/rinha2026, official issue #4682
-          # - baseline + best previous config sanity lane
-          # - cheap .NET scheduler knobs inspired by Ronie's thread-per-connection design
+          # - baseline + one surviving .NET config sanity lane
+          # - dropped proc2/preferlocal lanes after run 410; they were clean but slower/noisier.
           - name: jonathan-dotnet-asm-lb
             compose_file: competitor-compose/jonathan-dotnet-asm-lb/docker-compose.yml
           - name: jonathan-dotnet-asm-minworker256
             compose_file: competitor-compose/jonathan-dotnet-asm-minworker256/docker-compose.yml
-          - name: jonathan-dotnet-asm-preferlocal
-            compose_file: competitor-compose/jonathan-dotnet-asm-preferlocal/docker-compose.yml
-          - name: jonathan-dotnet-asm-proc2
-            compose_file: competitor-compose/jonathan-dotnet-asm-proc2/docker-compose.yml
-          - name: jonathan-dotnet-asm-proc2-min256
-            compose_file: competitor-compose/jonathan-dotnet-asm-proc2-min256/docker-compose.yml
           - name: ronieneubauer-rinha2026
             compose_file: competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
 
