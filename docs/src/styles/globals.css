@@ -1,13 +1,18 @@
 :root {
-  --bg-deep: #04120e;
-  --bg-metal: #071b14;
+  --bg-deep: oklch(18% 0.026 160);
+  --bg-metal: oklch(23% 0.035 158);
+  --bg-floor: oklch(15% 0.022 160);
+  --surface-1: oklch(28% 0.04 158 / 0.90);
+  --surface-2: oklch(34% 0.046 158 / 0.82);
+  --surface-terminal: oklch(20% 0.033 155 / 0.90);
+  --ink-shadow: oklch(8% 0.02 160 / 0.42);
   /* GitHub Linguist official C# color: https://github.com/github-linguist/linguist */
   --term-green: #178600;
   --term-green-soft: #56b84d;
-  --term-green-dim: rgba(23, 134, 0, 0.24);
-  --term-green-glow: rgba(23, 134, 0, 0.55);
-  --text-main: #dff8dc;
-  --text-muted: #b7d9b1;
+  --term-green-dim: rgba(23, 134, 0, 0.22);
+  --term-green-glow: rgba(23, 134, 0, 0.34);
+  --text-main: oklch(93% 0.04 145);
+  --text-muted: oklch(84% 0.055 145);
   --warn-amber: #ffb300;
   --kill-red: #ff2d55;
   --violet-signal: #7d64ff;
@@ -25,9 +30,10 @@ html {
 body {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 12% 15%, rgba(125, 100, 255, 0.12), transparent 26rem),
-    radial-gradient(circle at 85% 5%, rgba(255, 45, 85, 0.08), transparent 22rem),
-    linear-gradient(180deg, var(--bg-deep), #020806 70%);
+    radial-gradient(circle at 12% 12%, rgba(125, 100, 255, 0.10), transparent 28rem),
+    radial-gradient(circle at 85% 2%, rgba(255, 45, 85, 0.055), transparent 24rem),
+    radial-gradient(circle at 45% 105%, rgba(23, 134, 0, 0.14), transparent 34rem),
+    linear-gradient(180deg, var(--bg-metal), var(--bg-deep) 44%, var(--bg-floor) 100%);
   color: var(--term-green);
   font-family: var(--font-mono);
   line-height: 1.6;
@@ -39,7 +45,7 @@ body::before {
   content: "";
   position: fixed;
   inset: 0;
-  background: linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.16) 50%);
+  background: linear-gradient(to bottom, transparent 50%, oklch(9% 0.02 160 / 0.08) 50%);
   background-size: 100% 4px;
   z-index: 50;
   pointer-events: none;
@@ -49,16 +55,16 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background: rgba(23, 134, 0, 0.035);
+  background: rgba(23, 134, 0, 0.018);
   z-index: 50;
   pointer-events: none;
   animation: flicker 0.16s infinite;
 }
 
 @keyframes flicker {
-  0% { opacity: 0.01; }
-  50% { opacity: 0.045; }
-  100% { opacity: 0.02; }
+  0% { opacity: 0.006; }
+  50% { opacity: 0.025; }
+  100% { opacity: 0.012; }
 }
 
 a { color: inherit; }
@@ -154,8 +160,9 @@ footer {
   max-width: 46rem;
   color: var(--text-muted);
   margin: 1.75rem 0 3rem;
-  padding-left: 1rem;
-  border-left: 2px solid var(--warn-amber);
+  border: 1px solid rgba(255, 179, 0, 0.24);
+  background: rgba(255, 179, 0, 0.045);
+  padding: 1rem 1.1rem;
   font-size: 1.2rem;
 }
 
@@ -228,9 +235,9 @@ footer {
 
 .terminal-panel {
   min-height: 390px;
-  background: rgba(0, 8, 0, 0.82);
+  background: var(--surface-terminal);
   border: 1px solid var(--term-green-dim);
-  box-shadow: inset 0 0 55px rgba(23, 134, 0, 0.08), 0 0 24px rgba(23, 134, 0, 0.16);
+  box-shadow: inset 0 0 55px rgba(23, 134, 0, 0.06), 0 0 20px rgba(23, 134, 0, 0.10);
   padding: 2rem;
   position: relative;
   overflow: hidden;
@@ -297,13 +304,14 @@ footer {
 }
 
 .stat-box {
-  background: rgba(23, 134, 0, 0.04);
-  border-left: 4px solid var(--term-green);
+  background: var(--surface-1);
+  border: 1px solid rgba(23, 134, 0, 0.26);
+  box-shadow: inset 0 1px 0 rgba(183, 217, 177, 0.05);
   padding: 1.4rem;
   transition: all 0.2s ease;
 }
 
-.stat-box:hover { transform: translateX(5px); background: rgba(23, 134, 0, 0.08); }
+.stat-box:hover { transform: translateY(-2px); background: var(--surface-2); }
 .stat-box.warning { border-color: var(--warn-amber); }
 .stat-box.danger { border-color: var(--kill-red); }
 
@@ -400,7 +408,7 @@ footer {
 }
 
 .scenario-card {
-  background: linear-gradient(135deg, rgba(23, 134, 0, 0.08), rgba(0, 0, 0, 0));
+  background: linear-gradient(135deg, rgba(23, 134, 0, 0.10), oklch(28% 0.035 158 / 0.52));
   border: 1px solid var(--term-green-dim);
   padding: 2rem;
   position: relative;
@@ -425,7 +433,7 @@ footer {
   bottom: 0;
   left: 0;
   border-bottom: 2px solid var(--term-green);
-  border-left: 2px solid var(--term-green);
+  border-left: 1px solid var(--term-green);
 }
 
 .scenario-card h3 {
@@ -454,7 +462,7 @@ footer {
 .danger-text { color: var(--kill-red); }
 
 .stress-tests {
-  background: linear-gradient(135deg, rgba(23, 134, 0, 0.08), rgba(23, 134, 0, 0.04));
+  background: linear-gradient(135deg, rgba(23, 134, 0, 0.10), oklch(29% 0.04 158 / 0.64));
   border: 1px solid rgba(23, 134, 0, 0.20);
   padding: 3rem;
   margin: 3rem 0 5rem;
@@ -495,7 +503,7 @@ footer {
 .stress-metric {
   text-align: center;
   border: 1px solid rgba(23, 134, 0, 0.18);
-  background: rgba(255, 255, 255, 0.025);
+  background: oklch(31% 0.038 158 / 0.50);
   padding: 1.4rem;
 }
 
@@ -562,7 +570,7 @@ footer {
 .evidence-grid,
 .ab-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }
 .evidence-card,
-.ab-grid article { border: 1px solid var(--term-green-dim); background: linear-gradient(180deg, rgba(23, 134, 0, 0.08), rgba(0, 0, 0, 0.45)); padding: 1.4rem; position: relative; }
+.ab-grid article { border: 1px solid var(--term-green-dim); background: linear-gradient(180deg, rgba(23, 134, 0, 0.10), oklch(24% 0.032 158 / 0.74)); padding: 1.4rem; position: relative; }
 .evidence-card.stale { border-color: rgba(255, 179, 0, 0.42); }
 .evidence-card.current { border-color: rgba(86, 184, 77, 0.52); }
 .evidence-card.calibrated { border-color: rgba(125, 100, 255, 0.5); }
@@ -574,7 +582,7 @@ footer {
 .evidence-card h3,
 .ab-grid h3 { color: var(--term-green); margin: 1rem 0; font-size: 1.35rem; }
 .metric-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; margin: 1rem 0; }
-.metric-list div { border: 1px solid rgba(23, 134, 0, 0.18); padding: 0.75rem; background: rgba(0, 0, 0, 0.22); }
+.metric-list div { border: 1px solid rgba(23, 134, 0, 0.18); padding: 0.75rem; background: oklch(20% 0.03 158 / 0.54); }
 .metric-list dt { color: var(--text-muted); font-size: 0.72rem; text-transform: uppercase; }
 .metric-list dd { color: var(--term-green-soft); font-size: clamp(1.15rem, 2vw, 1.55rem); }
 .evidence-card p,

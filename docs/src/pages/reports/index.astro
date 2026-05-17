@@ -71,7 +71,7 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
           <div class="stat-value">{latest.p99}</div>
           <div class="stat-sub">{latest.short_sha}</div>
         </div>
-        <div class="stat-box danger">
+        <div class={latest.failure_rate === '0%' ? 'stat-box' : 'stat-box danger'}>
           <div class="stat-label">Failures</div>
           <div class="stat-value">{latest.failure_rate}</div>
           <div class="stat-sub">Target is 0%</div>
@@ -296,7 +296,7 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
   }
   .report-lane-summary article {
     border: 1px solid var(--term-green-dim);
-    background: linear-gradient(180deg, rgba(23, 134, 0, 0.08), rgba(0, 0, 0, 0.42));
+    background: linear-gradient(180deg, rgba(23, 134, 0, 0.10), oklch(24% 0.032 158 / 0.74));
     padding: 1rem;
   }
   .report-lane-summary h2 {
@@ -320,7 +320,7 @@ const fmtScore = (n: number) => n.toLocaleString('en-US', { minimumFractionDigit
   @media (max-width: 640px) { .report-lane-summary { grid-template-columns: 1fr; } }
   .report-table-wrap {
     border: 1px solid var(--term-green-dim);
-    background: rgba(0, 8, 0, 0.72);
+    background: oklch(18% 0.03 155 / 0.84);
     box-shadow: inset 0 0 40px rgba(23, 134, 0, 0.05);
   }
   .report-scroll { overflow-x: auto; }
