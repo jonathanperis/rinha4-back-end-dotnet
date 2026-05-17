@@ -59,8 +59,8 @@ jobs:
       matrix:
         participant:
           # Evergreen 5-lane comparison set requested by Jonathan:
-          # - ours: current .NET API image behind latest available ASM LB
-          # - ours: same .NET API image behind latest available C LB
+          # - ours: current .NET API image behind known-good same-source ASM LB
+          # - ours: same .NET API image behind known-good same-source C LB
           # - current #1 global target: MXLange/c-api-rinha2026, pinned Docker Hub digest
           # - tracked fast competitor: RonieNeubauer/rinha2026, official issue #4682
           # - #1 .NET competitor: daniloitagyba/rinha-2026-dotnet, official issue #4746
