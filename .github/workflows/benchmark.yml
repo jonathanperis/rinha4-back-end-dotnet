@@ -15,15 +15,11 @@ on:
         type: choice
         options:
           - all-comparison
-          - competitor-compose/jonathan-dotnet-asm-lb/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-asm-apiheavy-lb006/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-asm-minworker64/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-asm-minworker256/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-asm-fdraw0/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-asm-nocpuset/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-asm-preferlocal/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-asm-proc2/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-asm-proc2-min256/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-ronie-prevlb/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-ronie-fdtcp/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-ronie-mlock/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-ronie-fdtcp-mlock/docker-compose.yml
           - competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
       official_ref:
         description: Rinha official repo ref
@@ -63,14 +59,20 @@ jobs:
       max-parallel: 2
       matrix:
         participant:
-          # Active Ronie chase confirmation requested by Jonathan:
-          # - only external competitor: RonieNeubauer/rinha2026, official issue #4682
-          # - baseline + one surviving .NET config sanity lane
-          # - dropped proc2/preferlocal lanes after run 410; they were clean but slower/noisier.
-          - name: jonathan-dotnet-asm-lb
-            compose_file: competitor-compose/jonathan-dotnet-asm-lb/docker-compose.yml
-          - name: jonathan-dotnet-asm-minworker256
-            compose_file: competitor-compose/jonathan-dotnet-asm-minworker256/docker-compose.yml
+          # Ronie-only chase screen requested by Jonathan:
+          # - external competitor: RonieNeubauer/rinha2026, official issue #4682
+          # - current .NET image with current ASM LB vs prior official ASM LB
+          # - env-gated Ronie-inspired fd TCP tune / mlock probes, no official promotion.
+          - name: jonathan-dotnet-ronie-currentlb
+            compose_file: competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml
+          - name: jonathan-dotnet-ronie-prevlb
+            compose_file: competitor-compose/jonathan-dotnet-ronie-prevlb/docker-compose.yml
+          - name: jonathan-dotnet-ronie-fdtcp
+            compose_file: competitor-compose/jonathan-dotnet-ronie-fdtcp/docker-compose.yml
+          - name: jonathan-dotnet-ronie-mlock
+            compose_file: competitor-compose/jonathan-dotnet-ronie-mlock/docker-compose.yml
+          - name: jonathan-dotnet-ronie-fdtcp-mlock
+            compose_file: competitor-compose/jonathan-dotnet-ronie-fdtcp-mlock/docker-compose.yml
           - name: ronieneubauer-rinha2026
             compose_file: competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
 
