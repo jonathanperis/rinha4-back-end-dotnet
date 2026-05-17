@@ -2,7 +2,7 @@ name: 'rinha-2026-dotnet'
 
 services:
   webapi1: &webapi
-    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-ec87d4fec148cbb0ff72508d5c2d7c387f230dd1
+    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-f2eb4a0eecd897948cacc2a5dfefc93a8f5379e1
     container_name: webapi-1
     cpuset: "0,1"
     security_opt:
@@ -34,7 +34,7 @@ services:
       IVF_REPAIR_MIN_FRAUDS: "${IVF_REPAIR_MIN_FRAUDS:-0}"
       IVF_REPAIR_MAX_FRAUDS: "${IVF_REPAIR_MAX_FRAUDS:-5}"
       IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "${IVF_ZERO_FAST_APPROVE_WORST_DISTANCE:-5000000}"
-      IVF_FIVE_FAST_DENY_WORST_DISTANCE: "${IVF_FIVE_FAST_DENY_WORST_DISTANCE:-4000000}"
+      IVF_FIVE_FAST_DENY_WORST_DISTANCE: "${IVF_FIVE_FAST_DENY_WORST_DISTANCE:-2000000}"
       BUCKET_PATH: /data/references.bucket.bin
       BUCKET_EARLY_CANDIDATES: "${BUCKET_EARLY_CANDIDATES:-9800}"
       BUCKET_MIN_CANDIDATES: "${BUCKET_MIN_CANDIDATES:-16150}"
@@ -58,7 +58,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.45"
+          cpus: "0.425"
           memory: "165MB"
     ulimits:
       nofile:
@@ -93,7 +93,7 @@ services:
       IVF_REPAIR_MIN_FRAUDS: "${IVF_REPAIR_MIN_FRAUDS:-0}"
       IVF_REPAIR_MAX_FRAUDS: "${IVF_REPAIR_MAX_FRAUDS:-5}"
       IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "${IVF_ZERO_FAST_APPROVE_WORST_DISTANCE:-5000000}"
-      IVF_FIVE_FAST_DENY_WORST_DISTANCE: "${IVF_FIVE_FAST_DENY_WORST_DISTANCE:-4000000}"
+      IVF_FIVE_FAST_DENY_WORST_DISTANCE: "${IVF_FIVE_FAST_DENY_WORST_DISTANCE:-2000000}"
       BUCKET_PATH: /data/references.bucket.bin
       BUCKET_EARLY_CANDIDATES: "${BUCKET_EARLY_CANDIDATES:-9800}"
       BUCKET_MIN_CANDIDATES: "${BUCKET_MIN_CANDIDATES:-16150}"
@@ -137,7 +137,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.10"
+          cpus: "0.15"
           memory: "20MB"
     ulimits:
       nofile:
