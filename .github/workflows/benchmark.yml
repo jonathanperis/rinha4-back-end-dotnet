@@ -17,6 +17,8 @@ on:
           - all-comparison
           - competitor-compose/jonathan-dotnet-asm-lb/docker-compose.yml
           - competitor-compose/jonathan-dotnet-c-lb/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-asm-apiheavy-lb006/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-asm-balanced-lb010/docker-compose.yml
           - competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
       official_ref:
         description: Rinha official repo ref
@@ -59,11 +61,17 @@ jobs:
           # Ronie chase matrix requested by Jonathan:
           # - ours: current .NET API image behind known-good same-source ASM LB
           # - ours: same .NET API image behind known-good same-source C LB
+          # - ours: ASM LB with Ronie-style API-heavy CPU split (0.47/0.47 API, 0.06 LB)
+          # - ours: ASM LB with balanced CPU split (0.45/0.45 API, 0.10 LB)
           # - only external competitor: RonieNeubauer/rinha2026, official issue #4682
           - name: jonathan-dotnet-asm-lb
             compose_file: competitor-compose/jonathan-dotnet-asm-lb/docker-compose.yml
           - name: jonathan-dotnet-c-lb
             compose_file: competitor-compose/jonathan-dotnet-c-lb/docker-compose.yml
+          - name: jonathan-dotnet-asm-apiheavy-lb006
+            compose_file: competitor-compose/jonathan-dotnet-asm-apiheavy-lb006/docker-compose.yml
+          - name: jonathan-dotnet-asm-balanced-lb010
+            compose_file: competitor-compose/jonathan-dotnet-asm-balanced-lb010/docker-compose.yml
           - name: ronieneubauer-rinha2026
             compose_file: competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
 
