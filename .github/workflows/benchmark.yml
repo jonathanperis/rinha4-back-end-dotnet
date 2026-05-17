@@ -15,7 +15,8 @@ on:
         type: choice
         options:
           - all-comparison
-          - competitor-compose/jonathanperis/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-asm-lb/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-c-lb/docker-compose.yml
           - competitor-compose/mxlange-c-api-rinha2026/docker-compose.yml
           - competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
           - competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml
@@ -57,19 +58,22 @@ jobs:
       max-parallel: 2
       matrix:
         participant:
-          # Small active comparison set:
+          # Evergreen 5-lane comparison set requested by Jonathan:
+          # - ours: current .NET API image behind latest available ASM LB
+          # - ours: same .NET API image behind latest available C LB
           # - current #1 global target: MXLange/c-api-rinha2026, pinned Docker Hub digest
-          # - tracked fast C competitor: RonieNeubauer/rinha2026, official issue #4682
+          # - tracked fast competitor: RonieNeubauer/rinha2026, official issue #4682
           # - #1 .NET competitor: daniloitagyba/rinha-2026-dotnet, official issue #4746
-          # - ours: jonathanperis/rinha4-back-end-dotnet
+          - name: jonathan-dotnet-asm-lb
+            compose_file: competitor-compose/jonathan-dotnet-asm-lb/docker-compose.yml
+          - name: jonathan-dotnet-c-lb
+            compose_file: competitor-compose/jonathan-dotnet-c-lb/docker-compose.yml
           - name: mxlange-c-api-rinha2026
             compose_file: competitor-compose/mxlange-c-api-rinha2026/docker-compose.yml
           - name: ronieneubauer-rinha2026
             compose_file: competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
           - name: daniloitagyba-rinha-2026-dotnet
             compose_file: competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml
-          - name: jonathanperis
-            compose_file: competitor-compose/jonathanperis/docker-compose.yml
 
     permissions:
       contents: read
@@ -94,7 +98,7 @@ jobs:
           OFFICIAL_REF: ${{ inputs.official_ref || 'main' }}
           K6_IMAGE: ${{ inputs.k6_image || 'grafana/k6:latest' }}
           BENCHMARK_K6_MODE: ${{ inputs.benchmark_k6_mode || 'native' }}
-          WEBAPI_IMAGE: ${{ matrix.participant.name == 'jonathanperis' && inputs.webapi_image || '' }}
+          WEBAPI_IMAGE: ${{ startsWith(matrix.participant.name, 'jonathan-dotnet-') && inputs.webapi_image || '' }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions || '1' }}
           RESULTS_DIR: benchmark-results-${{ matrix.participant.name }}
         run: |
