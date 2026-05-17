@@ -27,7 +27,7 @@
 - Keep benchmark changes small and reversible.
 - Do not open/request official candidate or preview unless user explicitly asks; official attempts now have per-user/day limits.
 - Dedicated LB repo is `https://github.com/jonathanperis/rinha4-lb-yolo-mode`; LB code changes must happen there and be consumed here only as an image/config update.
-- Current dedicated LB image: `ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-dcc6b89ca9d21c7a8dbb1588a6bfbbc0bd20bb91` (`linux/amd64` ASM LB); .NET uses stream fd-pass control sockets.
+- Current dedicated LB image: `ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-0e7bbceed1eb8142dca5f83a449840381b30a785` (`linux/amd64` ASM LB, digest `sha256:2afd1b2d6da257ce6b5273070bd86e12ea36d8b22134170422d2df3e26c2ce24`); .NET uses stream fd-pass control sockets.
 
 ## Active Runtime Defaults
 

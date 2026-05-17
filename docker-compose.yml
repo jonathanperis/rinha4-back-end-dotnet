@@ -127,7 +127,7 @@ services:
 
 
   lb:
-    image: ${LB_IMAGE:-ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-dcc6b89ca9d21c7a8dbb1588a6bfbbc0bd20bb91}
+    image: ${LB_IMAGE:-ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-0e7bbceed1eb8142dca5f83a449840381b30a785}
     container_name: rinha-lb
     platform: linux/amd64
     cpuset: "0,2"
