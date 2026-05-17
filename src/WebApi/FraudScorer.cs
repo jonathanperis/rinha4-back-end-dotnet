@@ -20,6 +20,9 @@ internal sealed class FraudScorer
     private readonly int maxMerchantAvgAmount;
     private readonly double[] mccRisk;
     private readonly bool[] mccRiskKnown;
+    private readonly short[] mccRiskQuantized;
+    private readonly short[] hourQuantized;
+    private readonly short[] dayOfWeekQuantized;
     private readonly ExactIndex? exactIndex;
     private readonly IvfIndex? ivfIndex;
     private readonly IvfSearchOptions ivfOptions;
@@ -61,6 +64,9 @@ internal sealed class FraudScorer
             ScorerMode.Hybrid => bucketIndex!.Scale,
             _ => bucketIndex!.Scale
         };
+        mccRiskQuantized = BuildMccRiskQuantized(mccRisk, mccRiskKnown, scale);
+        hourQuantized = BuildLinearQuantized(24, 23.0, scale);
+        dayOfWeekQuantized = BuildLinearQuantized(7, 6.0, scale);
         submittedHybridFastPath = mode == ScorerMode.Hybrid && !string.Equals(Environment.GetEnvironmentVariable("SUBMITTED_FAST_PATH"), "0", StringComparison.OrdinalIgnoreCase);
     }
 
@@ -142,8 +148,9 @@ internal sealed class FraudScorer
                 maxKm,
                 maxTxCount24h,
                 maxMerchantAvgAmount,
-                mccRisk,
-                mccRiskKnown))
+                mccRiskQuantized,
+                hourQuantized,
+                dayOfWeekQuantized))
             return;
 
         FraudInput req = FraudRequestParser.Parse(body);
@@ -154,7 +161,7 @@ internal sealed class FraudScorer
 
     private void QuantizeRequest(FraudInput req, Span<short> qv, int scale)
     {
-        QuantizeRequestCore(req, qv, scale, maxAmount, maxInstallments, amountVsAvgRatio, maxMinutes, maxKm, maxTxCount24h, maxMerchantAvgAmount, mccRisk, mccRiskKnown);
+        QuantizeRequestCore(req, qv, scale, maxAmount, maxInstallments, amountVsAvgRatio, maxMinutes, maxKm, maxTxCount24h, maxMerchantAvgAmount, mccRiskQuantized, hourQuantized, dayOfWeekQuantized);
     }
 
     internal static bool TryParseAndQuantizeForTest(
@@ -174,7 +181,7 @@ internal sealed class FraudScorer
         try
         {
             FraudInput req = FraudRequestParser.Parse(body);
-            QuantizeRequestCore(req, qv, scale, maxAmount, maxInstallments, amountVsAvgRatio, maxMinutes, maxKm, maxTxCount24h, maxMerchantAvgAmount, mccRisk, mccRiskKnown);
+            QuantizeRequestCore(req, qv, scale, maxAmount, maxInstallments, amountVsAvgRatio, maxMinutes, maxKm, maxTxCount24h, maxMerchantAvgAmount, BuildMccRiskQuantized(mccRisk, mccRiskKnown, scale), BuildLinearQuantized(24, 23.0, scale), BuildLinearQuantized(7, 6.0, scale));
             qv[Dims] = 0;
             qv[Dims + 1] = 0;
             return true;
@@ -199,7 +206,7 @@ internal sealed class FraudScorer
         double[] mccRisk,
         bool[] mccRiskKnown)
     {
-        QuantizeRequestCore(req, qv, scale, maxAmount, maxInstallments, amountVsAvgRatio, maxMinutes, maxKm, maxTxCount24h, maxMerchantAvgAmount, mccRisk, mccRiskKnown);
+        QuantizeRequestCore(req, qv, scale, maxAmount, maxInstallments, amountVsAvgRatio, maxMinutes, maxKm, maxTxCount24h, maxMerchantAvgAmount, BuildMccRiskQuantized(mccRisk, mccRiskKnown, scale), BuildLinearQuantized(24, 23.0, scale), BuildLinearQuantized(7, 6.0, scale));
         qv[Dims] = 0;
         qv[Dims + 1] = 0;
     }
@@ -215,14 +222,15 @@ internal sealed class FraudScorer
         int maxKm,
         int maxTxCount24h,
         int maxMerchantAvgAmount,
-        double[] mccRisk,
-        bool[] mccRiskKnown)
+        short[] mccRiskQuantized,
+        short[] hourQuantized,
+        short[] dayOfWeekQuantized)
     {
         qv[0] = QuantizeRounded(Clamp(req.Amount / maxAmount), scale);
         qv[1] = QuantizeRounded(Clamp(req.Installments / (double)maxInstallments), scale);
         qv[2] = QuantizeRounded(Clamp((req.Amount / req.CustomerAvgAmount) / amountVsAvgRatio), scale);
-        qv[3] = QuantizeRounded(req.Hour / 23.0, scale);
-        qv[4] = QuantizeRounded(req.DayOfWeek / 6.0, scale);
+        qv[3] = hourQuantized[req.Hour];
+        qv[4] = dayOfWeekQuantized[req.DayOfWeek];
 
         if (req.HasLastTransaction)
         {
@@ -241,8 +249,25 @@ internal sealed class FraudScorer
         qv[9] = req.IsOnline ? (short)scale : (short)0;
         qv[10] = req.CardPresent ? (short)scale : (short)0;
         qv[11] = req.UnknownMerchant ? (short)scale : (short)0;
-        qv[12] = QuantizeRounded(req.MccCode >= 0 && req.MccCode < mccRisk.Length && mccRiskKnown[req.MccCode] ? mccRisk[req.MccCode] : 0.5, scale);
+        qv[12] = req.MccCode >= 0 && req.MccCode < mccRiskQuantized.Length ? mccRiskQuantized[req.MccCode] : QuantizeRounded(0.5, scale);
         qv[13] = QuantizeRounded(Clamp(req.MerchantAvgAmount / maxMerchantAvgAmount), scale);
+    }
+
+    private static short[] BuildMccRiskQuantized(double[] mccRisk, bool[] mccRiskKnown, int scale)
+    {
+        short fallback = QuantizeRounded(0.5, scale);
+        var quantized = new short[mccRisk.Length];
+        for (int i = 0; i < quantized.Length; i++)
+            quantized[i] = i < mccRiskKnown.Length && mccRiskKnown[i] ? QuantizeRounded(mccRisk[i], scale) : fallback;
+        return quantized;
+    }
+
+    private static short[] BuildLinearQuantized(int count, double divisor, int scale)
+    {
+        var quantized = new short[count];
+        for (int i = 0; i < quantized.Length; i++)
+            quantized[i] = QuantizeRounded(i / divisor, scale);
+        return quantized;
     }
 
     private static ExactIndex LoadExact(string dataDirectory)
