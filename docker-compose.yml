@@ -33,7 +33,9 @@ services:
       MIN_WORKER_THREADS: "${MIN_WORKER_THREADS:-128}"
       MAX_WORKER_THREADS: "${MAX_WORKER_THREADS:-}"
       MAX_IO_THREADS: "${MAX_IO_THREADS:-}"
+      THREADPOOL_PREFER_LOCAL: "${THREADPOOL_PREFER_LOCAL:-0}"
       SCORER_MODE: "${SCORER_MODE:-hybrid}"
+      SUBMITTED_FAST_PATH: "${SUBMITTED_FAST_PATH:-1}"
       BIND_ADDR: fd:/sockets/api1.sock.ctrl
       FD_RAW: "${FD_RAW:-1}"
       DATA_DIR: /data
@@ -92,7 +94,9 @@ services:
       MIN_WORKER_THREADS: "${MIN_WORKER_THREADS:-128}"
       MAX_WORKER_THREADS: "${MAX_WORKER_THREADS:-}"
       MAX_IO_THREADS: "${MAX_IO_THREADS:-}"
+      THREADPOOL_PREFER_LOCAL: "${THREADPOOL_PREFER_LOCAL:-0}"
       SCORER_MODE: "${SCORER_MODE:-hybrid}"
+      SUBMITTED_FAST_PATH: "${SUBMITTED_FAST_PATH:-1}"
       BIND_ADDR: fd:/sockets/api2.sock.ctrl
       FD_RAW: "${FD_RAW:-1}"
       DATA_DIR: /data

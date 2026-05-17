@@ -21,6 +21,7 @@ internal sealed class RawHttpServer
     private readonly int keepAliveMax;
     private readonly bool fdPassMode;
     private readonly bool rawFdHandoff;
+    private readonly bool threadPoolPreferLocal;
 
     /// <summary>
     /// Creates a server bound to the configured socket path and fraud scorer.
@@ -45,11 +46,17 @@ internal sealed class RawHttpServer
         this.scorer = scorer;
         keepAliveMax = GetNonNegativeIntEnvironment("KEEP_ALIVE_MAX", 0);
         rawFdHandoff = fdPassMode && RawFdHandoffEnabledFromEnvironment();
+        threadPoolPreferLocal = BooleanEnvironmentEnabled("THREADPOOL_PREFER_LOCAL");
     }
 
     internal static bool RawFdHandoffEnabledFromEnvironment()
     {
-        string? value = Environment.GetEnvironmentVariable("FD_RAW");
+        return BooleanEnvironmentEnabled("FD_RAW");
+    }
+
+    private static bool BooleanEnvironmentEnabled(string name)
+    {
+        string? value = Environment.GetEnvironmentVariable(name);
         return value is "1" or "true" or "TRUE" or "yes" or "YES";
     }
 
@@ -120,7 +127,7 @@ internal sealed class RawHttpServer
             ThreadPool.UnsafeQueueUserWorkItem(
                 static state => state.Server.HandleConnection(state.Socket),
                 (Server: this, Socket: client),
-                preferLocal: false);
+                preferLocal: threadPoolPreferLocal);
         }
     }
 
@@ -132,7 +139,7 @@ internal sealed class RawHttpServer
             ThreadPool.UnsafeQueueUserWorkItem(
                 static state => state.Server.ReceiveFdLoop(state.Control),
                 (Server: this, Control: control),
-                preferLocal: false);
+                preferLocal: threadPoolPreferLocal);
         }
     }
 
@@ -152,7 +159,7 @@ internal sealed class RawHttpServer
                     ThreadPool.UnsafeQueueUserWorkItem(
                         static state => state.Server.HandleConnection(state.Fd),
                         (Server: this, Fd: fd),
-                        preferLocal: false);
+                        preferLocal: threadPoolPreferLocal);
                     continue;
                 }
 
@@ -164,7 +171,7 @@ internal sealed class RawHttpServer
                     ThreadPool.UnsafeQueueUserWorkItem(
                         static state => state.Server.HandleConnection(state.Socket),
                         (Server: this, Socket: client),
-                        preferLocal: false);
+                        preferLocal: threadPoolPreferLocal);
                     client = null;
                 }
                 catch
