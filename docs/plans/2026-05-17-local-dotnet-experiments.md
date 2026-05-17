@@ -13,7 +13,7 @@ dotnet run --project tests/VectorizationTests/VectorizationTests.csproj -c Relea
 
 Result: build passed and all vectorization/parser/fd flag guard checks passed.
 
-## New local harness
+## New local harnesses
 
 `AccuracyProbe` now has a `score-bench` mode:
 
@@ -25,6 +25,17 @@ SCORER_MODE=hybrid \
 ```
 
 It warms one full corpus pass, then scores the corpus for `N` loops, verifies approval correctness, and prints per-request scorer elapsed nanoseconds. It is intended for quick local scorer-path comparisons before spending CI runs.
+
+The probe also has a `wire-bench` mode:
+
+```sh
+SCORER_MODE=hybrid \
+  dotnet run --project tests/AccuracyProbe/AccuracyProbe.csproj -c Release --no-build -- \
+  /opt/data/github/jonathanperis/rinha-de-backend-2026/test/test-data.json \
+  data wire-bench 5
+```
+
+`wire-bench` wraps each corpus request in an HTTP/1.1 `/fraud-score` request with k6-like headers, then times `HttpWire.FindHeaderEnd` + `GetContentLength` + route check + scorer. It does not include socket reads/writes, fd handoff, ThreadPool scheduling, or concurrency, so interpret it as a lower-bound local parser+scorer microbench rather than an end-to-end transport benchmark.
 
 ## Cascade / bucket-profile sweep
 
@@ -57,6 +68,17 @@ Default fallback details: `fallback_total_blocks avg=1012.87 p50=938 p90=1809 p9
 | `SCORER_MODE=ivf` | 0 / 0 | 59513 | 48091 | 102851 | 127312 | 183511 | Correct but far too much CPU; hybrid fast path is essential. |
 | `SCORER_MODE=bucket` | 393 FP / 441 FN over 3 loops | 6678 | 821 | 1240 | 2540 | 164442 | Incorrect and worse average/tail than hybrid because slow bucket fallbacks still occur. |
 
+## Local wire/parser timing sweep
+
+`wire-bench 5` with k6-like synthetic headers over 270,500 measured requests after warmup:
+
+| Mode | Correctness | Avg ns | p50 ns | p90 ns | p95 ns | p99 ns | Notes |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `score-bench` | 0 FP / 0 FN | 2402 | 840 | 1360 | 2580 | 39090 | Scorer-only lower bound. |
+| `wire-bench` | 0 / 0 | 2393 | 830 | 1290 | 2529 | 39161 | HTTP header parse + route check added no measurable local overhead versus scorer noise. |
+
+Takeaway: on this local single-thread harness, `HttpWire` header parsing is not the bottleneck. Remaining transport work should focus on fd handoff, socket read/write, keep-alive/concurrency scheduling, and hosted-runner resource split rather than micro-optimizing header parsing.
+
 ## Learnings
 
 1. **Do not relax profile/reference fast-path thresholds blindly.** The tempting low-count/legit knobs found correctness drifts immediately on the official corpus.
@@ -64,6 +86,11 @@ Default fallback details: `fallback_total_blocks avg=1012.87 p50=938 p90=1809 p9
 3. **Hybrid is mandatory.** IVF-only is roughly 24× the local average scorer cost of hybrid; bucket-only is not correct.
 4. **Next useful experiments should target non-scorer overhead or new safe decision mechanisms:** raw fd worker/dispatch overhead, parser hot path, or a generated selective cascade with corpus replay gates. Simple bucket candidate/threshold sweeps did not reveal a promotable config change.
 5. **`SUBMITTED_FAST_PATH=0` deserves only a cheap CI A/B, not a code change yet.** Local timing did not prove the submitted hybrid branch is faster; however, the difference is small enough that hosted noise may dominate.
+6. **The local HTTP parser layer is below scorer/tail noise.** `wire-bench` was essentially tied with scorer-only timing, so the next transport experiments need real fd/socket/concurrency evidence.
+
+## CI A/B enablement
+
+The manual `Official-like Benchmark` workflow now exposes an `fd_raw` input (`1`/`0`) and records that value through the archive path. The workflow also no longer advertises the deleted `docker-compose.fdpass.yml`; `docker-compose.yml` is the current fd-pass topology. This makes a clean managed-socket vs raw-fd official-like A/B possible against the same immutable WebApi image.
 
 ## Proposed next actions
 

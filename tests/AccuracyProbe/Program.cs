@@ -6,6 +6,7 @@ if (args.Length < 2)
     Console.Error.WriteLine("       AccuracyProbe <test-data.json> <data-dir> hybrid-profile");
     Console.Error.WriteLine("       AccuracyProbe <test-data.json> <data-dir> bucket-profile");
     Console.Error.WriteLine("       AccuracyProbe <test-data.json> <data-dir> score-bench [loops]");
+    Console.Error.WriteLine("       AccuracyProbe <test-data.json> <data-dir> wire-bench [loops]");
     return 2;
 }
 
@@ -23,6 +24,9 @@ if (args.Length >= 3 && string.Equals(args[2], "bucket-profile", StringCompariso
 
 if (args.Length >= 3 && string.Equals(args[2], "score-bench", StringComparison.OrdinalIgnoreCase))
     return RunScoreBench(testDataPath, dataDirectory, args.Length >= 4 ? args[3] : null);
+
+if (args.Length >= 3 && string.Equals(args[2], "wire-bench", StringComparison.OrdinalIgnoreCase))
+    return RunWireBench(testDataPath, dataDirectory, args.Length >= 4 ? args[3] : null);
 
 if (args.Length >= 4 && string.Equals(args[2], "exact", StringComparison.OrdinalIgnoreCase))
     return RunExactProbe(testDataPath, dataDirectory, args[3]);
@@ -149,6 +153,111 @@ static int RunScoreBench(string testDataPath, string dataDirectory, string? loop
         $"p50:{PercentileLong(elapsedNanos, 0.50)} p90:{PercentileLong(elapsedNanos, 0.90)} " +
         $"p95:{PercentileLong(elapsedNanos, 0.95)} p99:{PercentileLong(elapsedNanos, 0.99)} max:{elapsedNanos[^1]}");
     return 0;
+}
+
+static int RunWireBench(string testDataPath, string dataDirectory, string? loopArg)
+{
+    int loops = int.TryParse(loopArg, CultureInfo.InvariantCulture, out int parsedLoops) && parsedLoops > 0 ? parsedLoops : 3;
+    Environment.SetEnvironmentVariable("DATA_DIR", dataDirectory);
+    FraudScorer scorer = FraudScorer.Load(dataDirectory);
+    using JsonDocument doc = JsonDocument.Parse(File.ReadAllBytes(testDataPath));
+    byte[][] bodies = doc.RootElement.GetProperty("entries")
+        .EnumerateArray()
+        .Select(static entry => Encoding.UTF8.GetBytes(entry.GetProperty("request").GetRawText()))
+        .ToArray();
+    bool[] expectedApproved = doc.RootElement.GetProperty("entries")
+        .EnumerateArray()
+        .Select(static entry => entry.GetProperty("expected_approved").GetBoolean())
+        .ToArray();
+
+    byte[][] requests = bodies.Select(BuildFraudHttpRequest).ToArray();
+
+    int warmChecksum = 0;
+    for (int i = 0; i < requests.Length; i++)
+        warmChecksum += ScoreHttpRequest(requests[i], scorer).Span[^1];
+
+    long[] elapsedNanos = new long[requests.Length * loops];
+    int total = 0;
+    int fp = 0;
+    int fn = 0;
+    int tp = 0;
+    int tn = 0;
+    int checksum = warmChecksum;
+    for (int loop = 0; loop < loops; loop++)
+    {
+        for (int i = 0; i < requests.Length; i++)
+        {
+            long start = System.Diagnostics.Stopwatch.GetTimestamp();
+            ReadOnlyMemory<byte> response = ScoreHttpRequest(requests[i], scorer);
+            long elapsed = System.Diagnostics.Stopwatch.GetTimestamp() - start;
+            elapsedNanos[(loop * requests.Length) + i] = elapsed * 1_000_000_000L / System.Diagnostics.Stopwatch.Frequency;
+            checksum += response.Span[^1];
+
+            bool approved = ParseApproved(response.Span, out _);
+            if (approved == expectedApproved[i])
+            {
+                if (approved) tn++;
+                else tp++;
+            }
+            else if (approved)
+            {
+                fn++;
+            }
+            else
+            {
+                fp++;
+            }
+
+            total++;
+        }
+    }
+
+    Array.Sort(elapsedNanos);
+    int weighted = fp + (fn * 3);
+    double failureRate = total == 0 ? 0.0 : (fp + fn) * 100.0 / total;
+    double avg = elapsedNanos.Average();
+    Console.WriteLine($"mode=wire-bench loops={loops} requests={requests.Length} checksum={checksum}");
+    Console.WriteLine($"total={total} tp={tp} tn={tn} fp={fp} fn={fn} weighted={weighted} failure_rate={failureRate.ToString("F4", CultureInfo.InvariantCulture)}%");
+    Console.WriteLine(
+        $"wire_elapsed_ns=avg:{avg.ToString("F2", CultureInfo.InvariantCulture)} " +
+        $"p50:{PercentileLong(elapsedNanos, 0.50)} p90:{PercentileLong(elapsedNanos, 0.90)} " +
+        $"p95:{PercentileLong(elapsedNanos, 0.95)} p99:{PercentileLong(elapsedNanos, 0.99)} max:{elapsedNanos[^1]}");
+    return 0;
+}
+
+static byte[] BuildFraudHttpRequest(byte[] body)
+{
+    byte[] prefix = Encoding.ASCII.GetBytes(
+        $"POST /fraud-score HTTP/1.1\r\n" +
+        $"Host: localhost:9999\r\n" +
+        $"User-Agent: k6/1.0\r\n" +
+        $"Content-Type: application/json\r\n" +
+        $"Content-Length: {body.Length.ToString(CultureInfo.InvariantCulture)}\r\n\r\n");
+    byte[] request = new byte[prefix.Length + body.Length];
+    prefix.CopyTo(request, 0);
+    body.CopyTo(request, prefix.Length);
+    return request;
+}
+
+static ReadOnlyMemory<byte> ScoreHttpRequest(byte[] request, FraudScorer scorer)
+{
+    int headerEnd = HttpWire.FindHeaderEnd(request, 0, request.Length);
+    if (headerEnd < 0)
+        return HttpResponses.BadRequest;
+
+    int contentLength = HttpWire.GetContentLength(request.AsSpan(0, headerEnd));
+    if (contentLength < 0)
+        return HttpResponses.BadRequest;
+
+    int bodyStart = headerEnd + 4;
+    if (bodyStart + contentLength > request.Length)
+        return HttpResponses.BadRequest;
+
+    ReadOnlySpan<byte> header = request.AsSpan(0, headerEnd);
+    if (!HttpWire.IsPath(header, "POST "u8, "/fraud-score"u8))
+        return HttpResponses.NotFound;
+
+    return scorer.ScoreFraudRequest(request.AsSpan(bodyStart, contentLength));
 }
 
 static bool ParseApproved(ReadOnlySpan<byte> response, out double fraudScore)

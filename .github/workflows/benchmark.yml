@@ -10,7 +10,6 @@ on:
         type: choice
         options:
           - docker-compose.yml
-          - docker-compose.fdpass.yml
       official_ref:
         description: Rinha official repo ref to clone for test/test.js and test-data.json
         required: true
@@ -118,6 +117,14 @@ on:
         description: WebApi ACCEPT_LOOPS value
         required: true
         default: "1"
+      fd_raw:
+        description: WebApi FD_RAW raw-fd handoff toggle
+        required: true
+        default: "1"
+        type: choice
+        options:
+          - "1"
+          - "0"
       benchmark_repetitions:
         description: Number of k6 repetitions; median p99 is archived when >1
         required: true
@@ -142,8 +149,6 @@ jobs:
         lb:
           - name: yolo
             compose_file: docker-compose.yml
-          - name: fdpass
-            compose_file: docker-compose.fdpass.yml
     concurrency:
       group: benchmark-${{ github.run_id }}-${{ matrix.lb.name }}
       cancel-in-progress: false
@@ -195,6 +200,7 @@ jobs:
           BENCHMARK_API_CPUS: ${{ inputs.benchmark_api_cpus }}
           BENCHMARK_PROXY_CPUS: ${{ inputs.benchmark_proxy_cpus }}
           ACCEPT_LOOPS: ${{ inputs.accept_loops }}
+          FD_RAW: ${{ inputs.fd_raw }}
           MIN_WORKER_THREADS: "128"
           MAX_WORKER_THREADS: ""
           MAX_IO_THREADS: ""
@@ -281,6 +287,7 @@ jobs:
           BENCHMARK_API_CPUS: ${{ inputs.benchmark_api_cpus }}
           BENCHMARK_PROXY_CPUS: ${{ inputs.benchmark_proxy_cpus }}
           ACCEPT_LOOPS: ${{ inputs.accept_loops }}
+          FD_RAW: ${{ inputs.fd_raw }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
           MIN_WORKER_THREADS: "128"
           MAX_WORKER_THREADS: ""
