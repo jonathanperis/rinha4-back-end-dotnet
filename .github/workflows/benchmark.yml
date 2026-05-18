@@ -16,12 +16,6 @@ on:
         options:
           - all-comparison
           - competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-ronie-split4510/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-ronie-avx4/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-ronie-avx8/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-ronie-lowcandidates/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-ronie-midcandidates/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-ronie-ivfonly/docker-compose.yml
           - competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
       official_ref:
         description: Rinha official repo ref
@@ -61,21 +55,9 @@ jobs:
       max-parallel: 2
       matrix:
         participant:
-          # Ronie-only all-sweep requested by Jonathan; no official promotion.
+          # Ronie-only final head-to-head after all-sweep; no official promotion.
           - name: jonathan-dotnet-ronie-currentlb
             compose_file: competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml
-          - name: jonathan-dotnet-ronie-split4510
-            compose_file: competitor-compose/jonathan-dotnet-ronie-split4510/docker-compose.yml
-          - name: jonathan-dotnet-ronie-avx4
-            compose_file: competitor-compose/jonathan-dotnet-ronie-avx4/docker-compose.yml
-          - name: jonathan-dotnet-ronie-avx8
-            compose_file: competitor-compose/jonathan-dotnet-ronie-avx8/docker-compose.yml
-          - name: jonathan-dotnet-ronie-lowcandidates
-            compose_file: competitor-compose/jonathan-dotnet-ronie-lowcandidates/docker-compose.yml
-          - name: jonathan-dotnet-ronie-midcandidates
-            compose_file: competitor-compose/jonathan-dotnet-ronie-midcandidates/docker-compose.yml
-          - name: jonathan-dotnet-ronie-ivfonly
-            compose_file: competitor-compose/jonathan-dotnet-ronie-ivfonly/docker-compose.yml
           - name: ronieneubauer-rinha2026
             compose_file: competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
 
