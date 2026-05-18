@@ -25,6 +25,8 @@ on:
           - danilo-native-final
           - competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml
           - competitor-compose/jonathan-dotnet-danilo-current-split/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-wire-stack/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-wire-hotpath/docker-compose.yml
           - competitor-compose/jonathan-dotnet-danilo-split-fdtcp/docker-compose.yml
           - competitor-compose/jonathan-dotnet-danilo-split-min64/docker-compose.yml
           - competitor-compose/jonathan-dotnet-danilo-split-five4m/docker-compose.yml
@@ -90,6 +92,10 @@ jobs:
             compose_file: competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml
           - name: jonathan-dotnet-danilo-current-split
             compose_file: competitor-compose/jonathan-dotnet-danilo-current-split/docker-compose.yml
+          - name: jonathan-dotnet-wire-stack
+            compose_file: competitor-compose/jonathan-dotnet-wire-stack/docker-compose.yml
+          - name: jonathan-dotnet-wire-hotpath
+            compose_file: competitor-compose/jonathan-dotnet-wire-hotpath/docker-compose.yml
           - name: jonathan-dotnet-danilo-split-fdtcp
             compose_file: competitor-compose/jonathan-dotnet-danilo-split-fdtcp/docker-compose.yml
           - name: jonathan-dotnet-danilo-split-min64
@@ -356,6 +362,8 @@ jobs:
               run_participant "jonathan-dotnet-ronie-currentlb" "competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml"
               run_participant "jonathan-dotnet-danilo-split" "competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml"
               run_participant "jonathan-dotnet-danilo-current-split" "competitor-compose/jonathan-dotnet-danilo-current-split/docker-compose.yml"
+              run_participant "jonathan-dotnet-wire-hotpath" "competitor-compose/jonathan-dotnet-wire-hotpath/docker-compose.yml"
+              run_participant "jonathan-dotnet-wire-stack" "competitor-compose/jonathan-dotnet-wire-stack/docker-compose.yml"
               run_participant "daniloitagyba-rinha-2026-dotnet-current" "competitor-compose/daniloitagyba-rinha-2026-dotnet-current/docker-compose.yml"
               run_participant "daniloitagyba-rinha-2026-dotnet-5295-rerun" "competitor-compose/daniloitagyba-rinha-2026-dotnet-5295/docker-compose.yml"
               run_participant "jonathan-dotnet-danilo-split-rerun" "competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml"
