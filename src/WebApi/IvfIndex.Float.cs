@@ -4,6 +4,76 @@
 internal sealed partial class IvfIndex
 {
     [SkipLocalsInit]
+    private byte FraudCountBboxOrderedFloat(ReadOnlySpan<short> quantizedQuery, int maxProbes)
+    {
+        Span<float> candidateDistances = stackalloc float[5];
+        Span<int> candidateIds = stackalloc int[5];
+        Span<byte> candidateLabels = stackalloc byte[5];
+        candidateDistances.Fill(float.PositiveInfinity);
+        candidateIds.Fill(int.MaxValue);
+        int worstIndex = 0;
+
+        Span<Vector256<float>> queryVectors = stackalloc Vector256<float>[Dims];
+        FillQueryFloatVectors(quantizedQuery, queryVectors);
+
+        Span<float> lowerBounds = clusters <= 2048 ? stackalloc float[clusters] : new float[clusters];
+        Vector256<float> zero = Vector256<float>.Zero;
+        int cluster = 0;
+        int simdLimit = clusters & ~7;
+        Span<float> laneDistances = stackalloc float[8];
+        for (; cluster < simdLimit; cluster += 8)
+        {
+            Vector256<float> acc0 = Vector256<float>.Zero;
+            Vector256<float> acc1 = Vector256<float>.Zero;
+            AddBoundingBoxDimFloat(cluster, 5, queryVectors, zero, ref acc0);
+            AddBoundingBoxDimFloat(cluster, 6, queryVectors, zero, ref acc1);
+            AddBoundingBoxDimFloat(cluster, 2, queryVectors, zero, ref acc0);
+            AddBoundingBoxDimFloat(cluster, 0, queryVectors, zero, ref acc1);
+            AddBoundingBoxDimFloat(cluster, 7, queryVectors, zero, ref acc0);
+            AddBoundingBoxDimFloat(cluster, 8, queryVectors, zero, ref acc1);
+            AddBoundingBoxDimFloat(cluster, 11, queryVectors, zero, ref acc0);
+            AddBoundingBoxDimFloat(cluster, 12, queryVectors, zero, ref acc1);
+            AddBoundingBoxDimFloat(cluster, 9, queryVectors, zero, ref acc0);
+            AddBoundingBoxDimFloat(cluster, 10, queryVectors, zero, ref acc1);
+            AddBoundingBoxDimFloat(cluster, 1, queryVectors, zero, ref acc0);
+            AddBoundingBoxDimFloat(cluster, 13, queryVectors, zero, ref acc1);
+            AddBoundingBoxDimFloat(cluster, 3, queryVectors, zero, ref acc0);
+            AddBoundingBoxDimFloat(cluster, 4, queryVectors, zero, ref acc1);
+            Avx.Add(acc0, acc1).CopyTo(laneDistances);
+            for (int lane = 0; lane < 8; lane++)
+                lowerBounds[cluster + lane] = laneDistances[lane];
+        }
+
+        for (; cluster < clusters; cluster++)
+            lowerBounds[cluster] = BoundingBoxDistanceFloat(cluster, quantizedQuery);
+
+        int probeLimit = maxProbes > 0 ? Math.Min(maxProbes, clusters) : clusters;
+        for (int probes = 0; probes < probeLimit; probes++)
+        {
+            int bestCluster = -1;
+            float bestDistance = float.PositiveInfinity;
+            for (int i = 0; i < clusters; i++)
+            {
+                float distance = lowerBounds[i];
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    bestCluster = i;
+                }
+            }
+
+            if (bestCluster < 0 || bestDistance > candidateDistances[worstIndex])
+                break;
+
+            lowerBounds[bestCluster] = float.PositiveInfinity;
+            if (offsets[bestCluster] != offsets[bestCluster + 1])
+                ScanBlocksFloat(candidateDistances, candidateIds, candidateLabels, ref worstIndex, offsets[bestCluster], offsets[bestCluster + 1], queryVectors);
+        }
+
+        return CountFrauds(candidateLabels);
+    }
+
+    [SkipLocalsInit]
     private byte FraudCountOnceFloat(
         ReadOnlySpan<short> quantizedQuery,
         int nProbe,
@@ -255,6 +325,30 @@ internal sealed partial class IvfIndex
         }
 
         return worst;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private float BoundingBoxDistanceFloat(int cluster, ReadOnlySpan<short> query)
+    {
+        float distance = 0;
+        for (int dim = 0; dim < Dims; dim++)
+        {
+            short value = query[dim];
+            short min = bboxMin[dim * clusters + cluster];
+            short max = bboxMax[dim * clusters + cluster];
+            if (value < min)
+            {
+                float diff = value - min;
+                distance += diff * diff;
+            }
+            else if (value > max)
+            {
+                float diff = value - max;
+                distance += diff * diff;
+            }
+        }
+
+        return distance;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

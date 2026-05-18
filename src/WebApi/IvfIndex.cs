@@ -155,6 +155,9 @@ internal sealed partial class IvfIndex
     /// <returns>Fraud count from <c>0</c> through <c>5</c>.</returns>
     public byte FraudCount(ReadOnlySpan<short> quantizedQuery, IvfSearchOptions options)
     {
+        if (options.BboxOrdered && useFloatAvx2 && Avx2.IsSupported && blockLanes == 8)
+            return FraudCountBboxOrderedFloat(quantizedQuery, options.BboxOrderedMaxProbes);
+
         int fastNProbe = Math.Clamp(options.FastNProbe, 1, clusters);
         bool repairsAllCounts = options.BoundaryFull && options.RepairMinFrauds == 0 && options.RepairMaxFrauds == 5;
         bool fastRepair = options.BboxRepair && (!options.BoundaryFull || repairsAllCounts);
