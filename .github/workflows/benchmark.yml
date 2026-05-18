@@ -196,7 +196,7 @@ jobs:
     name: same-runner sequential benchmark
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.benchmark_runner == 'sequential' && inputs.compose_file == 'all-comparison' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.benchmark_runner == 'sequential' && (inputs.compose_file == 'all-comparison' || inputs.compose_file == 'danilo-sprint') }}
     permissions:
       contents: read
       packages: read
