@@ -18,8 +18,11 @@ on:
           - competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml
           - competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
           - competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml
+          - competitor-compose/daniloitagyba-rinha-2026-dotnet-5295/docker-compose.yml
+          - competitor-compose/daniloitagyba-rinha-2026-dotnet-current/docker-compose.yml
           - danilo-sprint
           - danilo-final
+          - danilo-native-final
           - competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml
           - competitor-compose/jonathan-dotnet-danilo-split-fdtcp/docker-compose.yml
           - competitor-compose/jonathan-dotnet-danilo-split-min64/docker-compose.yml
@@ -78,6 +81,10 @@ jobs:
             compose_file: competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
           - name: daniloitagyba-rinha-2026-dotnet
             compose_file: competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml
+          - name: daniloitagyba-rinha-2026-dotnet-5295
+            compose_file: competitor-compose/daniloitagyba-rinha-2026-dotnet-5295/docker-compose.yml
+          - name: daniloitagyba-rinha-2026-dotnet-current
+            compose_file: competitor-compose/daniloitagyba-rinha-2026-dotnet-current/docker-compose.yml
           - name: jonathan-dotnet-danilo-split
             compose_file: competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml
           - name: jonathan-dotnet-danilo-split-fdtcp
@@ -200,7 +207,7 @@ jobs:
     name: same-runner sequential benchmark
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.benchmark_runner == 'sequential' && (inputs.compose_file == 'all-comparison' || inputs.compose_file == 'danilo-sprint' || inputs.compose_file == 'danilo-final') }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.benchmark_runner == 'sequential' && (inputs.compose_file == 'all-comparison' || inputs.compose_file == 'danilo-sprint' || inputs.compose_file == 'danilo-final' || inputs.compose_file == 'danilo-native-final') }}
     permissions:
       contents: read
       packages: read
@@ -339,6 +346,14 @@ jobs:
               run_participant "jonathan-dotnet-danilo-split" "competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml"
               run_participant "jonathan-dotnet-danilo-split-five4m" "competitor-compose/jonathan-dotnet-danilo-split-five4m/docker-compose.yml"
               run_participant "daniloitagyba-rinha-2026-dotnet-rerun" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
+              run_participant "jonathan-dotnet-danilo-split-rerun" "competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml"
+              ;;
+            danilo-native-final)
+              run_participant "daniloitagyba-rinha-2026-dotnet-5295" "competitor-compose/daniloitagyba-rinha-2026-dotnet-5295/docker-compose.yml"
+              run_participant "jonathan-dotnet-ronie-currentlb" "competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml"
+              run_participant "jonathan-dotnet-danilo-split" "competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml"
+              run_participant "daniloitagyba-rinha-2026-dotnet-current" "competitor-compose/daniloitagyba-rinha-2026-dotnet-current/docker-compose.yml"
+              run_participant "daniloitagyba-rinha-2026-dotnet-5295-rerun" "competitor-compose/daniloitagyba-rinha-2026-dotnet-5295/docker-compose.yml"
               run_participant "jonathan-dotnet-danilo-split-rerun" "competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml"
               ;;
             *)
