@@ -16,7 +16,6 @@ on:
         options:
           - all-comparison
           - competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-ronie-prevlb/docker-compose.yml
           - competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
       official_ref:
         description: Rinha official repo ref
@@ -56,12 +55,10 @@ jobs:
       max-parallel: 2
       matrix:
         participant:
-          # Ronie-only final confirmation requested by Jonathan:
+          # Ronie-only head-to-head requested by Jonathan:
           # - external competitor: RonieNeubauer/rinha2026, official issue #4682
-          # - chosen candidate uses prior official ASM fdpass LB after run 412 beat current LB
-          # - current ASM LB kept as same-image sanity lane; no official promotion.
-          - name: jonathan-dotnet-ronie-prevlb
-            compose_file: competitor-compose/jonathan-dotnet-ronie-prevlb/docker-compose.yml
+          # - chosen candidate is current .NET API + current ASM fdpass LB
+          # - prior-LB lane removed after flip/noise; no official promotion.
           - name: jonathan-dotnet-ronie-currentlb
             compose_file: competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml
           - name: ronieneubauer-rinha2026
