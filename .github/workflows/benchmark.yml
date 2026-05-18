@@ -19,6 +19,7 @@ on:
           - competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
           - competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml
           - danilo-sprint
+          - danilo-final
           - competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml
           - competitor-compose/jonathan-dotnet-danilo-split-fdtcp/docker-compose.yml
           - competitor-compose/jonathan-dotnet-danilo-split-min64/docker-compose.yml
@@ -196,7 +197,7 @@ jobs:
     name: same-runner sequential benchmark
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.benchmark_runner == 'sequential' && (inputs.compose_file == 'all-comparison' || inputs.compose_file == 'danilo-sprint') }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.benchmark_runner == 'sequential' && (inputs.compose_file == 'all-comparison' || inputs.compose_file == 'danilo-sprint' || inputs.compose_file == 'danilo-final') }}
     permissions:
       contents: read
       packages: read
@@ -320,21 +321,31 @@ jobs:
             jq . "$results_dir/results.json"
           }
 
-          if [[ "${{ inputs.compose_file }}" == "danilo-sprint" ]]; then
-            run_participant "daniloitagyba-rinha-2026-dotnet" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
-            run_participant "jonathan-dotnet-ronie-currentlb" "competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml"
-            run_participant "jonathan-dotnet-danilo-split" "competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml"
-            run_participant "jonathan-dotnet-danilo-split-fdtcp" "competitor-compose/jonathan-dotnet-danilo-split-fdtcp/docker-compose.yml"
-            run_participant "jonathan-dotnet-danilo-split-min64" "competitor-compose/jonathan-dotnet-danilo-split-min64/docker-compose.yml"
-            run_participant "daniloitagyba-rinha-2026-dotnet-rerun" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
-          else
-            run_participant "daniloitagyba-rinha-2026-dotnet" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
-            run_participant "jonathan-dotnet-ronie-currentlb" "competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml"
-            run_participant "ronieneubauer-rinha2026" "competitor-compose/ronieneubauer-rinha2026/docker-compose.yml"
-            run_participant "daniloitagyba-rinha-2026-dotnet-rerun" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
-            run_participant "jonathan-dotnet-ronie-currentlb-rerun" "competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml"
-            run_participant "ronieneubauer-rinha2026-rerun" "competitor-compose/ronieneubauer-rinha2026/docker-compose.yml"
-          fi
+          case "${{ inputs.compose_file }}" in
+            danilo-sprint)
+              run_participant "daniloitagyba-rinha-2026-dotnet" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
+              run_participant "jonathan-dotnet-ronie-currentlb" "competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml"
+              run_participant "jonathan-dotnet-danilo-split" "competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml"
+              run_participant "jonathan-dotnet-danilo-split-fdtcp" "competitor-compose/jonathan-dotnet-danilo-split-fdtcp/docker-compose.yml"
+              run_participant "jonathan-dotnet-danilo-split-min64" "competitor-compose/jonathan-dotnet-danilo-split-min64/docker-compose.yml"
+              run_participant "daniloitagyba-rinha-2026-dotnet-rerun" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
+              ;;
+            danilo-final)
+              run_participant "daniloitagyba-rinha-2026-dotnet" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
+              run_participant "jonathan-dotnet-ronie-currentlb" "competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml"
+              run_participant "jonathan-dotnet-danilo-split" "competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml"
+              run_participant "daniloitagyba-rinha-2026-dotnet-rerun" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
+              run_participant "jonathan-dotnet-danilo-split-rerun" "competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml"
+              ;;
+            *)
+              run_participant "daniloitagyba-rinha-2026-dotnet" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
+              run_participant "jonathan-dotnet-ronie-currentlb" "competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml"
+              run_participant "ronieneubauer-rinha2026" "competitor-compose/ronieneubauer-rinha2026/docker-compose.yml"
+              run_participant "daniloitagyba-rinha-2026-dotnet-rerun" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
+              run_participant "jonathan-dotnet-ronie-currentlb-rerun" "competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml"
+              run_participant "ronieneubauer-rinha2026-rerun" "competitor-compose/ronieneubauer-rinha2026/docker-compose.yml"
+              ;;
+          esac
 
       - name: Upload sequential benchmark artifacts
         if: ${{ always() }}
