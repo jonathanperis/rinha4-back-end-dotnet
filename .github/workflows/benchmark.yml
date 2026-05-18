@@ -16,9 +16,6 @@ on:
         options:
           - all-comparison
           - competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-ronie-bboxordered/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-ronie-bboxordered64/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-ronie-bboxordered128/docker-compose.yml
           - competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
       official_ref:
         description: Rinha official repo ref
@@ -58,18 +55,12 @@ jobs:
       max-parallel: 2
       matrix:
         participant:
-          # Ronie-only bbox-order screen requested by Jonathan:
+          # Ronie-only final head-to-head requested by Jonathan:
           # - external competitor: RonieNeubauer/rinha2026, official issue #4682
-          # - current .NET API + current ASM fdpass LB baseline
-          # - Ronie-inspired IVF_BBOX_ORDERED gates; no official promotion.
+          # - selected .NET API candidate + current ASM fdpass LB
+          # - rejected bbox-ordered IVF gates in screen; no official promotion.
           - name: jonathan-dotnet-ronie-currentlb
             compose_file: competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml
-          - name: jonathan-dotnet-ronie-bboxordered
-            compose_file: competitor-compose/jonathan-dotnet-ronie-bboxordered/docker-compose.yml
-          - name: jonathan-dotnet-ronie-bboxordered64
-            compose_file: competitor-compose/jonathan-dotnet-ronie-bboxordered64/docker-compose.yml
-          - name: jonathan-dotnet-ronie-bboxordered128
-            compose_file: competitor-compose/jonathan-dotnet-ronie-bboxordered128/docker-compose.yml
           - name: ronieneubauer-rinha2026
             compose_file: competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
 
