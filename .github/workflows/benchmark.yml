@@ -17,6 +17,7 @@ on:
           - all-comparison
           - competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml
           - competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
+          - competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml
       official_ref:
         description: Rinha official repo ref
         required: true
@@ -69,6 +70,8 @@ jobs:
             compose_file: competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml
           - name: ronieneubauer-rinha2026
             compose_file: competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
+          - name: daniloitagyba-rinha-2026-dotnet
+            compose_file: competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml
 
     permissions:
       contents: read
@@ -307,10 +310,12 @@ jobs:
             jq . "$results_dir/results.json"
           }
 
-          run_participant "ronieneubauer-rinha2026" "competitor-compose/ronieneubauer-rinha2026/docker-compose.yml"
+          run_participant "daniloitagyba-rinha-2026-dotnet" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
           run_participant "jonathan-dotnet-ronie-currentlb" "competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml"
-          run_participant "ronieneubauer-rinha2026-rerun" "competitor-compose/ronieneubauer-rinha2026/docker-compose.yml"
+          run_participant "ronieneubauer-rinha2026" "competitor-compose/ronieneubauer-rinha2026/docker-compose.yml"
+          run_participant "daniloitagyba-rinha-2026-dotnet-rerun" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
           run_participant "jonathan-dotnet-ronie-currentlb-rerun" "competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml"
+          run_participant "ronieneubauer-rinha2026-rerun" "competitor-compose/ronieneubauer-rinha2026/docker-compose.yml"
 
       - name: Upload sequential benchmark artifacts
         if: ${{ always() }}
