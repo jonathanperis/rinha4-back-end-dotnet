@@ -1,25 +1,25 @@
 {
-  "synced_at": "2026-05-17T15:43:07.605Z",
+  "synced_at": "2026-05-18T11:05:23.985Z",
   "source": {
     "repo": "zanfranceschi/rinha-de-backend-2026",
     "author": "jonathanperis",
     "search": "is:issue state:closed author:jonathanperis reason:completed sort:updated-desc"
   },
   "issue": {
-    "number": 5000,
+    "number": 5217,
     "title": "rinha/test jonathanperis-dotnet",
-    "url": "https://github.com/zanfranceschi/rinha-de-backend-2026/issues/5000",
-    "updated_at": "2026-05-17T15:40:30Z",
-    "closed_at": "2026-05-17T15:40:30Z"
+    "url": "https://github.com/zanfranceschi/rinha-de-backend-2026/issues/5217",
+    "updated_at": "2026-05-18T11:04:16Z",
+    "closed_at": "2026-05-18T11:04:16Z"
   },
   "comment": {
-    "url": "https://github.com/zanfranceschi/rinha-de-backend-2026/issues/5000#issuecomment-4471252459",
-    "created_at": "2026-05-17T15:40:29Z",
+    "url": "https://github.com/zanfranceschi/rinha-de-backend-2026/issues/5217#issuecomment-4477024876",
+    "created_at": "2026-05-18T11:04:15Z",
     "author": "arinhadebackend"
   },
   "repo_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet",
-  "commit": "897122c",
-  "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-f2eb4a0eecd897948cacc2a5dfefc93a8f5379e1",
+  "commit": "07b6bf0",
+  "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-f621b2297857e0328a9d383f1f06edfd5cc54c3c",
   "result": {
     "expected": {
       "total": 54100,
@@ -30,7 +30,7 @@
       "edge_case_count": 797,
       "edge_case_rate": 0.0147
     },
-    "p99": "1.12ms",
+    "p99": "1.10ms",
     "scoring": {
       "breakdown": {
         "false_positive_detections": 0,
@@ -43,7 +43,7 @@
       "weighted_errors_E": 0,
       "error_rate_epsilon": 0,
       "p99_score": {
-        "value": 2950.41,
+        "value": 2956.84,
         "cut_triggered": false
       },
       "detection_score": {
@@ -52,13 +52,13 @@
         "absolute_penalty": 0,
         "cut_triggered": false
       },
-      "final_score": 5950.41
+      "final_score": 5956.84
     }
   },
   "runtime_info": {
     "mem": 350,
     "cpu": 1,
-    "commit": "897122c",
+    "commit": "07b6bf0",
     "instances_number_ok": true,
     "unlimited_services": null
   }
