@@ -50,7 +50,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install native k6
-        if: ${{ inputs.k6_mode == 'native' }}
+        if: ${{ github.event_name == 'push' || inputs.k6_mode == 'native' }}
         run: |
           curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
           echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
@@ -83,10 +83,10 @@ jobs:
 
       - name: Run paired gate rounds
         env:
-          OFFICIAL_REF: ${{ inputs.official_ref }}
-          ROUNDS: ${{ inputs.rounds }}
-          K6_MODE: ${{ inputs.k6_mode }}
-          K6_IMAGE: ${{ inputs.k6_image }}
+          OFFICIAL_REF: ${{ inputs.official_ref || 'main' }}
+          ROUNDS: ${{ inputs.rounds || '5' }}
+          K6_MODE: ${{ inputs.k6_mode || 'native' }}
+          K6_IMAGE: ${{ inputs.k6_image || 'grafana/k6:latest' }}
         run: |
           set -euo pipefail
           OFFICIAL_REPO="https://github.com/zanfranceschi/rinha-de-backend-2026.git"
