@@ -16,9 +16,11 @@ on:
         options:
           - all-comparison
           - competitor-compose/jonathan-dotnet-current/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-lb-v109/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-lb-sndbuf/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-c-lb-v109/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-api-tp64cap/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-api-tp64cap-fdtcp/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-api-tp64cap-mlock/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-api-ivfonly-tp64cap/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-lb-sndbuf-api-tp64cap/docker-compose.yml
           - competitor-compose/pedrosakuma-rinha-backend-2026/docker-compose.yml
       official_ref:
         description: Rinha official repo ref
@@ -65,12 +67,16 @@ jobs:
         participant:
           - name: jonathan-dotnet-current
             compose_file: competitor-compose/jonathan-dotnet-current/docker-compose.yml
-          - name: jonathan-dotnet-lb-v109
-            compose_file: competitor-compose/jonathan-dotnet-lb-v109/docker-compose.yml
-          - name: jonathan-dotnet-lb-sndbuf
-            compose_file: competitor-compose/jonathan-dotnet-lb-sndbuf/docker-compose.yml
-          - name: jonathan-dotnet-c-lb-v109
-            compose_file: competitor-compose/jonathan-dotnet-c-lb-v109/docker-compose.yml
+          - name: jonathan-dotnet-api-tp64cap
+            compose_file: competitor-compose/jonathan-dotnet-api-tp64cap/docker-compose.yml
+          - name: jonathan-dotnet-api-tp64cap-fdtcp
+            compose_file: competitor-compose/jonathan-dotnet-api-tp64cap-fdtcp/docker-compose.yml
+          - name: jonathan-dotnet-api-tp64cap-mlock
+            compose_file: competitor-compose/jonathan-dotnet-api-tp64cap-mlock/docker-compose.yml
+          - name: jonathan-dotnet-api-ivfonly-tp64cap
+            compose_file: competitor-compose/jonathan-dotnet-api-ivfonly-tp64cap/docker-compose.yml
+          - name: jonathan-dotnet-lb-sndbuf-api-tp64cap
+            compose_file: competitor-compose/jonathan-dotnet-lb-sndbuf-api-tp64cap/docker-compose.yml
           - name: pedrosakuma-rinha-backend-2026
             compose_file: competitor-compose/pedrosakuma-rinha-backend-2026/docker-compose.yml
 
@@ -310,9 +316,11 @@ jobs:
           }
 
           run_participant "jonathan-dotnet-current" "competitor-compose/jonathan-dotnet-current/docker-compose.yml"
-          run_participant "jonathan-dotnet-lb-v109" "competitor-compose/jonathan-dotnet-lb-v109/docker-compose.yml"
-          run_participant "jonathan-dotnet-lb-sndbuf" "competitor-compose/jonathan-dotnet-lb-sndbuf/docker-compose.yml"
-          run_participant "jonathan-dotnet-c-lb-v109" "competitor-compose/jonathan-dotnet-c-lb-v109/docker-compose.yml"
+          run_participant "jonathan-dotnet-api-tp64cap" "competitor-compose/jonathan-dotnet-api-tp64cap/docker-compose.yml"
+          run_participant "jonathan-dotnet-api-tp64cap-fdtcp" "competitor-compose/jonathan-dotnet-api-tp64cap-fdtcp/docker-compose.yml"
+          run_participant "jonathan-dotnet-api-tp64cap-mlock" "competitor-compose/jonathan-dotnet-api-tp64cap-mlock/docker-compose.yml"
+          run_participant "jonathan-dotnet-api-ivfonly-tp64cap" "competitor-compose/jonathan-dotnet-api-ivfonly-tp64cap/docker-compose.yml"
+          run_participant "jonathan-dotnet-lb-sndbuf-api-tp64cap" "competitor-compose/jonathan-dotnet-lb-sndbuf-api-tp64cap/docker-compose.yml"
           run_participant "pedrosakuma-rinha-backend-2026" "competitor-compose/pedrosakuma-rinha-backend-2026/docker-compose.yml"
 
       - name: Upload sequential benchmark artifacts

@@ -1,4 +1,4 @@
-name: 'jonathan-dotnet-c-lb-v109'
+name: 'jonathan-dotnet-api-ivfonly-tp64cap'
 
 services:
   webapi1: &webapi
@@ -18,21 +18,21 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "${ACCEPT_LOOPS:-1}"
-      MIN_WORKER_THREADS: "${MIN_WORKER_THREADS:-128}"
-      MAX_WORKER_THREADS: "${MAX_WORKER_THREADS:-}"
-      MAX_IO_THREADS: "${MAX_IO_THREADS:-}"
+      MIN_WORKER_THREADS: "64"
+      MAX_WORKER_THREADS: "64"
+      MAX_IO_THREADS: "1"
       THREADPOOL_PREFER_LOCAL: "${THREADPOOL_PREFER_LOCAL:-0}"
-      SCORER_MODE: "${SCORER_MODE:-hybrid}"
-      SUBMITTED_FAST_PATH: "${SUBMITTED_FAST_PATH:-1}"
+      SCORER_MODE: "ivf"
+      SUBMITTED_FAST_PATH: "0"
       BIND_ADDR: fd:/sockets/api1.sock.ctrl
       FD_RAW: "${FD_RAW:-1}"
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
       IVF_PATH: /data/references.ivf.bin
-      IVF_FAST_NPROBE: "${IVF_FAST_NPROBE:-1}"
-      IVF_FULL_NPROBE: "${IVF_FULL_NPROBE:-1}"
-      IVF_BOUNDARY_FULL: "${IVF_BOUNDARY_FULL:-false}"
-      IVF_BBOX_REPAIR: "${IVF_BBOX_REPAIR:-true}"
+      IVF_FAST_NPROBE: "1"
+      IVF_FULL_NPROBE: "1"
+      IVF_BOUNDARY_FULL: "false"
+      IVF_BBOX_REPAIR: "true"
       IVF_REPAIR_MIN_FRAUDS: "${IVF_REPAIR_MIN_FRAUDS:-0}"
       IVF_REPAIR_MAX_FRAUDS: "${IVF_REPAIR_MAX_FRAUDS:-5}"
       IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "${IVF_ZERO_FAST_APPROVE_WORST_DISTANCE:-5000000}"
@@ -79,21 +79,21 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "${ACCEPT_LOOPS:-1}"
-      MIN_WORKER_THREADS: "${MIN_WORKER_THREADS:-128}"
-      MAX_WORKER_THREADS: "${MAX_WORKER_THREADS:-}"
-      MAX_IO_THREADS: "${MAX_IO_THREADS:-}"
+      MIN_WORKER_THREADS: "64"
+      MAX_WORKER_THREADS: "64"
+      MAX_IO_THREADS: "1"
       THREADPOOL_PREFER_LOCAL: "${THREADPOOL_PREFER_LOCAL:-0}"
-      SCORER_MODE: "${SCORER_MODE:-hybrid}"
-      SUBMITTED_FAST_PATH: "${SUBMITTED_FAST_PATH:-1}"
+      SCORER_MODE: "ivf"
+      SUBMITTED_FAST_PATH: "0"
       BIND_ADDR: fd:/sockets/api2.sock.ctrl
       FD_RAW: "${FD_RAW:-1}"
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
       IVF_PATH: /data/references.ivf.bin
-      IVF_FAST_NPROBE: "${IVF_FAST_NPROBE:-1}"
-      IVF_FULL_NPROBE: "${IVF_FULL_NPROBE:-1}"
-      IVF_BOUNDARY_FULL: "${IVF_BOUNDARY_FULL:-false}"
-      IVF_BBOX_REPAIR: "${IVF_BBOX_REPAIR:-true}"
+      IVF_FAST_NPROBE: "1"
+      IVF_FULL_NPROBE: "1"
+      IVF_BOUNDARY_FULL: "false"
+      IVF_BBOX_REPAIR: "true"
       IVF_REPAIR_MIN_FRAUDS: "${IVF_REPAIR_MIN_FRAUDS:-0}"
       IVF_REPAIR_MAX_FRAUDS: "${IVF_REPAIR_MAX_FRAUDS:-5}"
       IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "${IVF_ZERO_FAST_APPROVE_WORST_DISTANCE:-5000000}"
@@ -118,7 +118,7 @@ services:
       - sockets:/sockets
 
   lb:
-    image: ghcr.io/jonathanperis/rinha4-lb-yolo-mode:c-ci-949e7484e6989b1bd1304f70eadb71fc41abfe24
+    image: ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-0e7bbceed1eb8142dca5f83a449840381b30a785
     container_name: rinha-lb
     platform: linux/amd64
     cpuset: "0,2"

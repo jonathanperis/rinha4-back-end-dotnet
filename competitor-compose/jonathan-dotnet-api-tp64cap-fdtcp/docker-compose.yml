@@ -1,4 +1,4 @@
-name: 'jonathan-dotnet-lb-sndbuf'
+name: 'jonathan-dotnet-api-tp64cap-fdtcp'
 
 services:
   webapi1: &webapi
@@ -18,9 +18,9 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "${ACCEPT_LOOPS:-1}"
-      MIN_WORKER_THREADS: "${MIN_WORKER_THREADS:-128}"
-      MAX_WORKER_THREADS: "${MAX_WORKER_THREADS:-}"
-      MAX_IO_THREADS: "${MAX_IO_THREADS:-}"
+      MIN_WORKER_THREADS: "64"
+      MAX_WORKER_THREADS: "64"
+      MAX_IO_THREADS: "1"
       THREADPOOL_PREFER_LOCAL: "${THREADPOOL_PREFER_LOCAL:-0}"
       SCORER_MODE: "${SCORER_MODE:-hybrid}"
       SUBMITTED_FAST_PATH: "${SUBMITTED_FAST_PATH:-1}"
@@ -79,9 +79,9 @@ services:
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
       ACCEPT_LOOPS: "${ACCEPT_LOOPS:-1}"
-      MIN_WORKER_THREADS: "${MIN_WORKER_THREADS:-128}"
-      MAX_WORKER_THREADS: "${MAX_WORKER_THREADS:-}"
-      MAX_IO_THREADS: "${MAX_IO_THREADS:-}"
+      MIN_WORKER_THREADS: "64"
+      MAX_WORKER_THREADS: "64"
+      MAX_IO_THREADS: "1"
       THREADPOOL_PREFER_LOCAL: "${THREADPOOL_PREFER_LOCAL:-0}"
       SCORER_MODE: "${SCORER_MODE:-hybrid}"
       SUBMITTED_FAST_PATH: "${SUBMITTED_FAST_PATH:-1}"
@@ -118,7 +118,7 @@ services:
       - sockets:/sockets
 
   lb:
-    image: ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-733c30c50c5d32069ce1dcb558416b060bb9f29e
+    image: ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-0e7bbceed1eb8142dca5f83a449840381b30a785
     container_name: rinha-lb
     platform: linux/amd64
     cpuset: "0,2"
