@@ -18,6 +18,7 @@ internal sealed class RawHttpServer
     private const int IpProtoTcp = 6;
     private const int TcpNoDelay = 1;
     private const int TcpQuickAck = 12;
+    private const int SoBusyPoll = 46;
     private const int MsgNoSignal = 0x4000;
 
     private readonly string? socketPath;
@@ -28,6 +29,7 @@ internal sealed class RawHttpServer
     private readonly bool threadPoolPreferLocal;
     private readonly bool forceBlockingPassedFd;
     private readonly bool tunePassedTcpFd;
+    private readonly int busyPollMicros;
 
     /// <summary>
     /// Creates a server bound to the configured socket path and fraud scorer.
@@ -55,6 +57,7 @@ internal sealed class RawHttpServer
         threadPoolPreferLocal = BooleanEnvironmentEnabled("THREADPOOL_PREFER_LOCAL");
         forceBlockingPassedFd = fdPassMode && BooleanEnvironmentEnabled("FD_SET_BLOCKING");
         tunePassedTcpFd = fdPassMode && BooleanEnvironmentEnabled("FD_TCP_TUNE");
+        busyPollMicros = fdPassMode ? GetNonNegativeIntEnvironment("FD_BUSY_POLL_US", 0) : 0;
     }
 
     internal static bool RawFdHandoffEnabledFromEnvironment()
@@ -509,12 +512,15 @@ internal sealed class RawHttpServer
 
     private void TunePassedTcpFd(int fd)
     {
-        if (!tunePassedTcpFd)
-            return;
+        if (tunePassedTcpFd)
+        {
+            int enabled = 1;
+            _ = setsockopt(fd, IpProtoTcp, TcpNoDelay, in enabled, sizeof(int));
+            _ = setsockopt(fd, IpProtoTcp, TcpQuickAck, in enabled, sizeof(int));
+        }
 
-        int enabled = 1;
-        _ = setsockopt(fd, IpProtoTcp, TcpNoDelay, in enabled, sizeof(int));
-        _ = setsockopt(fd, IpProtoTcp, TcpQuickAck, in enabled, sizeof(int));
+        if (busyPollMicros > 0)
+            _ = setsockopt(fd, SolSocket, SoBusyPoll, in busyPollMicros, sizeof(int));
     }
 
     private static int Fcntl(int fd, int command, int value)
