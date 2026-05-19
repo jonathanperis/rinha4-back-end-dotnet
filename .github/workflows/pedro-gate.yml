@@ -1,6 +1,13 @@
 name: Pedro Same-Runner Gate
 
 on:
+  push:
+    branches:
+      - comparison
+    paths:
+      - '.github/workflows/pedro-gate.yml'
+      - 'competitor-compose/jonathan-dotnet-lball-bp50/**'
+      - 'competitor-compose/pedrosakuma-rinha-backend-2026/**'
   workflow_dispatch:
     inputs:
       official_ref:
