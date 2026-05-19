@@ -26,6 +26,7 @@ internal sealed class RawHttpServer
     private readonly bool fdPassMode;
     private readonly bool rawFdHandoff;
     private readonly bool threadPoolPreferLocal;
+    private readonly bool forceBlockingPassedFd;
     private readonly bool tunePassedTcpFd;
 
     /// <summary>
@@ -52,6 +53,7 @@ internal sealed class RawHttpServer
         keepAliveMax = GetNonNegativeIntEnvironment("KEEP_ALIVE_MAX", 0);
         rawFdHandoff = fdPassMode && RawFdHandoffEnabledFromEnvironment();
         threadPoolPreferLocal = BooleanEnvironmentEnabled("THREADPOOL_PREFER_LOCAL");
+        forceBlockingPassedFd = fdPassMode && BooleanEnvironmentEnabled("FD_SET_BLOCKING");
         tunePassedTcpFd = fdPassMode && BooleanEnvironmentEnabled("FD_TCP_TUNE");
     }
 
@@ -186,7 +188,8 @@ internal sealed class RawHttpServer
 
                 if (rawFdHandoff)
                 {
-                    SetBlocking(fd);
+                    if (forceBlockingPassedFd)
+                        SetBlocking(fd);
                     TunePassedTcpFd(fd);
                     ThreadPool.UnsafeQueueUserWorkItem(
                         static state => state.Server.HandleConnection(state.Fd),
