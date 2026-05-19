@@ -61,7 +61,7 @@ services:
       PORT: "9999"
       UPSTREAMS: "/run/uds/api1.sock,/run/uds/api2.sock"
       BUF_SIZE: "4096"
-      WORKERS: "1"
+      WORKERS: "2"
     ports:
       - "9999:9999"
     volumes:
