@@ -28,7 +28,7 @@ on:
       benchmark_repetitions:
         description: Number of k6 repetitions
         required: true
-        default: "1"
+        default: "5"
       benchmark_k6_mode:
         description: k6 execution mode
         required: true
@@ -90,7 +90,7 @@ jobs:
           OFFICIAL_REF: ${{ inputs.official_ref || 'main' }}
           K6_IMAGE: ${{ inputs.k6_image || 'grafana/k6:latest' }}
           BENCHMARK_K6_MODE: ${{ inputs.benchmark_k6_mode || 'native' }}
-          BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions || '1' }}
+          BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions || '5' }}
           RESULTS_DIR: benchmark-results-${{ matrix.participant.name }}
         run: |
           set -euo pipefail
@@ -182,7 +182,7 @@ jobs:
     name: same-runner sequential benchmark
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.benchmark_runner == 'sequential' && inputs.compose_file == 'all-comparison' }}
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.benchmark_runner == 'sequential' && inputs.compose_file == 'all-comparison') }}
     permissions:
       contents: read
       packages: read
@@ -221,7 +221,7 @@ jobs:
           OFFICIAL_REF: ${{ inputs.official_ref || 'main' }}
           K6_IMAGE: ${{ inputs.k6_image || 'grafana/k6:latest' }}
           BENCHMARK_K6_MODE: ${{ inputs.benchmark_k6_mode || 'native' }}
-          BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions || '1' }}
+          BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions || '5' }}
         run: |
           set -euo pipefail
           OFFICIAL_REPO="https://github.com/zanfranceschi/rinha-de-backend-2026.git"
