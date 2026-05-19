@@ -2,7 +2,7 @@ name: 'jonathan-dotnet-api-tp64cap'
 
 services:
   webapi1: &webapi
-    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-8b7f9795565692cda56336c2ebee7953e3595f30
+    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-de32a7b3b6469bfccb833ab411c220265bf2e923
     container_name: webapi-1
     cpuset: "0,1"
     security_opt:
