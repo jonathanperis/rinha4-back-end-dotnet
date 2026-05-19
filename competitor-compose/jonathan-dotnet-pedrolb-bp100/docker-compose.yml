@@ -24,7 +24,7 @@ services:
       THREADPOOL_PREFER_LOCAL: "${THREADPOOL_PREFER_LOCAL:-0}"
       SCORER_MODE: "${SCORER_MODE:-hybrid}"
       SUBMITTED_FAST_PATH: "${SUBMITTED_FAST_PATH:-1}"
-      BIND_ADDR: fd:/run/uds/api1.sock.ctrl
+      BIND_ADDR: fd:/run/uds/api1.sock
       FD_RAW: "${FD_RAW:-1}"
       FD_BUSY_POLL_US: "100"
       FD_TCP_NODELAY: "0"
@@ -89,7 +89,7 @@ services:
       THREADPOOL_PREFER_LOCAL: "${THREADPOOL_PREFER_LOCAL:-0}"
       SCORER_MODE: "${SCORER_MODE:-hybrid}"
       SUBMITTED_FAST_PATH: "${SUBMITTED_FAST_PATH:-1}"
-      BIND_ADDR: fd:/run/uds/api2.sock.ctrl
+      BIND_ADDR: fd:/run/uds/api2.sock
       FD_RAW: "${FD_RAW:-1}"
       FD_BUSY_POLL_US: "100"
       FD_TCP_NODELAY: "0"
