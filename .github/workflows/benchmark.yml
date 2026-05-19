@@ -15,22 +15,8 @@ on:
         type: choice
         options:
           - all-comparison
-          - competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml
-          - competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
-          - competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml
-          - competitor-compose/daniloitagyba-rinha-2026-dotnet-5295/docker-compose.yml
-          - competitor-compose/daniloitagyba-rinha-2026-dotnet-current/docker-compose.yml
-          - danilo-sprint
-          - danilo-final
-          - danilo-native-final
-          - danilo-dotnet-final
-          - competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-danilo-current-split/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-wire-stack/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-wire-hotpath/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-danilo-split-fdtcp/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-danilo-split-min64/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-danilo-split-five4m/docker-compose.yml
+          - competitor-compose/jonathan-dotnet-current/docker-compose.yml
+          - competitor-compose/pedrosakuma-rinha-backend-2026/docker-compose.yml
       official_ref:
         description: Rinha official repo ref
         required: true
@@ -39,10 +25,6 @@ on:
         description: k6 Docker image used when benchmark_k6_mode=docker
         required: true
         default: grafana/k6:latest
-      webapi_image:
-        description: Optional Jonathan Peris image override
-        required: false
-        default: ""
       benchmark_repetitions:
         description: Number of k6 repetitions
         required: true
@@ -78,38 +60,18 @@ jobs:
       max-parallel: 2
       matrix:
         participant:
-          # Ronie-only final head-to-head after all-sweep; no official promotion.
-          - name: jonathan-dotnet-ronie-currentlb
-            compose_file: competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml
-          - name: ronieneubauer-rinha2026
-            compose_file: competitor-compose/ronieneubauer-rinha2026/docker-compose.yml
-          - name: daniloitagyba-rinha-2026-dotnet
-            compose_file: competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml
-          - name: daniloitagyba-rinha-2026-dotnet-5295
-            compose_file: competitor-compose/daniloitagyba-rinha-2026-dotnet-5295/docker-compose.yml
-          - name: daniloitagyba-rinha-2026-dotnet-current
-            compose_file: competitor-compose/daniloitagyba-rinha-2026-dotnet-current/docker-compose.yml
-          - name: jonathan-dotnet-danilo-split
-            compose_file: competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml
-          - name: jonathan-dotnet-danilo-current-split
-            compose_file: competitor-compose/jonathan-dotnet-danilo-current-split/docker-compose.yml
-          - name: jonathan-dotnet-wire-stack
-            compose_file: competitor-compose/jonathan-dotnet-wire-stack/docker-compose.yml
-          - name: jonathan-dotnet-wire-hotpath
-            compose_file: competitor-compose/jonathan-dotnet-wire-hotpath/docker-compose.yml
-          - name: jonathan-dotnet-danilo-split-fdtcp
-            compose_file: competitor-compose/jonathan-dotnet-danilo-split-fdtcp/docker-compose.yml
-          - name: jonathan-dotnet-danilo-split-min64
-            compose_file: competitor-compose/jonathan-dotnet-danilo-split-min64/docker-compose.yml
-          - name: jonathan-dotnet-danilo-split-five4m
-            compose_file: competitor-compose/jonathan-dotnet-danilo-split-five4m/docker-compose.yml
+          - name: jonathan-dotnet-current
+            compose_file: competitor-compose/jonathan-dotnet-current/docker-compose.yml
+          - name: pedrosakuma-rinha-backend-2026
+            compose_file: competitor-compose/pedrosakuma-rinha-backend-2026/docker-compose.yml
 
     permissions:
       contents: read
+      packages: read
 
     steps:
       - name: Checkout
-        if: ${{ github.event_name == 'push' || inputs.compose_file == matrix.participant.compose_file || (inputs.compose_file == 'all-comparison' || inputs.compose_file == 'danilo-sprint') }}
+        if: ${{ github.event_name == 'push' || inputs.compose_file == matrix.participant.compose_file || inputs.compose_file == 'all-comparison' }}
         uses: actions/checkout@v6
 
       - name: Install native k6
@@ -128,7 +90,6 @@ jobs:
           OFFICIAL_REF: ${{ inputs.official_ref || 'main' }}
           K6_IMAGE: ${{ inputs.k6_image || 'grafana/k6:latest' }}
           BENCHMARK_K6_MODE: ${{ inputs.benchmark_k6_mode || 'native' }}
-          WEBAPI_IMAGE: ${{ startsWith(matrix.participant.name, 'jonathan-dotnet-') && inputs.webapi_image || '' }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions || '1' }}
           RESULTS_DIR: benchmark-results-${{ matrix.participant.name }}
         run: |
@@ -140,7 +101,9 @@ jobs:
           compose_args=(--compatibility -f "$COMPOSE_FILE")
 
           cleanup() {
+            docker compose "${compose_args[@]}" ps > "$RESULTS_DIR/docker-compose.ps" 2>&1 || true
             docker compose "${compose_args[@]}" logs --no-color > "$RESULTS_DIR/docker-compose.log" 2>&1 || true
+            docker inspect $(docker compose "${compose_args[@]}" ps -q) > "$RESULTS_DIR/docker-inspect.json" 2>/dev/null || true
             docker compose "${compose_args[@]}" down --volumes --remove-orphans > /dev/null 2>&1 || true
           }
           trap cleanup EXIT
@@ -211,13 +174,15 @@ jobs:
             benchmark-results-${{ matrix.participant.name }}/k6-output-repetition-*.json
             benchmark-results-${{ matrix.participant.name }}/k6-report-*.html
             benchmark-results-${{ matrix.participant.name }}/docker-compose.log
+            benchmark-results-${{ matrix.participant.name }}/docker-compose.ps
+            benchmark-results-${{ matrix.participant.name }}/docker-inspect.json
           if-no-files-found: ignore
 
   benchmark-sequential:
     name: same-runner sequential benchmark
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.benchmark_runner == 'sequential' && (inputs.compose_file == 'all-comparison' || inputs.compose_file == 'danilo-sprint' || inputs.compose_file == 'danilo-final' || inputs.compose_file == 'danilo-native-final' || inputs.compose_file == 'danilo-dotnet-final') }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.benchmark_runner == 'sequential' && inputs.compose_file == 'all-comparison' }}
     permissions:
       contents: read
       packages: read
@@ -251,12 +216,11 @@ jobs:
           } > benchmark-runner-metadata/host.txt
           cat benchmark-runner-metadata/host.txt
 
-      - name: Run all participants on the same runner
+      - name: Run Jonathan and Pedro on the same runner
         env:
           OFFICIAL_REF: ${{ inputs.official_ref || 'main' }}
           K6_IMAGE: ${{ inputs.k6_image || 'grafana/k6:latest' }}
           BENCHMARK_K6_MODE: ${{ inputs.benchmark_k6_mode || 'native' }}
-          INPUT_WEBAPI_IMAGE: ${{ inputs.webapi_image || '' }}
           BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions || '1' }}
         run: |
           set -euo pipefail
@@ -267,11 +231,6 @@ jobs:
             local compose_file="$2"
             local results_dir="benchmark-results-$name"
             local official_dir="$results_dir/official"
-            local participant_webapi_image=""
-            if [[ "$name" == jonathan-dotnet-* ]]; then
-              participant_webapi_image="$INPUT_WEBAPI_IMAGE"
-            fi
-            export WEBAPI_IMAGE="$participant_webapi_image"
             mkdir -p "$results_dir"
             rm -rf "$official_dir"
             git clone --depth 1 --branch "$OFFICIAL_REF" "$OFFICIAL_REPO" "$official_dir"
@@ -341,49 +300,8 @@ jobs:
             jq . "$results_dir/results.json"
           }
 
-          case "${{ inputs.compose_file }}" in
-            danilo-sprint)
-              run_participant "daniloitagyba-rinha-2026-dotnet" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
-              run_participant "jonathan-dotnet-ronie-currentlb" "competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml"
-              run_participant "jonathan-dotnet-danilo-split" "competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml"
-              run_participant "jonathan-dotnet-danilo-split-fdtcp" "competitor-compose/jonathan-dotnet-danilo-split-fdtcp/docker-compose.yml"
-              run_participant "jonathan-dotnet-danilo-split-min64" "competitor-compose/jonathan-dotnet-danilo-split-min64/docker-compose.yml"
-              run_participant "daniloitagyba-rinha-2026-dotnet-rerun" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
-              ;;
-            danilo-final)
-              run_participant "daniloitagyba-rinha-2026-dotnet" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
-              run_participant "jonathan-dotnet-ronie-currentlb" "competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml"
-              run_participant "jonathan-dotnet-danilo-split" "competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml"
-              run_participant "jonathan-dotnet-danilo-split-five4m" "competitor-compose/jonathan-dotnet-danilo-split-five4m/docker-compose.yml"
-              run_participant "daniloitagyba-rinha-2026-dotnet-rerun" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
-              run_participant "jonathan-dotnet-danilo-split-rerun" "competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml"
-              ;;
-            danilo-native-final)
-              run_participant "daniloitagyba-rinha-2026-dotnet-5295" "competitor-compose/daniloitagyba-rinha-2026-dotnet-5295/docker-compose.yml"
-              run_participant "jonathan-dotnet-ronie-currentlb" "competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml"
-              run_participant "jonathan-dotnet-danilo-split" "competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml"
-              run_participant "jonathan-dotnet-danilo-current-split" "competitor-compose/jonathan-dotnet-danilo-current-split/docker-compose.yml"
-              run_participant "jonathan-dotnet-wire-hotpath" "competitor-compose/jonathan-dotnet-wire-hotpath/docker-compose.yml"
-              run_participant "jonathan-dotnet-wire-stack" "competitor-compose/jonathan-dotnet-wire-stack/docker-compose.yml"
-              run_participant "daniloitagyba-rinha-2026-dotnet-current" "competitor-compose/daniloitagyba-rinha-2026-dotnet-current/docker-compose.yml"
-              run_participant "daniloitagyba-rinha-2026-dotnet-5295-rerun" "competitor-compose/daniloitagyba-rinha-2026-dotnet-5295/docker-compose.yml"
-              run_participant "jonathan-dotnet-danilo-split-rerun" "competitor-compose/jonathan-dotnet-danilo-split/docker-compose.yml"
-              ;;
-            danilo-dotnet-final)
-              run_participant "daniloitagyba-rinha-2026-dotnet-5295" "competitor-compose/daniloitagyba-rinha-2026-dotnet-5295/docker-compose.yml"
-              run_participant "jonathan-dotnet-ronie-currentlb" "competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml"
-              run_participant "jonathan-dotnet-wire-hotpath" "competitor-compose/jonathan-dotnet-wire-hotpath/docker-compose.yml"
-              run_participant "jonathan-dotnet-wire-stack" "competitor-compose/jonathan-dotnet-wire-stack/docker-compose.yml"
-              ;;
-            *)
-              run_participant "daniloitagyba-rinha-2026-dotnet" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
-              run_participant "jonathan-dotnet-ronie-currentlb" "competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml"
-              run_participant "ronieneubauer-rinha2026" "competitor-compose/ronieneubauer-rinha2026/docker-compose.yml"
-              run_participant "daniloitagyba-rinha-2026-dotnet-rerun" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
-              run_participant "jonathan-dotnet-ronie-currentlb-rerun" "competitor-compose/jonathan-dotnet-ronie-currentlb/docker-compose.yml"
-              run_participant "ronieneubauer-rinha2026-rerun" "competitor-compose/ronieneubauer-rinha2026/docker-compose.yml"
-              ;;
-          esac
+          run_participant "jonathan-dotnet-current" "competitor-compose/jonathan-dotnet-current/docker-compose.yml"
+          run_participant "pedrosakuma-rinha-backend-2026" "competitor-compose/pedrosakuma-rinha-backend-2026/docker-compose.yml"
 
       - name: Upload sequential benchmark artifacts
         if: ${{ always() }}
@@ -425,10 +343,10 @@ jobs:
       - name: Write summary JSON
         run: |
           python3 - <<'PY'
-          import json, os, pathlib, statistics
+          import json, os, pathlib
           root = pathlib.Path('comparison-results/artifacts')
           rows = []
-          for p in sorted(root.glob('**/results.json')):
+          for p in sorted(root.glob('**/results*.json')):
               try:
                   d = json.load(open(p))
               except Exception:
@@ -442,8 +360,12 @@ jobs:
                   name = parent.removeprefix('benchmark-results-')
               else:
                   name = artifact.removeprefix('rinha-benchmark-').rsplit('-', 1)[0]
+              repetition = None
+              if p.name.startswith('results-repetition-'):
+                  repetition = int(p.stem.rsplit('-', 1)[1])
               rows.append({
                   'participant': name,
+                  'repetition': repetition,
                   'p99': r.get('p99'),
                   'final_score': sc.get('final_score'),
                   'false_positive_detections': bd.get('false_positive_detections'),
@@ -451,7 +373,7 @@ jobs:
                   'http_errors': bd.get('http_errors'),
                   'artifact': artifact,
               })
-          rows.sort(key=lambda x: x['participant'])
+          rows.sort(key=lambda x: (x['participant'], x['repetition'] is None, x['repetition'] or 0))
           out = {
               'run_id': os.environ.get('GITHUB_RUN_ID'),
               'run_number': os.environ.get('GITHUB_RUN_NUMBER'),
@@ -460,8 +382,10 @@ jobs:
               'results': rows,
           }
           pathlib.Path('comparison-results').mkdir(exist_ok=True)
-          pathlib.Path('comparison-results/latest.json').write_text(json.dumps(out, indent=2, sort_keys=True) + '\n')
-          pathlib.Path(f"comparison-results/run-{out['run_number']}.json").write_text(json.dumps(out, indent=2, sort_keys=True) + '\n')
+          pathlib.Path('comparison-results/latest.json').write_text(json.dumps(out, indent=2, sort_keys=True) + '
+')
+          pathlib.Path(f"comparison-results/run-{out['run_number']}.json").write_text(json.dumps(out, indent=2, sort_keys=True) + '
+')
           print(json.dumps(out, indent=2, sort_keys=True))
           PY
 
