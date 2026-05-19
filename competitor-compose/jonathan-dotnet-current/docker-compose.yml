@@ -121,7 +121,7 @@ services:
     image: ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-0e7bbceed1eb8142dca5f83a449840381b30a785
     container_name: rinha-lb
     platform: linux/amd64
-    cpuset: "0,2"
+    cpuset: "0,1,2,3"
     user: root
     restart: always
     pull_policy: always
