@@ -29,6 +29,8 @@ internal sealed class RawHttpServer
     private readonly bool threadPoolPreferLocal;
     private readonly bool forceBlockingPassedFd;
     private readonly bool tunePassedTcpFd;
+    private readonly bool tcpNoDelayPassedFd;
+    private readonly bool tcpQuickAckPassedFd;
     private readonly int busyPollMicros;
 
     /// <summary>
@@ -57,6 +59,8 @@ internal sealed class RawHttpServer
         threadPoolPreferLocal = BooleanEnvironmentEnabled("THREADPOOL_PREFER_LOCAL");
         forceBlockingPassedFd = fdPassMode && BooleanEnvironmentEnabled("FD_SET_BLOCKING");
         tunePassedTcpFd = fdPassMode && BooleanEnvironmentEnabled("FD_TCP_TUNE");
+        tcpNoDelayPassedFd = fdPassMode && (tunePassedTcpFd || BooleanEnvironmentEnabled("FD_TCP_NODELAY"));
+        tcpQuickAckPassedFd = fdPassMode && (tunePassedTcpFd || BooleanEnvironmentEnabled("FD_TCP_QUICKACK"));
         busyPollMicros = fdPassMode ? GetNonNegativeIntEnvironment("FD_BUSY_POLL_US", 0) : 0;
     }
 
@@ -512,12 +516,11 @@ internal sealed class RawHttpServer
 
     private void TunePassedTcpFd(int fd)
     {
-        if (tunePassedTcpFd)
-        {
-            int enabled = 1;
+        int enabled = 1;
+        if (tcpNoDelayPassedFd)
             _ = setsockopt(fd, IpProtoTcp, TcpNoDelay, in enabled, sizeof(int));
+        if (tcpQuickAckPassedFd)
             _ = setsockopt(fd, IpProtoTcp, TcpQuickAck, in enabled, sizeof(int));
-        }
 
         if (busyPollMicros > 0)
             _ = setsockopt(fd, SolSocket, SoBusyPoll, in busyPollMicros, sizeof(int));
