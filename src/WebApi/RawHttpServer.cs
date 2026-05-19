@@ -190,8 +190,7 @@ internal sealed class RawHttpServer
                 {
                     if (forceBlockingPassedFd)
                         SetBlocking(fd);
-                    if (tunePassedTcpFd)
-                        TunePassedTcpFd(fd);
+                    TunePassedTcpFd(fd);
                     ThreadPool.UnsafeQueueUserWorkItem(
                         static state => state.Server.HandleConnection(state.Fd),
                         (Server: this, Fd: fd),
@@ -508,6 +507,16 @@ internal sealed class RawHttpServer
             _ = Fcntl(fd, FSetFl, flags & ~ONonBlock);
     }
 
+    private void TunePassedTcpFd(int fd)
+    {
+        if (!tunePassedTcpFd)
+            return;
+
+        int enabled = 1;
+        _ = setsockopt(fd, IpProtoTcp, TcpNoDelay, in enabled, sizeof(int));
+        _ = setsockopt(fd, IpProtoTcp, TcpQuickAck, in enabled, sizeof(int));
+    }
+
     private static int Fcntl(int fd, int command, int value)
     {
         while (true)
@@ -518,30 +527,19 @@ internal sealed class RawHttpServer
         }
     }
 
-    private static void TunePassedTcpFd(int fd)
-    {
-        int enabled = 1;
-        _ = setsockopt(fd, IpProtoTcp, TcpNoDelay, in enabled, sizeof(int));
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static unsafe void SendAll(int fd, ReadOnlySpan<byte> data)
     {
-        fixed (byte* ptr = data)
+        while (!data.IsEmpty)
         {
-            byte* current = ptr;
-            nuint remaining = (nuint)data.Length;
-
-            while (remaining != 0)
+            fixed (byte* ptr = data)
             {
-                nint sent = send(fd, current, remaining, MsgNoSignal);
+                nint sent = send(fd, ptr, (nuint)data.Length, MsgNoSignal);
                 if (sent < 0 && Marshal.GetLastPInvokeError() == Eintr)
                     continue;
                 if (sent <= 0)
                     return;
 
-                current += sent;
-                remaining -= (nuint)sent;
+                data = data[(int)sent..];
             }
         }
     }
