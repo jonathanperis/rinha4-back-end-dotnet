@@ -2,7 +2,7 @@ name: 'jonathan-dotnet-current'
 
 services:
   webapi1: &webapi
-    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-2be48bf3740e413262efbb358785455072008fca
+    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-82ba0a687c6e66d68bc8c8b5f755a7012edfedbc
     container_name: webapi-1
     cpuset: "0,1"
     security_opt:
@@ -26,7 +26,7 @@ services:
       SUBMITTED_FAST_PATH: "${SUBMITTED_FAST_PATH:-1}"
       BIND_ADDR: fd:/sockets/api1.sock.ctrl
       FD_RAW: "${FD_RAW:-1}"
-      FD_TCP_TUNE: "${FD_TCP_TUNE:-1}"
+      FD_TCP_TUNE: "${FD_TCP_TUNE:-0}"
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
       IVF_PATH: /data/references.ivf.bin
@@ -88,7 +88,7 @@ services:
       SUBMITTED_FAST_PATH: "${SUBMITTED_FAST_PATH:-1}"
       BIND_ADDR: fd:/sockets/api2.sock.ctrl
       FD_RAW: "${FD_RAW:-1}"
-      FD_TCP_TUNE: "${FD_TCP_TUNE:-1}"
+      FD_TCP_TUNE: "${FD_TCP_TUNE:-0}"
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
       IVF_PATH: /data/references.ivf.bin
