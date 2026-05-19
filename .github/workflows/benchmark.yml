@@ -15,10 +15,7 @@ on:
         type: choice
         options:
           - all-comparison
-          - competitor-compose/jonathan-dotnet-current/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-lball/docker-compose.yml
           - competitor-compose/jonathan-dotnet-lball-bp50/docker-compose.yml
-          - competitor-compose/jonathan-dotnet-lball-bp100/docker-compose.yml
           - competitor-compose/pedrosakuma-rinha-backend-2026/docker-compose.yml
       official_ref:
         description: Rinha official repo ref
@@ -63,14 +60,8 @@ jobs:
       max-parallel: 2
       matrix:
         participant:
-          - name: jonathan-dotnet-current
-            compose_file: competitor-compose/jonathan-dotnet-current/docker-compose.yml
-          - name: jonathan-dotnet-lball
-            compose_file: competitor-compose/jonathan-dotnet-lball/docker-compose.yml
           - name: jonathan-dotnet-lball-bp50
             compose_file: competitor-compose/jonathan-dotnet-lball-bp50/docker-compose.yml
-          - name: jonathan-dotnet-lball-bp100
-            compose_file: competitor-compose/jonathan-dotnet-lball-bp100/docker-compose.yml
           - name: pedrosakuma-rinha-backend-2026
             compose_file: competitor-compose/pedrosakuma-rinha-backend-2026/docker-compose.yml
 
@@ -309,10 +300,7 @@ jobs:
             jq . "$results_dir/results.json"
           }
 
-          run_participant "jonathan-dotnet-current" "competitor-compose/jonathan-dotnet-current/docker-compose.yml"
-          run_participant "jonathan-dotnet-lball" "competitor-compose/jonathan-dotnet-lball/docker-compose.yml"
           run_participant "jonathan-dotnet-lball-bp50" "competitor-compose/jonathan-dotnet-lball-bp50/docker-compose.yml"
-          run_participant "jonathan-dotnet-lball-bp100" "competitor-compose/jonathan-dotnet-lball-bp100/docker-compose.yml"
           run_participant "pedrosakuma-rinha-backend-2026" "competitor-compose/pedrosakuma-rinha-backend-2026/docker-compose.yml"
 
       - name: Upload sequential benchmark artifacts
