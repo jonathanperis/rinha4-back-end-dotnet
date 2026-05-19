@@ -129,7 +129,7 @@ services:
       PORT: "9999"
       MODE: "fdpass"
       WORKERS: "2"
-      BACKENDS: "/sockets/api1.sock,/sockets/api2.sock"
+      UPSTREAMS: "/sockets/api1.sock,/sockets/api2.sock"
       CONNECT_TIMEOUT_MS: "200"
       IO_TIMEOUT_MS: "2000"
     volumes:
