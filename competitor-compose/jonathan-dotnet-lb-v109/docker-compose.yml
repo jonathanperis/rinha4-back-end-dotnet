@@ -1,4 +1,4 @@
-name: 'jonathan-dotnet-pedrolb-w2'
+name: 'jonathan-dotnet-lb-v109'
 
 services:
   webapi1: &webapi
@@ -118,34 +118,36 @@ services:
       - sockets:/sockets
 
   lb:
-    image: jrblatt/so-no-forevis:v1.0.0
-    pull_policy: always
+    image: ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-949e7484e6989b1bd1304f70eadb71fc41abfe24
     container_name: rinha-lb
-    cpuset: "0,1,2,3"
-    security_opt:
-      - seccomp=unconfined
+    platform: linux/amd64
+    cpuset: "0,2"
+    user: root
+    restart: always
+    pull_policy: always
     environment:
+      LB_MODE: "fdpass"
+      LB_FDPASS_SOCKET_TYPE: "stream"
       PORT: "9999"
       UPSTREAMS: "/sockets/api1.sock.ctrl,/sockets/api2.sock.ctrl"
-      BUF_SIZE: "4096"
-      WORKERS: "2"
-    ports:
-      - "${HOST_PORT:-9999}:9999"
     volumes:
       - sockets:/sockets
     depends_on:
       - webapi1
       - webapi2
+    ports:
+      - "${HOST_PORT:-9999}:9999"
     deploy:
       resources:
         limits:
           cpus: "0.15"
-          memory: "30MB"
+          memory: "20MB"
     ulimits:
       nofile:
         soft: 65535
         hard: 65535
-
+    security_opt:
+      - seccomp=unconfined
 
 volumes:
   sockets:
