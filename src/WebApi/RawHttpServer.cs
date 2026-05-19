@@ -190,7 +190,8 @@ internal sealed class RawHttpServer
                 {
                     if (forceBlockingPassedFd)
                         SetBlocking(fd);
-                    TunePassedTcpFd(fd);
+                    if (tunePassedTcpFd)
+                        TunePassedTcpFd(fd);
                     ThreadPool.UnsafeQueueUserWorkItem(
                         static state => state.Server.HandleConnection(state.Fd),
                         (Server: this, Fd: fd),
@@ -507,16 +508,6 @@ internal sealed class RawHttpServer
             _ = Fcntl(fd, FSetFl, flags & ~ONonBlock);
     }
 
-    private void TunePassedTcpFd(int fd)
-    {
-        if (!tunePassedTcpFd)
-            return;
-
-        int enabled = 1;
-        _ = setsockopt(fd, IpProtoTcp, TcpNoDelay, in enabled, sizeof(int));
-        _ = setsockopt(fd, IpProtoTcp, TcpQuickAck, in enabled, sizeof(int));
-    }
-
     private static int Fcntl(int fd, int command, int value)
     {
         while (true)
@@ -527,19 +518,30 @@ internal sealed class RawHttpServer
         }
     }
 
+    private static void TunePassedTcpFd(int fd)
+    {
+        int enabled = 1;
+        _ = setsockopt(fd, IpProtoTcp, TcpNoDelay, in enabled, sizeof(int));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static unsafe void SendAll(int fd, ReadOnlySpan<byte> data)
     {
-        while (!data.IsEmpty)
+        fixed (byte* ptr = data)
         {
-            fixed (byte* ptr = data)
+            byte* current = ptr;
+            nuint remaining = (nuint)data.Length;
+
+            while (remaining != 0)
             {
-                nint sent = send(fd, ptr, (nuint)data.Length, MsgNoSignal);
+                nint sent = send(fd, current, remaining, MsgNoSignal);
                 if (sent < 0 && Marshal.GetLastPInvokeError() == Eintr)
                     continue;
                 if (sent <= 0)
                     return;
 
-                data = data[(int)sent..];
+                current += sent;
+                remaining -= (nuint)sent;
             }
         }
     }

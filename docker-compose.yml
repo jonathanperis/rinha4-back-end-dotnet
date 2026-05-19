@@ -38,6 +38,7 @@ services:
       SUBMITTED_FAST_PATH: "${SUBMITTED_FAST_PATH:-1}"
       BIND_ADDR: fd:/sockets/api1.sock.ctrl
       FD_RAW: "${FD_RAW:-1}"
+      FD_TCP_TUNE: "${FD_TCP_TUNE:-1}"
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
       IVF_PATH: /data/references.ivf.bin
@@ -99,6 +100,7 @@ services:
       SUBMITTED_FAST_PATH: "${SUBMITTED_FAST_PATH:-1}"
       BIND_ADDR: fd:/sockets/api2.sock.ctrl
       FD_RAW: "${FD_RAW:-1}"
+      FD_TCP_TUNE: "${FD_TCP_TUNE:-1}"
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
       IVF_PATH: /data/references.ivf.bin
