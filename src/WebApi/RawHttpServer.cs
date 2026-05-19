@@ -85,11 +85,17 @@ internal sealed class RawHttpServer
         int acceptLoopCount = GetPositiveIntEnvironment("ACCEPT_LOOPS", DefaultAcceptLoops);
         if (fdPassMode)
         {
-            var receiverLoops = new Task[acceptLoopCount];
-            for (int i = 0; i < receiverLoops.Length; i++)
-                receiverLoops[i] = AcceptFdControlLoopAsync(listener);
+            for (int i = 1; i < acceptLoopCount; i++)
+            {
+                var thread = new Thread(state => ((RawHttpServer)state!).AcceptFdControlLoop(listener))
+                {
+                    IsBackground = true,
+                    Name = $"fdpass-accept-{i}",
+                };
+                thread.Start(this);
+            }
 
-            await Task.WhenAll(receiverLoops);
+            AcceptFdControlLoop(listener);
             return;
         }
 
@@ -137,15 +143,34 @@ internal sealed class RawHttpServer
         }
     }
 
-    private async Task AcceptFdControlLoopAsync(Socket listener)
+    private void AcceptFdControlLoop(Socket listener)
     {
         while (true)
         {
-            Socket control = await listener.AcceptAsync();
-            ThreadPool.UnsafeQueueUserWorkItem(
-                static state => state.Server.ReceiveFdLoop(state.Control),
-                (Server: this, Control: control),
-                preferLocal: threadPoolPreferLocal);
+            Socket control;
+            try
+            {
+                control = listener.Accept();
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
+            catch (SocketException)
+            {
+                continue;
+            }
+
+            var thread = new Thread(state =>
+            {
+                var item = ((RawHttpServer Server, Socket Control))state!;
+                item.Server.ReceiveFdLoop(item.Control);
+            })
+            {
+                IsBackground = true,
+                Name = "fdpass-ctrl",
+            };
+            thread.Start((this, control));
         }
     }
 
