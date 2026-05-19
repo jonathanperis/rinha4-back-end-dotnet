@@ -2,7 +2,7 @@ name: 'jonathan-dotnet-api-tp64cap-fdtcp'
 
 services:
   webapi1: &webapi
-    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-de32a7b3b6469bfccb833ab411c220265bf2e923
+    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-ba5dab5cb5cafe0439aa998d87f0732d1f9b80db
     container_name: webapi-1
     cpuset: "0,1"
     security_opt:
