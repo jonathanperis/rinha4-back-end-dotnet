@@ -123,7 +123,7 @@ services:
     cpuset: "0,2"
     user: root
     restart: always
-    pull_policy: always
+    pull_policy: if_not_present
     environment:
       LB_MODE: "fdpass"
       LB_FDPASS_SOCKET_TYPE: "stream"

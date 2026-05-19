@@ -124,7 +124,7 @@ services:
     cpuset: "0,2"
     user: root
     restart: always
-    pull_policy: always
+    pull_policy: if_not_present
     environment:
       PORT: "9999"
       MODE: "fdpass"

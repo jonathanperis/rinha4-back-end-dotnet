@@ -1,9 +1,9 @@
-name: 'rinha-2026-dotnet'
+name: 'jonathan-dotnet-lball-bp100'
 
 services:
   webapi1: &webapi
-    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-b1f9cebef4e3426941ef45e8d137085ea0810bf4
-    container_name: jonathan-dotnet-asm-proc2-webapi-1
+    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-124b36d9440bebc7b0546e96d5bfe0624cbdd921
+    container_name: webapi-1
     cpuset: "0,1"
     security_opt:
       - seccomp=unconfined
@@ -13,7 +13,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
-      DOTNET_PROCESSOR_COUNT: "2"
+      DOTNET_PROCESSOR_COUNT: "1"
       DOTNET_ThreadPool_UnfairSemaphoreSpinLimit: "0"
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
@@ -21,9 +21,13 @@ services:
       MIN_WORKER_THREADS: "${MIN_WORKER_THREADS:-128}"
       MAX_WORKER_THREADS: "${MAX_WORKER_THREADS:-}"
       MAX_IO_THREADS: "${MAX_IO_THREADS:-}"
+      THREADPOOL_PREFER_LOCAL: "${THREADPOOL_PREFER_LOCAL:-0}"
       SCORER_MODE: "${SCORER_MODE:-hybrid}"
+      SUBMITTED_FAST_PATH: "${SUBMITTED_FAST_PATH:-1}"
       BIND_ADDR: fd:/sockets/api1.sock.ctrl
       FD_RAW: "${FD_RAW:-1}"
+      FD_BUSY_POLL_US: "100"
+      FD_TCP_TUNE: "${FD_TCP_TUNE:-0}"
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
       IVF_PATH: /data/references.ivf.bin
@@ -67,12 +71,12 @@ services:
 
   webapi2:
     <<: *webapi
-    container_name: jonathan-dotnet-asm-proc2-webapi-2
+    container_name: webapi-2
     cpuset: "2,3"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
-      DOTNET_PROCESSOR_COUNT: "2"
+      DOTNET_PROCESSOR_COUNT: "1"
       DOTNET_ThreadPool_UnfairSemaphoreSpinLimit: "0"
       DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
       DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
@@ -80,9 +84,13 @@ services:
       MIN_WORKER_THREADS: "${MIN_WORKER_THREADS:-128}"
       MAX_WORKER_THREADS: "${MAX_WORKER_THREADS:-}"
       MAX_IO_THREADS: "${MAX_IO_THREADS:-}"
+      THREADPOOL_PREFER_LOCAL: "${THREADPOOL_PREFER_LOCAL:-0}"
       SCORER_MODE: "${SCORER_MODE:-hybrid}"
+      SUBMITTED_FAST_PATH: "${SUBMITTED_FAST_PATH:-1}"
       BIND_ADDR: fd:/sockets/api2.sock.ctrl
       FD_RAW: "${FD_RAW:-1}"
+      FD_BUSY_POLL_US: "100"
+      FD_TCP_TUNE: "${FD_TCP_TUNE:-0}"
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
       IVF_PATH: /data/references.ivf.bin
@@ -113,12 +121,11 @@ services:
     volumes:
       - sockets:/sockets
 
-
   lb:
-    image: ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-dcc6b89ca9d21c7a8dbb1588a6bfbbc0bd20bb91
-    container_name: jonathan-dotnet-asm-proc2-lb
+    image: ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-0e7bbceed1eb8142dca5f83a449840381b30a785
+    container_name: rinha-lb
     platform: linux/amd64
-    cpuset: "0,2"
+    cpuset: "0,1,2,3"
     user: root
     restart: always
     pull_policy: if_not_present
