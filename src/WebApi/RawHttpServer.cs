@@ -18,6 +18,7 @@ internal sealed class RawHttpServer
     private const int IpProtoTcp = 6;
     private const int TcpNoDelay = 1;
     private const int TcpQuickAck = 12;
+    private const int MsgNoSignal = 0x4000;
 
     private readonly string? socketPath;
     private readonly FraudScorer scorer;
@@ -296,7 +297,7 @@ internal sealed class RawHttpServer
     {
         try
         {
-            byte[] buffer = ArrayPool<byte>.Shared.Rent(ConnectionBufferBytes);
+            Span<byte> buffer = stackalloc byte[ConnectionBufferBytes];
             int start = 0;
             int end = 0;
             int requests = 0;
@@ -314,14 +315,14 @@ internal sealed class RawHttpServer
                             return;
                         }
 
-                        int read = Receive(fd, buffer.AsSpan(end));
+                        int read = Receive(fd, buffer[end..]);
                         if (read <= 0)
                             return;
 
                         end += read;
                     }
 
-                    int contentLength = HttpWire.GetContentLength(buffer.AsSpan(start, headerEnd - start));
+                    int contentLength = HttpWire.GetContentLength(buffer[start..headerEnd]);
                     if (contentLength < 0 || contentLength > MaxBodyBytes)
                     {
                         SendAll(fd, HttpResponses.BadRequest.Span);
@@ -338,20 +339,20 @@ internal sealed class RawHttpServer
                             return;
                         }
 
-                        int read = Receive(fd, buffer.AsSpan(end));
+                        int read = Receive(fd, buffer[end..]);
                         if (read <= 0)
                             return;
 
                         end += read;
                     }
 
-                    ReadOnlyMemory<byte> response = SelectResponse(buffer.AsSpan(start, headerEnd - start), buffer.AsSpan(bodyStart, contentLength));
+                    ReadOnlyMemory<byte> response = SelectResponse(buffer[start..headerEnd], buffer.Slice(bodyStart, contentLength));
                     SendAll(fd, response.Span);
                     requests++;
 
                     int remaining = end - requestEnd;
                     if (remaining > 0)
-                        Buffer.BlockCopy(buffer, requestEnd, buffer, 0, remaining);
+                        buffer.Slice(requestEnd, remaining).CopyTo(buffer);
 
                     start = 0;
                     end = remaining;
@@ -362,10 +363,6 @@ internal sealed class RawHttpServer
             catch
             {
                 // Client resets are expected under load; close connection without logging.
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(buffer);
             }
         }
         finally
@@ -380,10 +377,10 @@ internal sealed class RawHttpServer
     /// </summary>
     private ReadOnlyMemory<byte> SelectResponse(ReadOnlySpan<byte> header, ReadOnlySpan<byte> body)
     {
-        if (HttpWire.IsPath(header, "POST "u8, "/fraud-score"u8))
+        if (header.StartsWith("POST /fraud-score "u8))
             return body.IsEmpty ? HttpResponses.BadRequest : scorer.ScoreFraudRequest(body);
 
-        if (HttpWire.IsPath(header, "GET "u8, "/ready"u8))
+        if (header.StartsWith("GET /ready "u8))
             return HttpResponses.Ready;
 
         return HttpResponses.NotFound;
@@ -508,7 +505,7 @@ internal sealed class RawHttpServer
         {
             fixed (byte* ptr = data)
             {
-                nint sent = send(fd, ptr, (nuint)data.Length, 0);
+                nint sent = send(fd, ptr, (nuint)data.Length, MsgNoSignal);
                 if (sent < 0 && Marshal.GetLastPInvokeError() == Eintr)
                     continue;
                 if (sent <= 0)

@@ -40,9 +40,9 @@ internal static class HttpWire
     /// Finds the CRLFCRLF delimiter that terminates an HTTP header block within a buffer window.
     /// Returns -1 when the current window still needs more bytes from the socket.
     /// </summary>
-    public static int FindHeaderEnd(byte[] buffer, int start, int end)
+    public static int FindHeaderEnd(ReadOnlySpan<byte> buffer, int start, int end)
     {
-        int relative = buffer.AsSpan(start, end - start).IndexOf("\r\n\r\n"u8);
+        int relative = buffer.Slice(start, end - start).IndexOf("\r\n\r\n"u8);
         return relative < 0 ? -1 : start + relative;
     }
 

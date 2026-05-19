@@ -1,5 +1,6 @@
 string? socketPath = Environment.GetEnvironmentVariable("BIND_ADDR") ?? Environment.GetEnvironmentVariable("SOCKET_PATH");
 string dataDirectory = Environment.GetEnvironmentVariable("DATA_DIR") ?? "/data";
+GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
 SetMinWorkerThreads();
 var scorer = FraudScorer.Load(dataDirectory);
 NativeProcessTuning.TryLockMemoryFromEnvironment();
