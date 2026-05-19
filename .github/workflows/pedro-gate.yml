@@ -1,0 +1,190 @@
+name: Pedro Same-Runner Gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      official_ref:
+        description: Rinha official repo ref
+        required: true
+        default: main
+      rounds:
+        description: Number of paired Jonathan/Pedro rounds
+        required: true
+        default: "5"
+      k6_mode:
+        description: k6 execution mode
+        required: true
+        default: native
+        type: choice
+        options:
+          - native
+          - docker
+      k6_image:
+        description: k6 Docker image used when k6_mode=docker
+        required: true
+        default: grafana/k6:latest
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  JONATHAN_COMPOSE: competitor-compose/jonathan-dotnet-lball-bp50/docker-compose.yml
+  PEDRO_COMPOSE: competitor-compose/pedrosakuma-rinha-backend-2026/docker-compose.yml
+
+jobs:
+  pedro-gate:
+    name: Jonathan vs Pedro same-runner 5x gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install native k6
+        if: ${{ inputs.k6_mode == 'native' }}
+        run: |
+          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+          k6 version
+
+      - name: Capture runner metadata
+        run: |
+          set -euo pipefail
+          mkdir -p gate-results/metadata
+          {
+            echo "date_utc=$(date -u --iso-8601=seconds)"
+            echo "runner_name=${RUNNER_NAME:-}"
+            echo "runner_os=${RUNNER_OS:-}"
+            echo "runner_arch=${RUNNER_ARCH:-}"
+            echo "kernel=$(uname -a)"
+            echo "nproc=$(nproc)"
+            grep -m1 'model name' /proc/cpuinfo || true
+            grep -E 'MemTotal|MemAvailable' /proc/meminfo || true
+            docker version || true
+            docker compose version || true
+          } | tee gate-results/metadata/host.txt
+
+      - name: Pull images
+        run: |
+          set -euo pipefail
+          docker compose --compatibility -f "$JONATHAN_COMPOSE" pull
+          docker compose --compatibility -f "$PEDRO_COMPOSE" pull
+
+      - name: Run paired gate rounds
+        env:
+          OFFICIAL_REF: ${{ inputs.official_ref }}
+          ROUNDS: ${{ inputs.rounds }}
+          K6_MODE: ${{ inputs.k6_mode }}
+          K6_IMAGE: ${{ inputs.k6_image }}
+        run: |
+          set -euo pipefail
+          OFFICIAL_REPO="https://github.com/zanfranceschi/rinha-de-backend-2026.git"
+          mkdir -p gate-results
+
+          run_one() {
+            local participant="$1"
+            local compose_file="$2"
+            local round="$3"
+            local out_dir="gate-results/round-${round}-${participant}"
+            local official_dir="$out_dir/official"
+            local compose_args=(--compatibility -f "$compose_file")
+            mkdir -p "$out_dir"
+            rm -rf "$official_dir"
+            git clone --depth 1 --branch "$OFFICIAL_REF" "$OFFICIAL_REPO" "$official_dir"
+
+            cleanup() {
+              docker compose "${compose_args[@]}" ps > "$out_dir/docker-compose.ps" 2>&1 || true
+              docker compose "${compose_args[@]}" logs --no-color > "$out_dir/docker-compose.log" 2>&1 || true
+              docker inspect $(docker compose "${compose_args[@]}" ps -q) > "$out_dir/docker-inspect.json" 2>/dev/null || true
+              docker compose "${compose_args[@]}" down --volumes --remove-orphans > /dev/null 2>&1 || true
+            }
+
+            docker compose "${compose_args[@]}" down --volumes --remove-orphans > /dev/null 2>&1 || true
+            docker compose "${compose_args[@]}" up -d --no-build
+            for attempt in {1..30}; do
+              if curl -fsS http://localhost:9999/ready > /dev/null 2>&1; then
+                break
+              fi
+              if [[ "$attempt" == "30" ]]; then
+                echo "Service did not become ready for $participant round $round" >&2
+                cleanup
+                exit 1
+              fi
+              sleep 2
+            done
+
+            chmod -R a+rwX "$official_dir"
+            rm -f "$official_dir/test/results.json" "$official_dir/test/k6-report.html"
+            case "$K6_MODE" in
+              native)
+                timeout 360s bash -lc "cd '$official_dir' && bash ./run.sh" > "$out_dir/k6-output.json"
+                ;;
+              docker)
+                timeout 360s docker run --rm \
+                  --network host \
+                  --user "$(id -u):$(id -g)" \
+                  -e K6_NO_USAGE_REPORT=true \
+                  -e K6_WEB_DASHBOARD=true \
+                  -e K6_WEB_DASHBOARD_PORT=-1 \
+                  -e K6_WEB_DASHBOARD_EXPORT=test/k6-report.html \
+                  -v "$PWD/$official_dir:/official" \
+                  -w /official \
+                  "$K6_IMAGE" run test/test.js
+                ;;
+              *)
+                echo "Unsupported K6_MODE=$K6_MODE" >&2
+                cleanup
+                exit 1
+                ;;
+            esac
+            cp "$official_dir/test/results.json" "$out_dir/results.json"
+            [[ ! -f "$official_dir/test/k6-report.html" ]] || cp "$official_dir/test/k6-report.html" "$out_dir/k6-report.html"
+            cleanup
+          }
+
+          for round in $(seq 1 "$ROUNDS"); do
+            echo "::group::round $round Jonathan"
+            run_one jonathan "$JONATHAN_COMPOSE" "$round"
+            echo "::endgroup::"
+            echo "::group::round $round Pedro"
+            run_one pedro "$PEDRO_COMPOSE" "$round"
+            echo "::endgroup::"
+          done
+
+      - name: Check 5x gate
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, pathlib, re, sys
+          root = pathlib.Path('gate-results')
+          def p99(path):
+              d = json.load(open(path))
+              value = d.get('p99') or (d.get('result') or {}).get('p99')
+              if value is None:
+                  raise SystemExit(f'missing p99 in {path}')
+              return float(str(value).replace('ms',''))
+          rows = []
+          for jpath in sorted(root.glob('round-*-jonathan/results.json')):
+              m = re.search(r'round-(\d+)-jonathan', str(jpath))
+              r = int(m.group(1))
+              ppath = root / f'round-{r}-pedro' / 'results.json'
+              j = p99(jpath); p = p99(ppath)
+              rows.append({'round': r, 'jonathan_p99_ms': j, 'pedro_p99_ms': p, 'jonathan_wins': j < p, 'delta_ms': round(p - j, 6)})
+          summary = {'rounds': rows, 'wins': sum(1 for r in rows if r['jonathan_wins']), 'required': len(rows), 'passed': bool(rows) and all(r['jonathan_wins'] for r in rows)}
+          pathlib.Path('gate-results/gate-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
+          print(json.dumps(summary, indent=2))
+          if not summary['passed']:
+              sys.exit(1)
+          PY
+
+      - name: Upload gate artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: pedro-same-runner-gate-${{ github.run_number }}
+          path: gate-results/**
+          if-no-files-found: error
