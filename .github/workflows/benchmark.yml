@@ -382,10 +382,8 @@ jobs:
               'results': rows,
           }
           pathlib.Path('comparison-results').mkdir(exist_ok=True)
-          pathlib.Path('comparison-results/latest.json').write_text(json.dumps(out, indent=2, sort_keys=True) + '
-')
-          pathlib.Path(f"comparison-results/run-{out['run_number']}.json").write_text(json.dumps(out, indent=2, sort_keys=True) + '
-')
+          pathlib.Path('comparison-results/latest.json').write_text(json.dumps(out, indent=2, sort_keys=True) + '\n')
+          pathlib.Path(f"comparison-results/run-{out['run_number']}.json").write_text(json.dumps(out, indent=2, sort_keys=True) + '\n')
           print(json.dumps(out, indent=2, sort_keys=True))
           PY
 
