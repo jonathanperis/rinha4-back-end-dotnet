@@ -1,0 +1,68 @@
+{
+  "event_name": "workflow_dispatch",
+  "head_sha": "f5e122aae4b3e02fecef91349f4a385ef5fc1076",
+  "results": [
+    {
+      "artifact": "results-repetition-1.json",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.35ms",
+      "participant": "results-repetition",
+      "repetition": 1
+    },
+    {
+      "artifact": "results-repetition-2.json",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "results-repetition",
+      "repetition": 2
+    },
+    {
+      "artifact": "results-repetition-3.json",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "results-repetition",
+      "repetition": 3
+    },
+    {
+      "artifact": "results-repetition-4.json",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.35ms",
+      "participant": "results-repetition",
+      "repetition": 4
+    },
+    {
+      "artifact": "results-repetition-5.json",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "results-repetition",
+      "repetition": 5
+    },
+    {
+      "artifact": "results.json",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.35ms",
+      "participant": "results.json",
+      "repetition": null
+    }
+  ],
+  "run_id": "26117608705",
+  "run_number": "481"
+}

@@ -1,0 +1,71 @@
+{
+  "event_name": "workflow_dispatch",
+  "head_sha": "34012f122162c0c07b4ad32c1ed9ea0bcbda3471",
+  "results": [
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-asm-apiheavy-lb006-408",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.41ms",
+      "participant": "jonathan-dotnet-asm-apiheavy-lb006"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-asm-fdraw0-408",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.35ms",
+      "participant": "jonathan-dotnet-asm-fdraw0"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-asm-lb-408",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.23ms",
+      "participant": "jonathan-dotnet-asm-lb"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-asm-minworker256-408",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-asm-minworker256"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-asm-minworker64-408",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.54ms",
+      "participant": "jonathan-dotnet-asm-minworker64"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-asm-nocpuset-408",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-asm-nocpuset"
+    },
+    {
+      "artifact": "rinha-benchmark-ronieneubauer-rinha2026-408",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "ronieneubauer-rinha2026"
+    }
+  ],
+  "run_id": "26003542587",
+  "run_number": "408"
+}

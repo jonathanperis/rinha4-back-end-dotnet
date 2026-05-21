@@ -1,0 +1,53 @@
+{
+  "event_name": "workflow_dispatch",
+  "head_sha": "d49106bf722eed866af571d00f2b5a3f3662ac74",
+  "results": [
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-asm-apiheavy-lb006-407",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-asm-apiheavy-lb006"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-asm-balanced-lb010-407",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.40ms",
+      "participant": "jonathan-dotnet-asm-balanced-lb010"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-asm-lb-407",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-asm-lb"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-c-lb-407",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.34ms",
+      "participant": "jonathan-dotnet-c-lb"
+    },
+    {
+      "artifact": "rinha-benchmark-ronieneubauer-rinha2026-407",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "ronieneubauer-rinha2026"
+    }
+  ],
+  "run_id": "26002764713",
+  "run_number": "407"
+}

@@ -1,0 +1,35 @@
+{
+  "event_name": "workflow_dispatch",
+  "head_sha": "dbba08bd7cbe6911c57c180573f647f50c78f91b",
+  "results": [
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-ronie-currentlb-414",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-ronie-currentlb"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-ronie-prevlb-414",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-ronie-prevlb"
+    },
+    {
+      "artifact": "rinha-benchmark-ronieneubauer-rinha2026-414",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.22ms",
+      "participant": "ronieneubauer-rinha2026"
+    }
+  ],
+  "run_id": "26007955643",
+  "run_number": "414"
+}

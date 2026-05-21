@@ -1,0 +1,68 @@
+{
+  "event_name": "workflow_dispatch",
+  "head_sha": "4047ca6f84d24f63284eddc90e5247a7f11d2d4e",
+  "results": [
+    {
+      "artifact": "results-repetition-1.json",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "results-repetition",
+      "repetition": 1
+    },
+    {
+      "artifact": "results-repetition-2.json",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "results-repetition",
+      "repetition": 2
+    },
+    {
+      "artifact": "results-repetition-3.json",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "results-repetition",
+      "repetition": 3
+    },
+    {
+      "artifact": "results-repetition-4.json",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "results-repetition",
+      "repetition": 4
+    },
+    {
+      "artifact": "results-repetition-5.json",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "results-repetition",
+      "repetition": 5
+    },
+    {
+      "artifact": "results.json",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "results.json",
+      "repetition": null
+    }
+  ],
+  "run_id": "26109872637",
+  "run_number": "463"
+}

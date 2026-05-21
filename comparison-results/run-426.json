@@ -1,0 +1,62 @@
+{
+  "event_name": "workflow_dispatch",
+  "head_sha": "dc9654411993311ac2152916bb800128b7fe3372",
+  "results": [
+    {
+      "artifact": "benchmark-results-daniloitagyba-rinha-2026-dotnet",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.34ms",
+      "participant": "daniloitagyba-rinha-2026-dotnet"
+    },
+    {
+      "artifact": "benchmark-results-daniloitagyba-rinha-2026-dotnet-rerun",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.36ms",
+      "participant": "daniloitagyba-rinha-2026-dotnet-rerun"
+    },
+    {
+      "artifact": "benchmark-results-jonathan-dotnet-danilo-split",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-danilo-split"
+    },
+    {
+      "artifact": "benchmark-results-jonathan-dotnet-danilo-split-fdtcp",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.34ms",
+      "participant": "jonathan-dotnet-danilo-split-fdtcp"
+    },
+    {
+      "artifact": "benchmark-results-jonathan-dotnet-danilo-split-min64",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.37ms",
+      "participant": "jonathan-dotnet-danilo-split-min64"
+    },
+    {
+      "artifact": "benchmark-results-jonathan-dotnet-ronie-currentlb",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-ronie-currentlb"
+    }
+  ],
+  "run_id": "26034884715",
+  "run_number": "426"
+}

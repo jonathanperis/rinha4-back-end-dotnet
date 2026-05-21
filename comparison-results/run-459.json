@@ -1,0 +1,368 @@
+{
+  "event_name": "push",
+  "head_sha": "7e212071704d0d44a76bf5106aaf3feafc425ada",
+  "results": [
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp100-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.96ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp100-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 5918.67,
+      "http_errors": 0,
+      "p99": "1.21ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp100-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.97ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp100-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 5940.13,
+      "http_errors": 0,
+      "p99": "1.15ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp100-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.99ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp100-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.96ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-ivf64-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.51ms",
+      "participant": "jonathan-dotnet-lball-bp50-ivf64",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-ivf64-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.51ms",
+      "participant": "jonathan-dotnet-lball-bp50-ivf64",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-ivf64-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.51ms",
+      "participant": "jonathan-dotnet-lball-bp50-ivf64",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-ivf64-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.52ms",
+      "participant": "jonathan-dotnet-lball-bp50-ivf64",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-ivf64-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.51ms",
+      "participant": "jonathan-dotnet-lball-bp50-ivf64",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-ivf64-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.51ms",
+      "participant": "jonathan-dotnet-lball-bp50-ivf64",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-tp64-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-lball-bp50-tp64",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-tp64-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.43ms",
+      "participant": "jonathan-dotnet-lball-bp50-tp64",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-tp64-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-lball-bp50-tp64",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-tp64-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.51ms",
+      "participant": "jonathan-dotnet-lball-bp50-tp64",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-tp64-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-lball-bp50-tp64",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-tp64-459",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-lball-bp50-tp64",
+      "repetition": null
+    }
+  ],
+  "run_id": "26107368784",
+  "run_number": "459"
+}

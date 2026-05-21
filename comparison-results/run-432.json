@@ -1,0 +1,44 @@
+{
+  "event_name": "workflow_dispatch",
+  "head_sha": "02f4def451c94666d2590f05913dfe301bb5ce74",
+  "results": [
+    {
+      "artifact": "benchmark-results-daniloitagyba-rinha-2026-dotnet-5295",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "daniloitagyba-rinha-2026-dotnet-5295"
+    },
+    {
+      "artifact": "benchmark-results-jonathan-dotnet-ronie-currentlb",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-ronie-currentlb"
+    },
+    {
+      "artifact": "benchmark-results-jonathan-dotnet-wire-hotpath",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-wire-hotpath"
+    },
+    {
+      "artifact": "benchmark-results-jonathan-dotnet-wire-stack",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-wire-stack"
+    }
+  ],
+  "run_id": "26056483610",
+  "run_number": "432"
+}

@@ -1,0 +1,88 @@
+{
+  "event_name": "push",
+  "head_sha": "6d9d2f8b916a8f229c74773c4bd1359c741ec411",
+  "results": [
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-current-438",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-current",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-438",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-current",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-current-438",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-current",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-438",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-current",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-current-438",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.34ms",
+      "participant": "jonathan-dotnet-current",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-438",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-current",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-pedrosakuma-rinha-backend-2026-438",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.26ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-pedrosakuma-rinha-backend-2026-438",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": 2
+    }
+  ],
+  "run_id": "26074729556",
+  "run_number": "438"
+}

@@ -1,0 +1,103 @@
+name: rinha-backend-2026
+
+# Submission stack — usa imagem pública do GHCR (sem build local).
+# Dataset (~192MB) é baked dentro da imagem; ambas as réplicas compartilham
+# a mesma layer overlayfs → kernel page cache é único.
+#
+# Recursos: 2× api (0.37 vCPU / 150MB) + lb nginx (0.26 vCPU / 50MB).
+# Total: 1.00 vCPU + 350 MB.
+#
+# Eval-2026-05: lb e api comunicam via Unix Domain Socket em tmpfs (sem TCP
+# loopback overhead) e cada container tem cpuset isolado pra eliminar
+# contenção CFS entre lb e api (era o caso quando lb=0,2 sobreposto a
+# api1=0,1 e api2=2,3).
+
+services:
+  api1: &api
+    image: ghcr.io/pedrosakuma/rinha-backend-2026-api:wave48-busyqack-ede543e
+    pull_policy: if_not_present
+    cpuset: "0,1"
+    security_opt:
+      - seccomp=unconfined
+    environment:
+      UDS_PATH: "/run/uds/api1.sock"
+      DOTNET_PROCESSOR_COUNT: "1"
+      TP_MIN_WORKERS: "64"
+      TP_MAX_WORKERS: "64"
+      SCORER: "ivf-blocked"
+      IVF_BLOCKED_NPROBE: "1"
+      IVF_BLOCKED_EARLY_EXIT_DIST: "0.020"
+      RAW_HTTP: "1"
+      RAW_HTTP_FDPASS: "1"
+      RAW_HTTP_WORKERS: "1"
+      RAW_HTTP_KEEPALIVE_MAX: "0"
+      RAW_HTTP_BUSY_POLL: "50"
+      RAW_HTTP_QUICKACK: "0"
+      IO_URING_ENABLED: "0"
+    networks: [app]
+    volumes:
+      - uds:/run/uds
+    ulimits:
+      memlock: -1
+      nofile: 65536
+    deploy:
+      resources:
+        limits:
+          cpus: "0.425"
+          memory: "150MB"
+
+  api2:
+    <<: *api
+    cpuset: "2,3"
+    environment:
+      UDS_PATH: "/run/uds/api2.sock"
+      DOTNET_PROCESSOR_COUNT: "1"
+      TP_MIN_WORKERS: "64"
+      TP_MAX_WORKERS: "64"
+      SCORER: "ivf-blocked"
+      IVF_BLOCKED_NPROBE: "1"
+      IVF_BLOCKED_EARLY_EXIT_DIST: "0.020"
+      RAW_HTTP: "1"
+      RAW_HTTP_FDPASS: "1"
+      RAW_HTTP_WORKERS: "1"
+      RAW_HTTP_KEEPALIVE_MAX: "0"
+      RAW_HTTP_BUSY_POLL: "50"
+      RAW_HTTP_QUICKACK: "0"
+      IO_URING_ENABLED: "0"
+    depends_on:
+      - api1
+
+  lb:
+    image: jrblatt/so-no-forevis:v1.0.0
+    pull_policy: if_not_present
+    cpuset: "0,1,2,3"
+    security_opt:
+      - seccomp=unconfined
+    environment:
+      PORT: "9999"
+      UPSTREAMS: "/run/uds/api1.sock,/run/uds/api2.sock"
+      BUF_SIZE: "4096"
+      WORKERS: "2"
+    ports:
+      - "9999:9999"
+    volumes:
+      - uds:/run/uds
+    depends_on:
+      - api1
+      - api2
+    networks: [app]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.15"
+          memory: "30MB"
+
+volumes:
+  uds:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+
+networks:
+  app:
+    driver: bridge

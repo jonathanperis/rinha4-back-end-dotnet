@@ -1,0 +1,62 @@
+{
+  "event_name": "workflow_dispatch",
+  "head_sha": "5a178cf724510927bc8be15af2ed4bee4911330c",
+  "results": [
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-asm-lb-410",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.24ms",
+      "participant": "jonathan-dotnet-asm-lb"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-asm-minworker256-410",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-asm-minworker256"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-asm-preferlocal-410",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.40ms",
+      "participant": "jonathan-dotnet-asm-preferlocal"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-asm-proc2-410",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.37ms",
+      "participant": "jonathan-dotnet-asm-proc2"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-asm-proc2-min256-410",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.34ms",
+      "participant": "jonathan-dotnet-asm-proc2-min256"
+    },
+    {
+      "artifact": "rinha-benchmark-ronieneubauer-rinha2026-410",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.37ms",
+      "participant": "ronieneubauer-rinha2026"
+    }
+  ],
+  "run_id": "26004757760",
+  "run_number": "410"
+}

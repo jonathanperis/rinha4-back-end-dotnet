@@ -1,0 +1,162 @@
+name: 'jonathan-dotnet-current'
+
+services:
+  webapi1: &webapi
+    image: ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-124b36d9440bebc7b0546e96d5bfe0624cbdd921
+    container_name: webapi-1
+    cpuset: "0,1"
+    security_opt:
+      - seccomp=unconfined
+    user: root
+    restart: always
+    read_only: true
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
+      DOTNET_PROCESSOR_COUNT: "1"
+      DOTNET_ThreadPool_UnfairSemaphoreSpinLimit: "0"
+      DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
+      DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
+      ACCEPT_LOOPS: "${ACCEPT_LOOPS:-1}"
+      MIN_WORKER_THREADS: "${MIN_WORKER_THREADS:-128}"
+      MAX_WORKER_THREADS: "${MAX_WORKER_THREADS:-}"
+      MAX_IO_THREADS: "${MAX_IO_THREADS:-}"
+      THREADPOOL_PREFER_LOCAL: "${THREADPOOL_PREFER_LOCAL:-0}"
+      SCORER_MODE: "${SCORER_MODE:-hybrid}"
+      SUBMITTED_FAST_PATH: "${SUBMITTED_FAST_PATH:-1}"
+      BIND_ADDR: fd:/sockets/api1.sock.ctrl
+      FD_RAW: "${FD_RAW:-1}"
+      FD_BUSY_POLL_US: "100"
+      FD_TCP_TUNE: "${FD_TCP_TUNE:-0}"
+      DATA_DIR: /data
+      EXACT_PATH: /data/references.bin
+      IVF_PATH: /data/references.ivf.bin
+      IVF_FAST_NPROBE: "${IVF_FAST_NPROBE:-1}"
+      IVF_FULL_NPROBE: "${IVF_FULL_NPROBE:-1}"
+      IVF_BOUNDARY_FULL: "${IVF_BOUNDARY_FULL:-false}"
+      IVF_BBOX_REPAIR: "${IVF_BBOX_REPAIR:-true}"
+      IVF_REPAIR_MIN_FRAUDS: "${IVF_REPAIR_MIN_FRAUDS:-0}"
+      IVF_REPAIR_MAX_FRAUDS: "${IVF_REPAIR_MAX_FRAUDS:-5}"
+      IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "${IVF_ZERO_FAST_APPROVE_WORST_DISTANCE:-5000000}"
+      IVF_FIVE_FAST_DENY_WORST_DISTANCE: "${IVF_FIVE_FAST_DENY_WORST_DISTANCE:-2000000}"
+      BUCKET_PATH: /data/references.bucket.bin
+      BUCKET_EARLY_CANDIDATES: "${BUCKET_EARLY_CANDIDATES:-9800}"
+      BUCKET_MIN_CANDIDATES: "${BUCKET_MIN_CANDIDATES:-16150}"
+      BUCKET_MAX_CANDIDATES: "${BUCKET_MAX_CANDIDATES:-24200}"
+      BUCKET_PROFILE_FASTPATH: "${BUCKET_PROFILE_FASTPATH:-true}"
+      BUCKET_REFERENCE_FASTPATH: "${BUCKET_REFERENCE_FASTPATH:-true}"
+      BUCKET_REFERENCE_FASTPATH_LEGIT: "${BUCKET_REFERENCE_FASTPATH_LEGIT:-false}"
+      BUCKET_REFERENCE_FASTPATH_FRAUD: "${BUCKET_REFERENCE_FASTPATH_FRAUD:-true}"
+      BUCKET_REFERENCE_FASTPATH2_LEGIT: "${BUCKET_REFERENCE_FASTPATH2_LEGIT:-true}"
+      BUCKET_REFERENCE_FASTPATH2_FRAUD: "${BUCKET_REFERENCE_FASTPATH2_FRAUD:-true}"
+      BUCKET_PROFILE_LEGIT_MIN_COUNT: "${BUCKET_PROFILE_LEGIT_MIN_COUNT:-5}"
+      BUCKET_PROFILE_FRAUD_MIN_COUNT: "${BUCKET_PROFILE_FRAUD_MIN_COUNT:-15}"
+      BUCKET_EXACT_FALLBACK: "${BUCKET_EXACT_FALLBACK:-risky}"
+      BUCKET_AVX_CUTOFF_DIMS: "${BUCKET_AVX_CUTOFF_DIMS:-6}"
+    tmpfs:
+      - /tmp
+    volumes:
+      - sockets:/sockets
+    healthcheck:
+      disable: true
+    deploy:
+      resources:
+        limits:
+          cpus: "0.425"
+          memory: "165MB"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+
+  webapi2:
+    <<: *webapi
+    container_name: webapi-2
+    cpuset: "2,3"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
+      DOTNET_PROCESSOR_COUNT: "1"
+      DOTNET_ThreadPool_UnfairSemaphoreSpinLimit: "0"
+      DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS: "1"
+      DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT: "1"
+      ACCEPT_LOOPS: "${ACCEPT_LOOPS:-1}"
+      MIN_WORKER_THREADS: "${MIN_WORKER_THREADS:-128}"
+      MAX_WORKER_THREADS: "${MAX_WORKER_THREADS:-}"
+      MAX_IO_THREADS: "${MAX_IO_THREADS:-}"
+      THREADPOOL_PREFER_LOCAL: "${THREADPOOL_PREFER_LOCAL:-0}"
+      SCORER_MODE: "${SCORER_MODE:-hybrid}"
+      SUBMITTED_FAST_PATH: "${SUBMITTED_FAST_PATH:-1}"
+      BIND_ADDR: fd:/sockets/api2.sock.ctrl
+      FD_RAW: "${FD_RAW:-1}"
+      FD_BUSY_POLL_US: "100"
+      FD_TCP_TUNE: "${FD_TCP_TUNE:-0}"
+      DATA_DIR: /data
+      EXACT_PATH: /data/references.bin
+      IVF_PATH: /data/references.ivf.bin
+      IVF_FAST_NPROBE: "${IVF_FAST_NPROBE:-1}"
+      IVF_FULL_NPROBE: "${IVF_FULL_NPROBE:-1}"
+      IVF_BOUNDARY_FULL: "${IVF_BOUNDARY_FULL:-false}"
+      IVF_BBOX_REPAIR: "${IVF_BBOX_REPAIR:-true}"
+      IVF_REPAIR_MIN_FRAUDS: "${IVF_REPAIR_MIN_FRAUDS:-0}"
+      IVF_REPAIR_MAX_FRAUDS: "${IVF_REPAIR_MAX_FRAUDS:-5}"
+      IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "${IVF_ZERO_FAST_APPROVE_WORST_DISTANCE:-5000000}"
+      IVF_FIVE_FAST_DENY_WORST_DISTANCE: "${IVF_FIVE_FAST_DENY_WORST_DISTANCE:-2000000}"
+      BUCKET_PATH: /data/references.bucket.bin
+      BUCKET_EARLY_CANDIDATES: "${BUCKET_EARLY_CANDIDATES:-9800}"
+      BUCKET_MIN_CANDIDATES: "${BUCKET_MIN_CANDIDATES:-16150}"
+      BUCKET_MAX_CANDIDATES: "${BUCKET_MAX_CANDIDATES:-24200}"
+      BUCKET_PROFILE_FASTPATH: "${BUCKET_PROFILE_FASTPATH:-true}"
+      BUCKET_REFERENCE_FASTPATH: "${BUCKET_REFERENCE_FASTPATH:-true}"
+      BUCKET_REFERENCE_FASTPATH_LEGIT: "${BUCKET_REFERENCE_FASTPATH_LEGIT:-false}"
+      BUCKET_REFERENCE_FASTPATH_FRAUD: "${BUCKET_REFERENCE_FASTPATH_FRAUD:-true}"
+      BUCKET_REFERENCE_FASTPATH2_LEGIT: "${BUCKET_REFERENCE_FASTPATH2_LEGIT:-true}"
+      BUCKET_REFERENCE_FASTPATH2_FRAUD: "${BUCKET_REFERENCE_FASTPATH2_FRAUD:-true}"
+      BUCKET_PROFILE_LEGIT_MIN_COUNT: "${BUCKET_PROFILE_LEGIT_MIN_COUNT:-5}"
+      BUCKET_PROFILE_FRAUD_MIN_COUNT: "${BUCKET_PROFILE_FRAUD_MIN_COUNT:-15}"
+      BUCKET_EXACT_FALLBACK: "${BUCKET_EXACT_FALLBACK:-risky}"
+      BUCKET_AVX_CUTOFF_DIMS: "${BUCKET_AVX_CUTOFF_DIMS:-6}"
+    tmpfs:
+      - /tmp
+    volumes:
+      - sockets:/sockets
+
+  lb:
+    image: ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-0e7bbceed1eb8142dca5f83a449840381b30a785
+    container_name: rinha-lb
+    platform: linux/amd64
+    cpuset: "0,2"
+    user: root
+    restart: always
+    pull_policy: if_not_present
+    environment:
+      LB_MODE: "fdpass"
+      LB_FDPASS_SOCKET_TYPE: "stream"
+      PORT: "9999"
+      UPSTREAMS: "/sockets/api1.sock.ctrl,/sockets/api2.sock.ctrl"
+    volumes:
+      - sockets:/sockets
+    depends_on:
+      - webapi1
+      - webapi2
+    ports:
+      - "${HOST_PORT:-9999}:9999"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.15"
+          memory: "20MB"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    security_opt:
+      - seccomp=unconfined
+
+volumes:
+  sockets:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=4m,mode=0777

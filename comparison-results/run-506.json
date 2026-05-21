@@ -1,0 +1,128 @@
+{
+  "event_name": "workflow_dispatch",
+  "head_sha": "0dabdec3bdfa3b2d351fe6bedb9324a51c355370",
+  "results": [
+    {
+      "artifact": "benchmark-results-jonathan-dotnet-stable",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.36ms",
+      "participant": "jonathan-dotnet-stable",
+      "repetition": 1
+    },
+    {
+      "artifact": "benchmark-results-jonathan-dotnet-stable",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.34ms",
+      "participant": "jonathan-dotnet-stable",
+      "repetition": 2
+    },
+    {
+      "artifact": "benchmark-results-jonathan-dotnet-stable",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-stable",
+      "repetition": 3
+    },
+    {
+      "artifact": "benchmark-results-jonathan-dotnet-stable",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.36ms",
+      "participant": "jonathan-dotnet-stable",
+      "repetition": 4
+    },
+    {
+      "artifact": "benchmark-results-jonathan-dotnet-stable",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-stable",
+      "repetition": 5
+    },
+    {
+      "artifact": "benchmark-results-jonathan-dotnet-stable",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.36ms",
+      "participant": "jonathan-dotnet-stable",
+      "repetition": null
+    },
+    {
+      "artifact": "benchmark-results-pedrosakuma-rinha-backend-2026",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": 1
+    },
+    {
+      "artifact": "benchmark-results-pedrosakuma-rinha-backend-2026",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": 2
+    },
+    {
+      "artifact": "benchmark-results-pedrosakuma-rinha-backend-2026",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": 3
+    },
+    {
+      "artifact": "benchmark-results-pedrosakuma-rinha-backend-2026",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": 4
+    },
+    {
+      "artifact": "benchmark-results-pedrosakuma-rinha-backend-2026",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": 5
+    },
+    {
+      "artifact": "benchmark-results-pedrosakuma-rinha-backend-2026",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": null
+    }
+  ],
+  "run_id": "26170740728",
+  "run_number": "506"
+}

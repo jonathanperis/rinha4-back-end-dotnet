@@ -1,0 +1,2168 @@
+{
+  "event_name": "push",
+  "head_sha": "4fc0c49b81f14cefe8a647ce6dbe5600b374ace3",
+  "results": [
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp100-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.42ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp100-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp100-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp100-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp100-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp100-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.42ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp100",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.35ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.46ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.35ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-lball-bp50",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-accept2-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-lball-bp50-accept2",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-lball-bp50-accept2",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-accept2-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-lball-bp50-accept2",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp50-accept2",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-accept2-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-lball-bp50-accept2",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp50-accept2",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-accept2-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-lball-bp50-accept2",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp50-accept2",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-accept2-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-lball-bp50-accept2",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-lball-bp50-accept2",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-accept2-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-lball-bp50-accept2",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-lball-bp50-accept2",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-ivf64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.41ms",
+      "participant": "jonathan-dotnet-lball-bp50-ivf64",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.41ms",
+      "participant": "jonathan-dotnet-lball-bp50-ivf64",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-ivf64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.42ms",
+      "participant": "jonathan-dotnet-lball-bp50-ivf64",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.35ms",
+      "participant": "jonathan-dotnet-lball-bp50-ivf64",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-ivf64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.38ms",
+      "participant": "jonathan-dotnet-lball-bp50-ivf64",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.34ms",
+      "participant": "jonathan-dotnet-lball-bp50-ivf64",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-ivf64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.41ms",
+      "participant": "jonathan-dotnet-lball-bp50-ivf64",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.35ms",
+      "participant": "jonathan-dotnet-lball-bp50-ivf64",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-ivf64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.38ms",
+      "participant": "jonathan-dotnet-lball-bp50-ivf64",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.36ms",
+      "participant": "jonathan-dotnet-lball-bp50-ivf64",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-ivf64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.41ms",
+      "participant": "jonathan-dotnet-lball-bp50-ivf64",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.41ms",
+      "participant": "jonathan-dotnet-lball-bp50-ivf64",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-localq-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-lball-bp50-localq",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp50-localq",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-localq-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-lball-bp50-localq",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-lball-bp50-localq",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-localq-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-lball-bp50-localq",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp50-localq",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-localq-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-lball-bp50-localq",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp50-localq",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-localq-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-lball-bp50-localq",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp50-localq",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-localq-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-lball-bp50-localq",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp50-localq",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-tp64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-lball-bp50-tp64",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-lball-bp50-tp64",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-tp64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-lball-bp50-tp64",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp50-tp64",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-tp64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-lball-bp50-tp64",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-lball-bp50-tp64",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-tp64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-lball-bp50-tp64",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp50-tp64",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-tp64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-lball-bp50-tp64",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-lball-bp50-tp64",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-lball-bp50-tp64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-lball-bp50-tp64",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-lball-bp50-tp64",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-09c2bdc-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-pedrolb-09c2bdc-bp50-tp64-api44lb12",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-09c2bdc-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-09c2bdc-bp50-tp64-api44lb12",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-09c2bdc-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-09c2bdc-bp50-tp64-api44lb12",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-09c2bdc-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-pedrolb-09c2bdc-bp50-tp64-api44lb12",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-09c2bdc-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-pedrolb-09c2bdc-bp50-tp64-api44lb12",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-09c2bdc-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-pedrolb-09c2bdc-bp50-tp64-api44lb12",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-2c177ab-cascade-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-2c177ab-cascade-bp50-tp64-api44lb12",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-2c177ab-cascade-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-2c177ab-cascade-bp50-tp64-api44lb12",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-2c177ab-cascade-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-2c177ab-cascade-bp50-tp64-api44lb12",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-2c177ab-cascade-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-2c177ab-cascade-bp50-tp64-api44lb12",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-2c177ab-cascade-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-2c177ab-cascade-bp50-tp64-api44lb12",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-2c177ab-cascade-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-2c177ab-cascade-bp50-tp64-api44lb12",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-6319cf5-hs1024-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.39ms",
+      "participant": "jonathan-dotnet-pedrolb-6319cf5-hs1024-bp50-tp64-api44lb12",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-6319cf5-hs1024-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-6319cf5-hs1024-bp50-tp64-api44lb12",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-6319cf5-hs1024-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-6319cf5-hs1024-bp50-tp64-api44lb12",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-6319cf5-hs1024-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.35ms",
+      "participant": "jonathan-dotnet-pedrolb-6319cf5-hs1024-bp50-tp64-api44lb12",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-6319cf5-hs1024-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.40ms",
+      "participant": "jonathan-dotnet-pedrolb-6319cf5-hs1024-bp50-tp64-api44lb12",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-6319cf5-hs1024-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.39ms",
+      "participant": "jonathan-dotnet-pedrolb-6319cf5-hs1024-bp50-tp64-api44lb12",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp100-tp64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.36ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp100-tp64",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp100-tp64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.35ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp100-tp64",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp100-tp64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.36ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp100-tp64",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp100-tp64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.34ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp100-tp64",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp100-tp64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.35ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp100-tp64",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp100-tp64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.36ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp100-tp64",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-localq-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-localq",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-localq-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-localq",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-localq-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.35ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-localq",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-localq-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.36ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-localq",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-localq-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-localq",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-localq-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-localq",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api40-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api40",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api40-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.39ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api40",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api40-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api40",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api40-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api40",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api40-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.42ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api40",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api40-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api40",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api44lb12",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api44lb12",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api44lb12",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api44lb12",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api44lb12",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api44lb12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api44lb12",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api45-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api45",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api45-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api45",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api45-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api45",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api45-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api45",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api45-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api45",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api45-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api45",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api46lb08-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api46lb08",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api46lb08-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api46lb08",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api46lb08-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api46lb08",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api46lb08-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api46lb08",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api46lb08-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.37ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api46lb08",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api46lb08-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api46lb08",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api47-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api47",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api47-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api47",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api47-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api47",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api47-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api47",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api47-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.34ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api47",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api47-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api47",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api48lb04-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api48lb04",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api48lb04-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api48lb04",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api48lb04-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api48lb04",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api48lb04-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api48lb04",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api48lb04-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api48lb04",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-api48lb04-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-api48lb04",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-avx0-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.26ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-avx0",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-avx0-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.25ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-avx0",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-avx0-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-avx0",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-avx0-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-avx0",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-avx0-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.24ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-avx0",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-avx0-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.26ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-avx0",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-cand12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-cand12",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-cand12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-cand12",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-cand12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-cand12",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-cand12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.27ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-cand12",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-cand12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-cand12",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-cand12-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-cand12",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-cand20-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-cand20",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-cand20-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-cand20",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-cand20-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-cand20",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-cand20-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-cand20",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-cand20-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-cand20",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-cand20-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-cand20",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-cand8-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-cand8",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-cand8-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-cand8",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-cand8-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-cand8",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-cand8-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-cand8",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-cand8-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-cand8",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-cand8-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-cand8",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-noexact-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.45ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-noexact",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-noexact-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.37ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-noexact",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-noexact-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.43ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-noexact",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-noexact-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.35ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-noexact",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-noexact-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.38ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-noexact",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-noexact-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.45ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-noexact",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-pedrores-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-pedrores",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-pedrores-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-pedrores",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-pedrores-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-pedrores",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-pedrores-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-pedrores",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-pedrores-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.34ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-pedrores",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-pedrores-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-pedrores",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-reflegit-503",
+      "false_negative_detections": 1,
+      "false_positive_detections": 0,
+      "final_score": 5819.38,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-reflegit",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-reflegit-503",
+      "false_negative_detections": 1,
+      "false_positive_detections": 0,
+      "final_score": 5819.38,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-reflegit",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-reflegit-503",
+      "false_negative_detections": 1,
+      "false_positive_detections": 0,
+      "final_score": 5819.38,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-reflegit",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-reflegit-503",
+      "false_negative_detections": 1,
+      "false_positive_detections": 0,
+      "final_score": 5819.38,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-reflegit",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-reflegit-503",
+      "false_negative_detections": 1,
+      "false_positive_detections": 0,
+      "final_score": 5819.38,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-reflegit",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-a918-bp50-tp64-reflegit-503",
+      "false_negative_detections": 1,
+      "false_positive_detections": 0,
+      "final_score": 5819.38,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-pedrolb-a918-bp50-tp64-reflegit",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-bp100-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-bp100",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-pedrolb-bp100",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-bp100-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-bp100",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-pedrolb-bp100",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-bp100-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-bp100",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-pedrolb-bp100",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-bp100-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-bp100",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-pedrolb-bp100",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-bp100-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-bp100",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-pedrolb-bp100",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-bp100-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-pedrolb-bp100",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-pedrolb-bp100",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-ee1247e-bp50-tp64-avx0-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-pedrolb-ee1247e-bp50-tp64-avx0",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-ee1247e-bp50-tp64-avx0-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-pedrolb-ee1247e-bp50-tp64-avx0",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-ee1247e-bp50-tp64-avx0-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-ee1247e-bp50-tp64-avx0",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-ee1247e-bp50-tp64-avx0-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-pedrolb-ee1247e-bp50-tp64-avx0",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-ee1247e-bp50-tp64-avx0-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-pedrolb-ee1247e-bp50-tp64-avx0",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-pedrolb-ee1247e-bp50-tp64-avx0-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.33ms",
+      "participant": "jonathan-dotnet-pedrolb-ee1247e-bp50-tp64-avx0",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-pedrosakuma-rinha-backend-2026-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.26ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-pedrosakuma-rinha-backend-2026-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.26ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": 2
+    },
+    {
+      "artifact": "rinha-benchmark-pedrosakuma-rinha-backend-2026-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.27ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": 3
+    },
+    {
+      "artifact": "rinha-benchmark-pedrosakuma-rinha-backend-2026-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.27ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": 4
+    },
+    {
+      "artifact": "rinha-benchmark-pedrosakuma-rinha-backend-2026-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.27ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": 5
+    },
+    {
+      "artifact": "rinha-benchmark-pedrosakuma-rinha-backend-2026-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": null
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-503",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.26ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": null
+    }
+  ],
+  "run_id": "26137557461",
+  "run_number": "503"
+}

@@ -1,0 +1,62 @@
+{
+  "event_name": "workflow_dispatch",
+  "head_sha": "72803d84a9ab2cd0a65dc43f8fc31e87a3f6cd53",
+  "results": [
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-ronie-currentlb-412",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.43ms",
+      "participant": "jonathan-dotnet-ronie-currentlb"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-ronie-fdtcp-412",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-ronie-fdtcp"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-ronie-fdtcp-mlock-412",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 0,
+      "http_errors": 53624,
+      "p99": "0.84ms",
+      "participant": "jonathan-dotnet-ronie-fdtcp-mlock"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-ronie-mlock-412",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 0,
+      "http_errors": 53626,
+      "p99": "0.58ms",
+      "participant": "jonathan-dotnet-ronie-mlock"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-ronie-prevlb-412",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.23ms",
+      "participant": "jonathan-dotnet-ronie-prevlb"
+    },
+    {
+      "artifact": "rinha-benchmark-ronieneubauer-rinha2026-412",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "ronieneubauer-rinha2026"
+    }
+  ],
+  "run_id": "26006263471",
+  "run_number": "412"
+}

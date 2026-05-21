@@ -1,0 +1,38 @@
+{
+  "event_name": "push",
+  "head_sha": "b1b2500d53bb4a4bb2cd8ff3f61461f2a4ffed39",
+  "results": [
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-stable-511",
+      "false_negative_detections": 4,
+      "false_positive_detections": 38,
+      "final_score": 5487.73,
+      "http_errors": 0,
+      "p99": "0.28ms",
+      "participant": "jonathan-dotnet-stable",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-sequential-511",
+      "false_negative_detections": 4,
+      "false_positive_detections": 38,
+      "final_score": 5487.73,
+      "http_errors": 0,
+      "p99": "0.40ms",
+      "participant": "jonathan-dotnet-stable",
+      "repetition": 1
+    },
+    {
+      "artifact": "rinha-benchmark-pedrosakuma-rinha-backend-2026-511",
+      "false_negative_detections": 0,
+      "false_positive_detections": 31,
+      "final_score": 5548.46,
+      "http_errors": 0,
+      "p99": "0.52ms",
+      "participant": "pedrosakuma-rinha-backend-2026",
+      "repetition": 1
+    }
+  ],
+  "run_id": "26237307243",
+  "run_number": "511"
+}

@@ -1,0 +1,71 @@
+{
+  "event_name": "workflow_dispatch",
+  "head_sha": "43c9fbec43bb60ce71e15cb5ca2751871f455e12",
+  "results": [
+    {
+      "artifact": "benchmark-results-daniloitagyba-rinha-2026-dotnet-5295",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.38ms",
+      "participant": "daniloitagyba-rinha-2026-dotnet-5295"
+    },
+    {
+      "artifact": "benchmark-results-daniloitagyba-rinha-2026-dotnet-5295-rerun",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.35ms",
+      "participant": "daniloitagyba-rinha-2026-dotnet-5295-rerun"
+    },
+    {
+      "artifact": "benchmark-results-daniloitagyba-rinha-2026-dotnet-current",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "daniloitagyba-rinha-2026-dotnet-current"
+    },
+    {
+      "artifact": "benchmark-results-jonathan-dotnet-danilo-current-split",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.44ms",
+      "participant": "jonathan-dotnet-danilo-current-split"
+    },
+    {
+      "artifact": "benchmark-results-jonathan-dotnet-danilo-split",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.35ms",
+      "participant": "jonathan-dotnet-danilo-split"
+    },
+    {
+      "artifact": "benchmark-results-jonathan-dotnet-danilo-split-rerun",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-danilo-split-rerun"
+    },
+    {
+      "artifact": "benchmark-results-jonathan-dotnet-ronie-currentlb",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-ronie-currentlb"
+    }
+  ],
+  "run_id": "26048820359",
+  "run_number": "430"
+}

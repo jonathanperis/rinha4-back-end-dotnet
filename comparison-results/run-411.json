@@ -1,0 +1,35 @@
+{
+  "event_name": "workflow_dispatch",
+  "head_sha": "32e772b138fe5810f986179e3d003ab1700e4864",
+  "results": [
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-asm-lb-411",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.31ms",
+      "participant": "jonathan-dotnet-asm-lb"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-asm-minworker256-411",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.35ms",
+      "participant": "jonathan-dotnet-asm-minworker256"
+    },
+    {
+      "artifact": "rinha-benchmark-ronieneubauer-rinha2026-411",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "ronieneubauer-rinha2026"
+    }
+  ],
+  "run_id": "26005268796",
+  "run_number": "411"
+}

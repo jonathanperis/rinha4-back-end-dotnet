@@ -1,0 +1,80 @@
+{
+  "event_name": "workflow_dispatch",
+  "head_sha": "2adb884e4a69a00900b384e65cbc537a88d65d10",
+  "results": [
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-ronie-avx4-418",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.38ms",
+      "participant": "jonathan-dotnet-ronie-avx4"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-ronie-avx8-418",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.32ms",
+      "participant": "jonathan-dotnet-ronie-avx8"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-ronie-currentlb-418",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.29ms",
+      "participant": "jonathan-dotnet-ronie-currentlb"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-ronie-ivfonly-418",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.42ms",
+      "participant": "jonathan-dotnet-ronie-ivfonly"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-ronie-lowcandidates-418",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-ronie-lowcandidates"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-ronie-midcandidates-418",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.53ms",
+      "participant": "jonathan-dotnet-ronie-midcandidates"
+    },
+    {
+      "artifact": "rinha-benchmark-jonathan-dotnet-ronie-split4510-418",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.30ms",
+      "participant": "jonathan-dotnet-ronie-split4510"
+    },
+    {
+      "artifact": "rinha-benchmark-ronieneubauer-rinha2026-418",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.37ms",
+      "participant": "ronieneubauer-rinha2026"
+    }
+  ],
+  "run_id": "26011421563",
+  "run_number": "418"
+}

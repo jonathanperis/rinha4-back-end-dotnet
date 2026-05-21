@@ -1,0 +1,17 @@
+{
+  "event_name": "workflow_dispatch",
+  "head_sha": "ae5ddacb7251db25929bb0d27f691dc02ef0fb0f",
+  "results": [
+    {
+      "artifact": "rinha-benchmark-jonathanperis-lb-asm-dcc6b89-379",
+      "false_negative_detections": 0,
+      "false_positive_detections": 0,
+      "final_score": 6000,
+      "http_errors": 0,
+      "p99": "0.37ms",
+      "participant": "jonathanperis-lb-asm-dcc6b89"
+    }
+  ],
+  "run_id": "25972328909",
+  "run_number": "379"
+}
