@@ -246,7 +246,7 @@ jobs:
           IVF_REPAIR_MAX_FRAUDS: "5"
           IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "5000000"
           IVF_FIVE_FAST_DENY_WORST_DISTANCE: "2000000"
-          SCORER_MODE: hybrid
+          SCORER_MODE: ivf
           ACCEPT_LOOPS: "1"
           FD_RAW: "1"
           BENCHMARK_STACK_CPUSET: ""
@@ -278,7 +278,7 @@ jobs:
           IVF_REPAIR_MAX_FRAUDS: "5"
           IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "5000000"
           IVF_FIVE_FAST_DENY_WORST_DISTANCE: "2000000"
-          SCORER_MODE: hybrid
+          SCORER_MODE: ivf
           ACCEPT_LOOPS: "1"
           FD_RAW: "1"
           BENCHMARK_STACK_CPUSET: ""
@@ -310,7 +310,7 @@ jobs:
           IVF_REPAIR_MAX_FRAUDS: "5"
           IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "5000000"
           IVF_FIVE_FAST_DENY_WORST_DISTANCE: "2000000"
-          SCORER_MODE: hybrid
+          SCORER_MODE: ivf
           ACCEPT_LOOPS: "1"
           FD_RAW: "1"
           BENCHMARK_API_CPUS: "0.425"
@@ -345,7 +345,7 @@ jobs:
           IVF_REPAIR_MAX_FRAUDS: "5"
           IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: "5000000"
           IVF_FIVE_FAST_DENY_WORST_DISTANCE: "2000000"
-          SCORER_MODE: hybrid
+          SCORER_MODE: ivf
           ACCEPT_LOOPS: "1"
           FD_RAW: "1"
           BENCHMARK_API_CPUS: "0.425"

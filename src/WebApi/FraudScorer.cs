@@ -322,7 +322,7 @@ internal sealed class FraudScorer
         if (string.Equals(value, "hybrid", StringComparison.OrdinalIgnoreCase))
             return ScorerMode.Hybrid;
 
-        return ScorerMode.Bucket;
+        return ScorerMode.Ivf;
     }
 
     /// <summary>
