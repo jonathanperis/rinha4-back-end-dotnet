@@ -165,7 +165,7 @@ services:
       - webapi1
       - webapi2
     ports:
-      - "${HOST_PORT:-9999}:9999"
+      - "9999:9999"
     deploy:
       resources:
         limits:
