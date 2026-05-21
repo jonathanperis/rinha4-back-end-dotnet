@@ -1,11 +1,11 @@
 {
   "metadata": {
-    "timestamp": "2026-05-21T16:22:26Z",
-    "sha": "5cc9ef10396318bfc181b1a53fe981f27d4b35e7",
-    "short_sha": "5cc9ef103963",
-    "run_id": "26238730868",
-    "run_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/26238730868",
-    "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-5cc9ef10396318bfc181b1a53fe981f27d4b35e7",
+    "timestamp": "2026-05-21T23:13:24Z",
+    "sha": "960d938515a9bf1cd5d37c95553f22a81a48a695",
+    "short_sha": "960d938515a9",
+    "run_id": "26258586717",
+    "run_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/26258586717",
+    "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-960d938515a9bf1cd5d37c95553f22a81a48a695",
     "compose_file": "docker-compose.yml",
     "report_kind": "candidate",
     "html_report": null,
@@ -34,7 +34,7 @@
       "ivf_bbox_repair": "true",
       "ivf_repair_min_frauds": "0",
       "ivf_repair_max_frauds": "5",
-      "scorer_mode": "hybrid",
+      "scorer_mode": "ivf",
       "accept_loops": "1",
       "fd_raw": "1",
       "min_worker_threads": "",
@@ -59,29 +59,29 @@
       "edge_case_count": 645,
       "edge_case_rate": 0.0119
     },
-    "p99": "0.39ms",
+    "p99": "0.79ms",
     "scoring": {
       "breakdown": {
-        "false_positive_detections": 38,
-        "false_negative_detections": 4,
-        "true_positive_detections": 23938,
-        "true_negative_detections": 30079,
+        "false_positive_detections": 0,
+        "false_negative_detections": 0,
+        "true_positive_detections": 23942,
+        "true_negative_detections": 30117,
         "http_errors": 0
       },
-      "failure_rate": "0.08%",
-      "weighted_errors_E": 50,
-      "error_rate_epsilon": 0.000925,
+      "failure_rate": "0%",
+      "weighted_errors_E": 0,
+      "error_rate_epsilon": 0,
       "p99_score": {
         "value": 3000,
         "cut_triggered": false
       },
       "detection_score": {
-        "value": 2487.73,
+        "value": 3000,
         "rate_component": 3000,
-        "absolute_penalty": -512.27,
+        "absolute_penalty": 0,
         "cut_triggered": false
       },
-      "final_score": 5487.73
+      "final_score": 6000
     }
   }
 }
