@@ -1,0 +1,65 @@
+{
+  "synced_at": "2026-05-18T11:05:23.985Z",
+  "source": {
+    "repo": "zanfranceschi/rinha-de-backend-2026",
+    "author": "jonathanperis",
+    "search": "is:issue state:closed author:jonathanperis reason:completed sort:updated-desc"
+  },
+  "issue": {
+    "number": 5217,
+    "title": "rinha/test jonathanperis-dotnet",
+    "url": "https://github.com/zanfranceschi/rinha-de-backend-2026/issues/5217",
+    "updated_at": "2026-05-18T11:04:16Z",
+    "closed_at": "2026-05-18T11:04:16Z"
+  },
+  "comment": {
+    "url": "https://github.com/zanfranceschi/rinha-de-backend-2026/issues/5217#issuecomment-4477024876",
+    "created_at": "2026-05-18T11:04:15Z",
+    "author": "arinhadebackend"
+  },
+  "repo_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet",
+  "commit": "07b6bf0",
+  "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-f621b2297857e0328a9d383f1f06edfd5cc54c3c",
+  "result": {
+    "expected": {
+      "total": 54100,
+      "fraud_count": 24058,
+      "legit_count": 30042,
+      "fraud_rate": 0.4447,
+      "legit_rate": 0.5553,
+      "edge_case_count": 797,
+      "edge_case_rate": 0.0147
+    },
+    "p99": "1.10ms",
+    "scoring": {
+      "breakdown": {
+        "false_positive_detections": 0,
+        "false_negative_detections": 0,
+        "true_positive_detections": 24037,
+        "true_negative_detections": 30022,
+        "http_errors": 0
+      },
+      "failure_rate": "0%",
+      "weighted_errors_E": 0,
+      "error_rate_epsilon": 0,
+      "p99_score": {
+        "value": 2956.84,
+        "cut_triggered": false
+      },
+      "detection_score": {
+        "value": 3000,
+        "rate_component": 3000,
+        "absolute_penalty": 0,
+        "cut_triggered": false
+      },
+      "final_score": 5956.84
+    }
+  },
+  "runtime_info": {
+    "mem": 350,
+    "cpu": 1,
+    "commit": "07b6bf0",
+    "instances_number_ok": true,
+    "unlimited_services": null
+  }
+}

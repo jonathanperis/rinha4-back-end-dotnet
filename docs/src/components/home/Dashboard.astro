@@ -1,0 +1,175 @@
+---
+const official = await import('../../../public/official/latest.json');
+const latest = await import('../../../public/reports/latest-candidate.json');
+const calibratedLatest = await import('../../../public/reports/latest-calibrated.json');
+const index = await import('../../../public/reports/index.json');
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const href = (path: string) => `${base}${path}`;
+const officialResult = official.default.result;
+const officialIssue = official.default.issue;
+const officialComment = official.default.comment;
+const officialSource = official.default.source;
+const result = latest.default.result;
+const metadata = latest.default.metadata;
+const calibrated = calibratedLatest.default;
+const calibratedResult = calibrated.result;
+const runs = index.default;
+const candidates = runs.filter((run) => run.report_kind === 'candidate');
+const calibratedRuns = runs.filter((run) => run.report_kind === 'official-calibrated');
+const experiments = runs.filter((run) => run.report_kind === 'experiment');
+const cleanCandidates = candidates.filter((run) => run.http_errors === 0 && run.false_positive_detections === 0 && run.false_negative_detections === 0);
+const p99Number = (value: string) => Number(String(value).replace('ms', ''));
+const bestCandidate = [...cleanCandidates].sort((a, b) => p99Number(a.p99) - p99Number(b.p99))[0] ?? candidates[0];
+const fmtScore = (n: number) => Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const officialScore = fmtScore(officialResult.scoring.final_score);
+const score = fmtScore(result.scoring.final_score);
+const calibratedScore = fmtScore(calibratedResult.scoring.final_score);
+const p99Score = fmtScore(result.scoring.p99_score.value);
+const detectionScore = fmtScore(result.scoring.detection_score.value);
+const officialClosedAt = new Intl.DateTimeFormat('en-US', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'UTC',
+}).format(new Date(officialIssue.closed_at));
+const shortSha = metadata.short_sha?.slice(0, 12) ?? metadata.sha?.slice(0, 12);
+---
+
+<section class="evidence-panel" aria-labelledby="evidence-title">
+  <div class="section-header">
+    <p class="section-kicker">PROOF LEDGER</p>
+    <h2 id="evidence-title">OFFICIAL HISTORY, CURRENT CANDIDATE, CALIBRATED PROJECTION.</h2>
+    <p>Every number below is lane-labeled. Official Rinha hardware remains separate from GitHub Actions and CPU-quota calibration.</p>
+  </div>
+
+  <div class="evidence-grid">
+    <article class="evidence-card stale">
+      <div class="lane-row"><span class="status-pill warn">[stale official]</span><span>upstream issue</span></div>
+      <h3>Issue #{officialIssue.number}</h3>
+      <dl class="metric-list">
+        <div><dt>p99</dt><dd>{officialResult.p99}</dd></div>
+        <div><dt>failures</dt><dd>{officialResult.scoring.failure_rate}</dd></div>
+        <div><dt>score</dt><dd>{officialScore}</dd></div>
+      </dl>
+      <p>Closed {officialClosedAt} UTC by the upstream runner. Kept as accepted history, not current candidate state.</p>
+      <a class="action-link" href={officialIssue.url} target="_blank" rel="noopener noreferrer">open issue</a>
+    </article>
+
+    <article class="evidence-card current">
+      <div class="lane-row"><span class="status-pill clean">[clean]</span><span>GitHub Actions candidate</span></div>
+      <h3>Run {metadata.run_id}</h3>
+      <dl class="metric-list">
+        <div><dt>p99</dt><dd>{result.p99}</dd></div>
+        <div><dt>failures</dt><dd>{result.scoring.failure_rate}</dd></div>
+        <div><dt>score</dt><dd>{score}</dd></div>
+      </dl>
+      <p>Main candidate at <code>{shortSha}</code>. CI evidence only, but this is the current clean public artifact.</p>
+      <a class="action-link" href={metadata.run_url} target="_blank" rel="noopener noreferrer">inspect run</a>
+    </article>
+
+    <article class="evidence-card calibrated">
+      <div class="lane-row"><span class="status-pill ci">[calibrated-ci]</span><span>CPU quota projection</span></div>
+      <h3>api {calibrated.metadata.benchmark_api_cpus || 'default'} / proxy {calibrated.metadata.benchmark_proxy_cpus || 'default'}</h3>
+      <dl class="metric-list">
+        <div><dt>p99</dt><dd>{calibratedResult.p99}</dd></div>
+        <div><dt>failures</dt><dd>{calibratedResult.scoring.failure_rate}</dd></div>
+        <div><dt>score</dt><dd>{calibratedScore}</dd></div>
+      </dl>
+      <p>Projection lane for the same commit and workflow. It predicts pressure, it does not replace official hardware.</p>
+      <a class="action-link" href={href('/reports/')}>compare reports</a>
+    </article>
+  </div>
+</section>
+
+<section class="provenance-ledger" aria-label="Source provenance">
+  <div>
+    <span class="official-kicker">official source</span>
+    <p>Latest closed completed upstream issue authored by <code>{officialSource.author}</code>, synced through <code>gh</code> from <code>{officialSource.repo}</code>.</p>
+    <div class="official-links align-left">
+      <a href={officialIssue.url} target="_blank" rel="noopener noreferrer">Issue #{officialIssue.number}</a>
+      <a href={officialComment.url} target="_blank" rel="noopener noreferrer">Result comment</a>
+      <a href="https://rinhadebackend.com.br/" target="_blank" rel="noopener noreferrer">Ranking</a>
+    </div>
+  </div>
+  <div>
+    <span class="official-kicker">local evidence</span>
+    <p><code>{runs.length}</code> archived report rows across <code>{candidates.length}</code> candidate, <code>{calibratedRuns.length}</code> calibrated, and <code>{experiments.length}</code> experiment entries.</p>
+    <div class="official-links align-left">
+      <a href={href('/reports/')}>Report archive</a>
+      <a href={metadata.run_url} target="_blank" rel="noopener noreferrer">Latest CI run</a>
+      <a href="https://github.com/jonathanperis/rinha4-back-end-dotnet" target="_blank" rel="noopener noreferrer">Source</a>
+    </div>
+  </div>
+</section>
+
+<section class="runtime-trace" aria-labelledby="runtime-title">
+  <div class="section-header narrow">
+    <p class="section-kicker">RUNTIME TRACE</p>
+    <h2 id="runtime-title">THE HOT PATH IS A SHORT PATH.</h2>
+  </div>
+  <ol class="trace-list">
+    <li><span>01 ingress</span><strong>k6 / judge reaches :9999</strong><p>The public boundary is the yolo load balancer, not ASP.NET Core.</p></li>
+    <li><span>02 transport</span><strong>UDS fanout to two APIs</strong><p>Raw HTTP is forwarded through Unix Domain Sockets to NativeAOT containers.</p></li>
+    <li><span>03 parse</span><strong>minimal field extraction</strong><p>The app scans enough JSON to build the 14-dimensional fraud vector.</p></li>
+    <li><span>04 score</span><strong>bucket first, IVF fallback</strong><p>Fast bucket decisions handle easy cases, rounded int16 IVF protects correctness.</p></li>
+    <li><span>05 respond</span><strong>prebuilt bytes out</strong><p>The decision returns a small HTTP response without framework ceremony.</p></li>
+  </ol>
+</section>
+
+<section class="ab-lab" aria-labelledby="ab-title">
+  <div class="section-header narrow">
+    <p class="section-kicker">A/B TEST SURFACE</p>
+    <h2 id="ab-title">THREE LANES TO TEST WITHOUT CHANGING THE BRAND.</h2>
+  </div>
+  <div class="ab-grid">
+    <article>
+      <span class="status-pill ci">A</span>
+      <h3>Evidence Terminal</h3>
+      <p>Default lane. Compare official, candidate, and calibrated proof above the fold.</p>
+      <a class="action-link" href={href('/ab/evidence-terminal/')}>review evidence lane</a>
+    </article>
+    <article>
+      <span class="status-pill warn">B</span>
+      <h3>Benchmark Ledger</h3>
+      <p>Make provenance the lead object: issue, run, image, p99, failures, score.</p>
+      <a class="action-link" href={href('/reports/')}>review report ledger</a>
+    </article>
+    <article>
+      <span class="status-pill clean">C</span>
+      <h3>Runtime Trace</h3>
+      <p>Lead with architecture: load balancer, sockets, parser, scorer, bytes.</p>
+      <a class="action-link" href={href('/docs/architecture/')}>review architecture lane</a>
+    </article>
+  </div>
+</section>
+
+<section class="stress-tests">
+  <h3>CI BENCHMARK STREAM</h3>
+  <p class="stress-intro">
+    Candidate metrics are local evidence from GitHub Actions. Official hardware is shown separately in the proof ledger.
+  </p>
+
+  <div class="stress-metrics">
+    <div class="stress-metric">
+      <span class="metric-value">{result.p99}</span>
+      <span class="metric-label">CI p99</span>
+    </div>
+    <div class="stress-metric">
+      <span class="metric-value">{result.scoring.failure_rate}</span>
+      <span class="metric-label">CI failures</span>
+    </div>
+    <div class="stress-metric">
+      <span class="metric-value">{score}</span>
+      <span class="metric-label">CI score</span>
+    </div>
+    <div class="stress-metric">
+      <span class="metric-value">{bestCandidate?.p99 ?? result.p99}</span>
+      <span class="metric-label">best clean p99</span>
+    </div>
+  </div>
+
+  <div class="stress-links">
+    <a href={href('/reports/')} class="stress-link">View report history</a>
+    <a href={metadata.run_url} class="stress-link" target="_blank" rel="noopener noreferrer">Latest CI run</a>
+    <span class="stress-link ghost">p99 score {p99Score} // detection {detectionScore}</span>
+  </div>
+</section>

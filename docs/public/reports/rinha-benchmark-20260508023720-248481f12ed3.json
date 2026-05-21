@@ -1,0 +1,63 @@
+{
+  "metadata": {
+    "timestamp": "2026-05-07T23:37:20-03:00",
+    "sha": "248481f12ed32a60ab95756d0da13665c9c1871b",
+    "short_sha": "248481f12ed3",
+    "run_id": "25533479060",
+    "run_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25533479060",
+    "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-248481f12ed32a60ab95756d0da13665c9c1871b",
+    "compose_file": "docker-compose.yml",
+    "report_kind": "candidate",
+    "html_report": "rinha-benchmark-20260508023720-248481f12ed3.html",
+    "official_ref": "main",
+    "k6_image": "grafana/k6:latest",
+    "source": "zanfranceschi/rinha-de-backend-2026:test/test.js",
+    "environment": "GitHub Actions ubuntu-latest; official-like only, not official Rinha hardware",
+    "benchmark_config": {
+      "ivf_clusters": "",
+      "ivf_train_sample": "",
+      "ivf_iterations": "",
+      "ivf_fast_nprobe": "",
+      "ivf_full_nprobe": "",
+      "ivf_boundary_full": "",
+      "ivf_bbox_repair": "",
+      "ivf_repair_min_frauds": "",
+      "ivf_repair_max_frauds": ""
+    }
+  },
+  "result": {
+    "expected": {
+      "total": 54100,
+      "fraud_count": 24058,
+      "legit_count": 30042,
+      "fraud_rate": 0.4447,
+      "legit_rate": 0.5553,
+      "edge_case_count": 797,
+      "edge_case_rate": 0.0147
+    },
+    "p99": "16.12ms",
+    "scoring": {
+      "breakdown": {
+        "false_positive_detections": 0,
+        "false_negative_detections": 0,
+        "true_positive_detections": 24037,
+        "true_negative_detections": 30022,
+        "http_errors": 0
+      },
+      "failure_rate": "0%",
+      "weighted_errors_E": 0,
+      "error_rate_epsilon": 0,
+      "p99_score": {
+        "value": 1792.55,
+        "cut_triggered": false
+      },
+      "detection_score": {
+        "value": 3000,
+        "rate_component": 3000,
+        "absolute_penalty": 0,
+        "cut_triggered": false
+      },
+      "final_score": 4792.55
+    }
+  }
+}

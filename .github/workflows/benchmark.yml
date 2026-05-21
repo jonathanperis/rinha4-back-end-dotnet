@@ -1,0 +1,360 @@
+name: Official-like Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      official_ref:
+        description: Rinha official repo ref to clone for the pinned EVALUATION/test suite
+        required: true
+        default: 645165cbc88a637c78bd6d5cc07bae4dbe422567
+      k6_image:
+        description: k6 Docker image
+        required: true
+        default: grafana/k6:latest
+      webapi_image:
+        description: Optional prebuilt WebApi image; empty means build from checkout
+        required: false
+        default: ""
+      scorer_mode:
+        description: Runtime scorer mode
+        required: true
+        default: hybrid
+        type: choice
+        options:
+          - ivf
+          - bucket
+          - hybrid
+          - exact
+      report_kind:
+        description: Report lane used by GitHub Pages archive
+        required: true
+        default: experiment
+        type: choice
+        options:
+          - experiment
+          - candidate
+          - official-calibrated
+      ivf_clusters:
+        description: IVF build cluster count
+        required: true
+        default: "512"
+      ivf_train_sample:
+        description: IVF build training sample size
+        required: true
+        default: "65536"
+      ivf_iterations:
+        description: IVF k-means iterations
+        required: true
+        default: "6"
+      ivf_scale:
+        description: IVF int16 quantization scale
+        required: true
+        default: "10000"
+      ivf_fast_nprobe:
+        description: IVF first-pass nprobe
+        required: true
+        default: "1"
+      ivf_full_nprobe:
+        description: IVF boundary-pass nprobe
+        required: true
+        default: "1"
+      ivf_boundary_full:
+        description: Enable boundary second pass
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      ivf_bbox_repair:
+        description: Enable bounding-box repair
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      ivf_repair_min_frauds:
+        description: Inclusive repair fraud-count minimum
+        required: true
+        default: "0"
+      ivf_repair_max_frauds:
+        description: Inclusive repair fraud-count maximum
+        required: true
+        default: "5"
+      ivf_zero_fast_approve_worst_distance:
+        description: Zero-fraud top-five distance threshold that skips repair
+        required: true
+        default: "5000000"
+      ivf_five_fast_deny_worst_distance:
+        description: Five-fraud top-five distance threshold that skips repair
+        required: true
+        default: "2000000"
+      ivf_pedro_decision_path:
+        description: Enable Pedro-style borderline IVF expansion path (uses 2..3 frauds, nprobe=32, rerank=128)
+        required: true
+        default: "0"
+        type: choice
+        options:
+          - "0"
+          - "1"
+      benchmark_api_cpuset:
+        description: Optional Docker cpuset for WebApi containers; overrides stack cpuset for API only
+        required: false
+        default: ""
+      benchmark_proxy_cpuset:
+        description: Optional Docker cpuset for proxy container; overrides stack cpuset for proxy only
+        required: false
+        default: ""
+      benchmark_api_cpus:
+        description: Optional calibrated CPU quota for each WebApi container, e.g. 0.20
+        required: false
+        default: ""
+      benchmark_proxy_cpus:
+        description: Optional calibrated CPU quota for proxy container, e.g. 0.10
+        required: false
+        default: ""
+      accept_loops:
+        description: WebApi ACCEPT_LOOPS value
+        required: true
+        default: "1"
+      fd_raw:
+        description: WebApi FD_RAW raw-fd handoff toggle
+        required: true
+        default: "1"
+        type: choice
+        options:
+          - "1"
+          - "0"
+      benchmark_repetitions:
+        description: Number of k6 repetitions; median p99 is archived when >1
+        required: true
+        default: "1"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  official-like-benchmark:
+    name: ${{ matrix.lb.name }} official-like k6 benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        lb:
+          - name: yolo
+            compose_file: docker-compose.yml
+    concurrency:
+      group: benchmark-${{ github.run_id }}-${{ matrix.lb.name }}
+      cancel-in-progress: false
+
+    permissions:
+      actions: write
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Show runner capacity
+        run: |
+          uname -a
+          nproc
+          free -h
+          docker version
+          docker compose version
+
+      - name: Install native k6
+        run: |
+          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+          k6 version
+
+      - name: Run benchmark
+        env:
+          COMPOSE_FILE: ${{ matrix.lb.compose_file }}
+          OFFICIAL_REF: ${{ inputs.official_ref }}
+          K6_IMAGE: ${{ inputs.k6_image }}
+          BENCHMARK_K6_MODE: native
+          WEBAPI_IMAGE: ${{ inputs.webapi_image }}
+          BENCHMARK_PULL_IMAGE: ${{ inputs.webapi_image != '' && 'true' || 'false' }}
+          BENCHMARK_NO_BUILD: ${{ inputs.webapi_image != '' && 'true' || 'false' }}
+          RESULTS_DIR: benchmark-results-${{ matrix.lb.name }}
+          IVF_CLUSTERS: ${{ inputs.ivf_clusters }}
+          IVF_TRAIN_SAMPLE: ${{ inputs.ivf_train_sample }}
+          IVF_ITERATIONS: ${{ inputs.ivf_iterations }}
+          IVF_SCALE: ${{ inputs.ivf_scale }}
+          IVF_FAST_NPROBE: ${{ inputs.ivf_fast_nprobe }}
+          IVF_FULL_NPROBE: ${{ inputs.ivf_full_nprobe }}
+          IVF_BOUNDARY_FULL: ${{ inputs.ivf_boundary_full }}
+          IVF_BBOX_REPAIR: ${{ inputs.ivf_bbox_repair }}
+          IVF_REPAIR_MIN_FRAUDS: ${{ inputs.ivf_repair_min_frauds }}
+          IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
+          IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: ${{ inputs.ivf_zero_fast_approve_worst_distance }}
+          IVF_FIVE_FAST_DENY_WORST_DISTANCE: ${{ inputs.ivf_five_fast_deny_worst_distance }}
+          IVF_PEDRO_DECISION_PATH: ${{ inputs.ivf_pedro_decision_path }}
+          IVF_BORDERLINE_MIN_FRAUDS: "2"
+          IVF_BORDERLINE_MAX_FRAUDS: "3"
+          IVF_BORDERLINE_NPROBE: "32"
+          IVF_BORDERLINE_RERANK: "128"
+          BENCHMARK_API_CPUSET: ${{ inputs.benchmark_api_cpuset }}
+          BENCHMARK_PROXY_CPUSET: ${{ inputs.benchmark_proxy_cpuset }}
+          BENCHMARK_API_CPUS: ${{ inputs.benchmark_api_cpus }}
+          BENCHMARK_PROXY_CPUS: ${{ inputs.benchmark_proxy_cpus }}
+          ACCEPT_LOOPS: ${{ inputs.accept_loops }}
+          FD_RAW: ${{ inputs.fd_raw }}
+          MIN_WORKER_THREADS: "128"
+          MAX_WORKER_THREADS: ""
+          MAX_IO_THREADS: ""
+          BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
+          SCORER_MODE: ${{ inputs.scorer_mode }}
+          BUCKET_AVX_CUTOFF_DIMS: "6"
+          BUCKET_REFERENCE_FASTPATH: "true"
+          BUCKET_REFERENCE_FASTPATH_LEGIT: "false"
+          BUCKET_REFERENCE_FASTPATH_FRAUD: "true"
+        run: bash scripts/ci-official-benchmark.sh
+
+      - name: Write benchmark metadata
+        if: ${{ always() }}
+        run: |
+          mkdir -p benchmark-results-${{ matrix.lb.name }}
+          cat > benchmark-results-${{ matrix.lb.name }}/metadata.env <<'EOF'
+          LB_NAME=${{ matrix.lb.name }}
+          COMPOSE_FILE=${{ matrix.lb.compose_file }}
+          EOF
+
+      - name: Upload benchmark artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: rinha-benchmark-results-${{ matrix.lb.name }}-${{ github.run_number }}
+          path: |
+            benchmark-results-${{ matrix.lb.name }}/metadata.env
+            benchmark-results-${{ matrix.lb.name }}/results.json
+            benchmark-results-${{ matrix.lb.name }}/k6-report.html
+            benchmark-results-${{ matrix.lb.name }}/k6-report-repetition-*.html
+            benchmark-results-${{ matrix.lb.name }}/k6-output-repetition-*.json
+            benchmark-results-${{ matrix.lb.name }}/results-repetition-*.json
+            benchmark-results-${{ matrix.lb.name }}/repetition-summary.json
+            benchmark-results-${{ matrix.lb.name }}/docker-compose.log
+            benchmark-results-${{ matrix.lb.name }}/docker-state-*.txt
+            benchmark-results-${{ matrix.lb.name }}/docker-compose.calibration.yml
+          if-no-files-found: ignore
+
+  archive-benchmark-reports:
+    name: Archive benchmark reports
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: official-like-benchmark
+    if: ${{ always() && !cancelled() }}
+    permissions:
+      actions: write
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download benchmark artifacts
+        uses: actions/download-artifact@v7
+        with:
+          pattern: rinha-benchmark-results-*-${{ github.run_number }}
+          path: benchmark-artifacts
+
+      - name: Archive benchmark reports
+        id: archive-benchmark-reports
+        env:
+          BENCHMARK_IMAGE: ${{ inputs.webapi_image }}
+          BENCHMARK_SHA: ${{ github.sha }}
+          BENCHMARK_RUN_ID: ${{ github.run_id }}
+          BENCHMARK_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BENCHMARK_REPORT_KIND: ${{ inputs.report_kind }}
+          OFFICIAL_REF: ${{ inputs.official_ref }}
+          K6_IMAGE: ${{ inputs.k6_image }}
+          BENCHMARK_K6_MODE: native
+          IVF_CLUSTERS: ${{ inputs.ivf_clusters }}
+          IVF_TRAIN_SAMPLE: ${{ inputs.ivf_train_sample }}
+          IVF_ITERATIONS: ${{ inputs.ivf_iterations }}
+          IVF_SCALE: ${{ inputs.ivf_scale }}
+          IVF_FAST_NPROBE: ${{ inputs.ivf_fast_nprobe }}
+          IVF_FULL_NPROBE: ${{ inputs.ivf_full_nprobe }}
+          IVF_BOUNDARY_FULL: ${{ inputs.ivf_boundary_full }}
+          IVF_BBOX_REPAIR: ${{ inputs.ivf_bbox_repair }}
+          IVF_REPAIR_MIN_FRAUDS: ${{ inputs.ivf_repair_min_frauds }}
+          IVF_REPAIR_MAX_FRAUDS: ${{ inputs.ivf_repair_max_frauds }}
+          IVF_ZERO_FAST_APPROVE_WORST_DISTANCE: ${{ inputs.ivf_zero_fast_approve_worst_distance }}
+          IVF_FIVE_FAST_DENY_WORST_DISTANCE: ${{ inputs.ivf_five_fast_deny_worst_distance }}
+          IVF_PEDRO_DECISION_PATH: ${{ inputs.ivf_pedro_decision_path }}
+          IVF_BORDERLINE_MIN_FRAUDS: "2"
+          IVF_BORDERLINE_MAX_FRAUDS: "3"
+          IVF_BORDERLINE_NPROBE: "32"
+          IVF_BORDERLINE_RERANK: "128"
+          BENCHMARK_API_CPUSET: ${{ inputs.benchmark_api_cpuset }}
+          BENCHMARK_PROXY_CPUSET: ${{ inputs.benchmark_proxy_cpuset }}
+          BENCHMARK_API_CPUS: ${{ inputs.benchmark_api_cpus }}
+          BENCHMARK_PROXY_CPUS: ${{ inputs.benchmark_proxy_cpus }}
+          ACCEPT_LOOPS: ${{ inputs.accept_loops }}
+          FD_RAW: ${{ inputs.fd_raw }}
+          BENCHMARK_REPETITIONS: ${{ inputs.benchmark_repetitions }}
+          MIN_WORKER_THREADS: "128"
+          MAX_WORKER_THREADS: ""
+          MAX_IO_THREADS: ""
+          SCORER_MODE: ${{ inputs.scorer_mode }}
+          BUCKET_AVX_CUTOFF_DIMS: "6"
+          BUCKET_REFERENCE_FASTPATH: "true"
+          BUCKET_REFERENCE_FASTPATH_LEGIT: "false"
+          BUCKET_REFERENCE_FASTPATH_FRAUD: "true"
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
+          archived=false
+          for metadata in benchmark-artifacts/*/metadata.env; do
+            [ -f "$metadata" ] || continue
+            artifact_dir="$(dirname "$metadata")"
+            COMPOSE_FILE=""
+            LB_NAME=""
+            source "$metadata"
+            if [ ! -f "$artifact_dir/results.json" ]; then
+              echo "No results for $LB_NAME; skip archive"
+              continue
+            fi
+            RESULTS_JSON="$artifact_dir/results.json" \
+              K6_HTML_REPORT="$artifact_dir/k6-report.html" \
+              COMPOSE_LOG="$artifact_dir/docker-compose.log" \
+              REPETITION_SUMMARY="$artifact_dir/repetition-summary.json" \
+              COMPOSE_FILE="$COMPOSE_FILE" \
+              bash scripts/archive-benchmark-result.sh
+            archived=true
+          done
+          echo "archived=$archived" >> "$GITHUB_OUTPUT"
+
+      - name: Commit benchmark reports
+        id: commit-benchmark-reports
+        if: steps.archive-benchmark-reports.outputs.archived == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/public/reports
+          if git diff --cached --quiet; then
+            echo "No benchmark report changes to commit"
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "docs: archive rinha benchmark"
+            git push
+            echo "committed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Refresh GitHub Pages report site
+        if: steps.commit-benchmark-reports.outputs.committed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run pages.yml --ref main

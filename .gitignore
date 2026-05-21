@@ -1,0 +1,35 @@
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+**/publish/
+**/node_modules/
+**/.astro/
+
+# Generated data
+data/references.bin
+data/references.exact.bin
+data/references.ivf.bin
+data/references.bucket.bin
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+benchmark-results*/
+
+# Secrets
+.env
+*.key
+
+# Docker
+.docker/

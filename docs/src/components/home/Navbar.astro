@@ -1,0 +1,15 @@
+---
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const href = (path: string) => `${base}${path}`;
+---
+
+<nav class="site-nav">
+  <a class="logo" href={href('/')}>
+    <span>rinha4.dotnet</span>
+  </a>
+  <div class="nav-links">
+    <a href={href('/docs/')}>Docs</a>
+    <a href={href('/reports/')}>Reports</a>
+    <a href="https://github.com/jonathanperis/rinha4-back-end-dotnet" target="_blank" rel="noopener noreferrer">GitHub</a>
+  </div>
+</nav>

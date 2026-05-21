@@ -1,0 +1,85 @@
+{
+  "metadata": {
+    "timestamp": "2026-05-13T10:59:24-03:00",
+    "sha": "e25219e4bd2691d1c8ac169f90337042c895ac59",
+    "short_sha": "e25219e4bd26",
+    "run_id": "25803929412",
+    "run_url": "https://github.com/jonathanperis/rinha4-back-end-dotnet/actions/runs/25803929412",
+    "image": "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-e25219e4bd2691d1c8ac169f90337042c895ac59",
+    "compose_file": "docker-compose.nginx.yml",
+    "report_kind": "official-calibrated",
+    "html_report": "rinha-benchmark-20260513135924-e25219e4bd26-official-calibrated-docker-compose-nginx-yml.html",
+    "official_ref": "main",
+    "k6_image": "grafana/k6:latest",
+    "source": "zanfranceschi/rinha-de-backend-2026:test/test.js",
+    "environment": "GitHub Actions ubuntu-latest; calibrated CPU limits api=0.40, proxy=0.20; not official Rinha hardware",
+    "benchmark_stack_cpuset": "",
+    "benchmark_k6_cpuset": "",
+    "benchmark_api_cpuset": "",
+    "benchmark_proxy_cpuset": "",
+    "benchmark_api_cpus": "0.40",
+    "benchmark_proxy_cpus": "0.20",
+    "benchmark_api_memory": "",
+    "benchmark_proxy_memory": "",
+    "benchmark_repetitions": "1",
+    "benchmark_config": {
+      "ivf_clusters": "512",
+      "ivf_train_sample": "65536",
+      "ivf_iterations": "6",
+      "ivf_scale": "10000",
+      "ivf_fast_nprobe": "1",
+      "ivf_full_nprobe": "1",
+      "ivf_boundary_full": "false",
+      "ivf_bbox_repair": "true",
+      "ivf_repair_min_frauds": "0",
+      "ivf_repair_max_frauds": "5",
+      "scorer_mode": "",
+      "accept_loops": "",
+      "min_worker_threads": "",
+      "max_worker_threads": "",
+      "max_io_threads": "",
+      "bucket_avx_cutoff_dims": "",
+      "bucket_reference_fastpath": "",
+      "bucket_reference_fastpath_legit": "",
+      "bucket_reference_fastpath_fraud": "",
+      "ivf_zero_fast_approve_worst_distance": "",
+      "ivf_five_fast_deny_worst_distance": ""
+    },
+    "repetition_summary": null
+  },
+  "result": {
+    "expected": {
+      "total": 54100,
+      "fraud_count": 24058,
+      "legit_count": 30042,
+      "fraud_rate": 0.4447,
+      "legit_rate": 0.5553,
+      "edge_case_count": 797,
+      "edge_case_rate": 0.0147
+    },
+    "p99": "1.43ms",
+    "scoring": {
+      "breakdown": {
+        "false_positive_detections": 0,
+        "false_negative_detections": 0,
+        "true_positive_detections": 24037,
+        "true_negative_detections": 30022,
+        "http_errors": 0
+      },
+      "failure_rate": "0%",
+      "weighted_errors_E": 0,
+      "error_rate_epsilon": 0,
+      "p99_score": {
+        "value": 2844.83,
+        "cut_triggered": false
+      },
+      "detection_score": {
+        "value": 3000,
+        "rate_component": 3000,
+        "absolute_penalty": 0,
+        "cut_triggered": false
+      },
+      "final_score": 5844.83
+    }
+  }
+}

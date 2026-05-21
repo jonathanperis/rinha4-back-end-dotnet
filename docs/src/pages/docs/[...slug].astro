@@ -1,0 +1,185 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import '../../styles/docs.css';
+import { DOC_META, SECTION_CATEGORIES, SECTION_ORDER } from '../../lib/docsNavigation';
+
+const globResult = import.meta.glob('../../../wiki/*.md', { eager: true });
+
+const pagesBySlug: Record<string, any> = {};
+for (const [path, module] of Object.entries(globResult)) {
+  const fileName = path.split('/').pop()!.replace('.md', '');
+  pagesBySlug[fileName] = module;
+}
+
+const availableSlugs = new Set(Object.keys(pagesBySlug));
+for (const cat of SECTION_CATEGORIES) {
+  for (const id of cat.ids) {
+    if (!availableSlugs.has(id)) {
+      throw new Error(`sidebar id "${id}" has no matching wiki/${id}.md`);
+    }
+  }
+}
+
+const requestedSlug = Astro.params.slug;
+const isRoot = requestedSlug === undefined;
+const requestedKey = requestedSlug ?? 'home';
+
+const sectionsToRender = isRoot
+  ? SECTION_CATEGORIES.flatMap(cat => cat.ids).map(slug => ({ slug, page: pagesBySlug[slug], meta: DOC_META[slug] })).filter(s => s.page)
+  : pagesBySlug[requestedKey] ? [{ slug: requestedSlug!, page: pagesBySlug[requestedKey], meta: DOC_META[requestedKey] }] : [];
+
+export function getStaticPaths() {
+  return [
+    { params: { slug: undefined } },
+    ...SECTION_ORDER.filter(s => s !== 'home').map(slug => ({ params: { slug } })),
+  ];
+}
+
+const pageTitle = isRoot ? 'rinha4-back-end-dotnet | Docs' : `${DOC_META[requestedKey]?.label ?? requestedSlug} | rinha4-back-end-dotnet`;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const docsBase = `${base}/docs`;
+const architectureHref = `${docsBase}/architecture/`;
+const reportsHref = `${base}/reports/`;
+---
+
+<BaseLayout title={pageTitle}>
+  <div class="docs-shell">
+    <div class="mobile-header">
+      <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu" aria-controls="sidebar" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <div class="repo-title">rinha4.dotnet</div>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h1 class="repo-title">rinha4.dotnet</h1>
+        <p class="repo-description">NativeAOT fraud scorer. Raw socket HTTP. Official-like benchmark archive.</p>
+        <input type="text" id="searchInput" class="search-box" placeholder="Search docs..." aria-label="Search docs" hidden={!isRoot}>
+      </div>
+      <div class="sidebar-nav-container">
+        {SECTION_CATEGORIES.map((cat) => (
+          <div class="sidebar-category-group" data-category>
+            {cat.label && <div class="sidebar-category">{cat.label}</div>}
+            <ul>
+              {cat.ids.map((id) => (
+                <li>
+                  <a class="nav-item" href={`${docsBase}/#${id}`} data-nav-id={id}>
+                    <span>{DOC_META[id].label}</span>
+                    <small>{DOC_META[id].signal}</small>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      <div class="sidebar-footer">
+        <a href={`${base}/`}>Back home</a>
+        <a href={reportsHref}>Benchmark reports</a>
+        <a href="https://github.com/jonathanperis/rinha4-back-end-dotnet" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </div>
+    </aside>
+
+    <div class="content-wrapper">
+      <main class="content" id="mainContent">
+        <section class="docs-command-center" aria-labelledby="docs-command-title">
+          <p class="docs-kicker">SOURCE-BACKED WIKI</p>
+          <h1 id="docs-command-title">TRACE THE SUBMISSION WITHOUT LOSING THE EVIDENCE LANES.</h1>
+          <p>
+            This docs surface keeps architecture, rules, performance notes, and CI provenance in one terminal-readable lane.
+            Official upstream data, candidate CI evidence, and calibrated CI projections remain intentionally separated.
+          </p>
+          <div class="docs-action-row">
+            <a href={architectureHref}>open architecture</a>
+            <a href={reportsHref}>compare reports</a>
+            <a href="https://github.com/jonathanperis/rinha4-back-end-dotnet" target="_blank" rel="noopener noreferrer">source ↗</a>
+          </div>
+        </section>
+
+        <nav class="docs-overview" aria-label="Docs overview">
+          {SECTION_ORDER.map((id, index) => (
+            <a href={`${docsBase}/#${id}`} data-overview-id={id}>
+              <span>{String(index + 1).padStart(2, '0')}</span>
+              <strong>{DOC_META[id].label}</strong>
+              <small>{DOC_META[id].intent}</small>
+            </a>
+          ))}
+        </nav>
+
+        {sectionsToRender.map(({ slug, page: wikiPage, meta }) => {
+          const Content = wikiPage.default ?? wikiPage;
+          return (
+            <section id={slug} class="doc-section" data-signal={meta?.signal}>
+              <div class="doc-section-meta">
+                <span>{meta?.signal}</span>
+                <a href={`https://github.com/jonathanperis/rinha4-back-end-dotnet/blob/main/docs/wiki/${slug}.md`} target="_blank" rel="noopener noreferrer">wiki/{slug}.md ↗</a>
+              </div>
+              <Content />
+            </section>
+          );
+        })}
+      </main>
+    </div>
+  </div>
+
+  <script is:inline define:vars={{ requestedSlug, isRoot }}>
+    window.__docsSlug = requestedSlug;
+    window.__isRoot = isRoot;
+  </script>
+
+  <script is:inline>
+    document.addEventListener('DOMContentLoaded', () => {
+      const menuToggle = document.getElementById('menuToggle');
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('overlay');
+      const sections = document.querySelectorAll('section.doc-section');
+      const navItems = document.querySelectorAll('.nav-item');
+      const overviewItems = document.querySelectorAll('[data-overview-id]');
+
+      function toggleMenu() {
+        const isOpen = sidebar.classList.toggle('open');
+        overlay.classList.toggle('open');
+        if (menuToggle) menuToggle.setAttribute('aria-expanded', String(isOpen));
+      }
+
+      if (menuToggle) menuToggle.addEventListener('click', toggleMenu);
+      if (overlay) overlay.addEventListener('click', toggleMenu);
+
+      if (window.__isRoot && sections.length > 1) {
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            navItems.forEach(item => item.classList.toggle('active', item.dataset.navId === entry.target.id));
+            overviewItems.forEach(item => item.classList.toggle('active', item.dataset.overviewId === entry.target.id));
+          });
+        }, { rootMargin: '-80px 0px -60% 0px' });
+
+        sections.forEach(section => observer.observe(section));
+      }
+
+      navItems.forEach(item => {
+        item.addEventListener('click', () => {
+          if (window.innerWidth <= 820) toggleMenu();
+        });
+      });
+
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          const query = e.target.value.toLowerCase();
+          sections.forEach(section => {
+            const match = !query || (section.textContent || '').toLowerCase().includes(query);
+            section.classList.toggle('hidden-section', !match);
+            const navItem = document.querySelector(`.nav-item[data-nav-id="${section.id}"]`);
+            if (navItem && navItem.parentElement) navItem.parentElement.style.display = match ? '' : 'none';
+          });
+        });
+      }
+    });
+  </script>
+</BaseLayout>
