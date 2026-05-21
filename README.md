@@ -140,7 +140,7 @@ The site uses GitHub Linguist's C# language color (`#178600`) as its accent.
 
 ## Official evaluation gate
 
-This repository's manual `Official-like Benchmark` workflow and `scripts/ci-official-benchmark.sh` run the public Rinha 2026 k6 suite pinned to `645165cbc88a637c78bd6d5cc07bae4dbe422567` by default. See `docs/official-evaluation.md` for scoring thresholds and how to run the gate locally.
+This repository's manual `Official-like Benchmark` workflow and `scripts/ci-official-benchmark.sh` run the public Rinha 2026 k6 suite against upstream `main` by default. The benchmark script also validates the resolved compose against the published topology/resource constraints before starting the stack. See `docs/official-evaluation.md` for scoring thresholds, compliance checks, and how to run the gate locally.
 
 ## License
 

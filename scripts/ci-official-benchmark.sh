@@ -105,6 +105,109 @@ YAML
     compose_args+=(-f "$CALIBRATION_COMPOSE_FILE")
 fi
 
+validate_rinha_compose_rules() {
+    local config_json="$RESULTS_DIR/docker-compose.resolved.json"
+
+    echo "==> Validating Rinha compose rules"
+    docker compose "${compose_args[@]}" config --format json > "$config_json"
+
+    python3 - "$config_json" <<'PY'
+import json
+import re
+import sys
+
+path = sys.argv[1]
+with open(path, encoding="utf-8") as f:
+    config = json.load(f)
+
+services = config.get("services") or {}
+errors = []
+
+def fail(message):
+    errors.append(message)
+
+def parse_cpus(value):
+    if value is None or value == "":
+        return 0.0
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        fail(f"invalid cpus limit {value!r}")
+        return 0.0
+
+def parse_memory_mb(value):
+    if value is None or value == "":
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value) / 1_000_000.0
+    text = str(value).strip()
+    match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)\s*([kmgtp]?i?b?|[KMGTPE]?B?)?", text)
+    if not match:
+        fail(f"invalid memory limit {value!r}")
+        return 0.0
+    number = float(match.group(1))
+    unit = (match.group(2) or "b").lower()
+    factors = {
+        "": 1, "b": 1,
+        "k": 1_000, "kb": 1_000, "m": 1_000_000, "mb": 1_000_000,
+        "g": 1_000_000_000, "gb": 1_000_000_000,
+        "ki": 1024, "kib": 1024, "mi": 1024**2, "mib": 1024**2,
+        "gi": 1024**3, "gib": 1024**3,
+    }
+    factor = factors.get(unit)
+    if factor is None:
+        fail(f"unsupported memory unit in {value!r}")
+        return 0.0
+    return number * factor / 1_000_000.0
+
+if len(services) < 3:
+    fail("expected at least three services: one load balancer and two API instances")
+
+for required in ("webapi1", "webapi2", "lb"):
+    if required not in services:
+        fail(f"missing required service {required!r}")
+
+lb = services.get("lb") or {}
+ports = lb.get("ports") or []
+port_strings = [str(p) for p in ports]
+if not any("9999" in p for p in port_strings):
+    fail("lb service must publish/listen on port 9999")
+
+cpu_total = 0.0
+memory_total = 0.0
+for name, service in services.items():
+    if service.get("privileged") is True:
+        fail(f"{name}: privileged mode is not allowed")
+    if str(service.get("network_mode", "")).lower() == "host":
+        fail(f"{name}: host network mode is not allowed")
+
+    limits = (((service.get("deploy") or {}).get("resources") or {}).get("limits") or {})
+    cpus = limits.get("cpus") or service.get("cpus")
+    memory = limits.get("memory") or service.get("mem_limit")
+    if cpus is None:
+        fail(f"{name}: missing deploy.resources.limits.cpus")
+    if memory is None:
+        fail(f"{name}: missing deploy.resources.limits.memory")
+    cpu_total += parse_cpus(cpus)
+    memory_total += parse_memory_mb(memory)
+
+if cpu_total > 1.0000001:
+    fail(f"CPU limits exceed Rinha cap: {cpu_total:.6g} > 1.0")
+if memory_total > 350.0000001:
+    fail(f"memory limits exceed Rinha cap: {memory_total:.6g}MB > 350MB")
+
+if errors:
+    print("Rinha compose rule validation failed:", file=sys.stderr)
+    for error in errors:
+        print(f"- {error}", file=sys.stderr)
+    sys.exit(1)
+
+print(f"Rinha compose rule validation passed: services={len(services)}, cpu_total={cpu_total:.6g}, memory_total={memory_total:.6g}MB")
+PY
+}
+
+validate_rinha_compose_rules
+
 capture_docker_state() {
     local phase="$1"
     local output="$RESULTS_DIR/docker-state-$phase.txt"
