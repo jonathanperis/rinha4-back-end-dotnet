@@ -33,7 +33,7 @@ services:
           memory: "30M"
 
   api1:
-    image: "ghcr.io/jonathanperis/rinha4-back-end-c:ci-5602cfbcd984bcbab33a1ccccc5a77f3c5eaf4ef"
+    image: "ghcr.io/jonathanperis/rinha4-back-end-c:ci-1627848e02cf55e3d5e3b5a21b8a38a4ccdce382"
     command: ["/app/api"]
     user: root
     environment:
@@ -75,7 +75,7 @@ services:
           memory: "160M"
 
   api2:
-    image: "ghcr.io/jonathanperis/rinha4-back-end-c:ci-5602cfbcd984bcbab33a1ccccc5a77f3c5eaf4ef"
+    image: "ghcr.io/jonathanperis/rinha4-back-end-c:ci-1627848e02cf55e3d5e3b5a21b8a38a4ccdce382"
     command: ["/app/api"]
     user: root
     environment:
