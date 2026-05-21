@@ -15,14 +15,16 @@ on:
         type: choice
         options:
           - all-comparison
-          - competitor-compose/jonathanperis-latest/docker-compose.yml
-          - competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml
-          - competitor-compose/gabrielrauch-rinha-2026/docker-compose.yml
-          - competitor-compose/crepao-da-massa-silent-index/docker-compose.yml
+          - competitor-compose/dotnet-c-lb/docker-compose.yml
+          - competitor-compose/dotnet-asm-lb/docker-compose.yml
+          - competitor-compose/c-c-lb/docker-compose.yml
+          - competitor-compose/c-asm-lb/docker-compose.yml
+          - competitor-compose/yolo-c-lb/docker-compose.yml
+          - competitor-compose/yolo-asm-lb/docker-compose.yml
       official_ref:
         description: Rinha official repo ref for the pinned EVALUATION/test suite
         required: true
-        default: 645165cbc88a637c78bd6d5cc07bae4dbe422567
+        default: main
       k6_image:
         description: k6 Docker image used when benchmark_k6_mode=docker
         required: true
@@ -62,14 +64,18 @@ jobs:
       max-parallel: 2
       matrix:
         participant:
-          - name: jonathanperis-latest
-            compose_file: competitor-compose/jonathanperis-latest/docker-compose.yml
-          - name: daniloitagyba-rinha-2026-dotnet
-            compose_file: competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml
-          - name: gabrielrauch-rinha-2026
-            compose_file: competitor-compose/gabrielrauch-rinha-2026/docker-compose.yml
-          - name: crepao-da-massa-silent-index
-            compose_file: competitor-compose/crepao-da-massa-silent-index/docker-compose.yml
+          - name: dotnet-c-lb
+            compose_file: competitor-compose/dotnet-c-lb/docker-compose.yml
+          - name: dotnet-asm-lb
+            compose_file: competitor-compose/dotnet-asm-lb/docker-compose.yml
+          - name: c-c-lb
+            compose_file: competitor-compose/c-c-lb/docker-compose.yml
+          - name: c-asm-lb
+            compose_file: competitor-compose/c-asm-lb/docker-compose.yml
+          - name: yolo-c-lb
+            compose_file: competitor-compose/yolo-c-lb/docker-compose.yml
+          - name: yolo-asm-lb
+            compose_file: competitor-compose/yolo-asm-lb/docker-compose.yml
 
     permissions:
       contents: read
@@ -177,6 +183,7 @@ jobs:
           path: |
             benchmark-results-${{ matrix.participant.name }}/results.json
             benchmark-results-${{ matrix.participant.name }}/results-repetition-*.json
+            benchmark-results-${{ matrix.participant.name }}/repetition-summary.json
             benchmark-results-${{ matrix.participant.name }}/k6-output-repetition-*.json
             benchmark-results-${{ matrix.participant.name }}/k6-report-*.html
             benchmark-results-${{ matrix.participant.name }}/docker-compose.log
@@ -222,7 +229,7 @@ jobs:
           } > benchmark-runner-metadata/host.txt
           cat benchmark-runner-metadata/host.txt
 
-      - name: Run Jonathan and Pedro on the same runner
+      - name: Run all Jonathan implementations on the same runner
         env:
           OFFICIAL_REF: ${{ inputs.official_ref || 'main' }}
           K6_IMAGE: ${{ inputs.k6_image || 'grafana/k6:latest' }}
@@ -306,10 +313,12 @@ jobs:
             jq . "$results_dir/results.json"
           }
 
-          run_participant "jonathanperis-latest" "competitor-compose/jonathanperis-latest/docker-compose.yml"
-          run_participant "daniloitagyba-rinha-2026-dotnet" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
-          run_participant "gabrielrauch-rinha-2026" "competitor-compose/gabrielrauch-rinha-2026/docker-compose.yml"
-          run_participant "crepao-da-massa-silent-index" "competitor-compose/crepao-da-massa-silent-index/docker-compose.yml"
+          run_participant "dotnet-c-lb" "competitor-compose/dotnet-c-lb/docker-compose.yml"
+          run_participant "dotnet-asm-lb" "competitor-compose/dotnet-asm-lb/docker-compose.yml"
+          run_participant "c-c-lb" "competitor-compose/c-c-lb/docker-compose.yml"
+          run_participant "c-asm-lb" "competitor-compose/c-asm-lb/docker-compose.yml"
+          run_participant "yolo-c-lb" "competitor-compose/yolo-c-lb/docker-compose.yml"
+          run_participant "yolo-asm-lb" "competitor-compose/yolo-asm-lb/docker-compose.yml"
 
       - name: Upload sequential benchmark artifacts
         if: ${{ always() }}
@@ -320,6 +329,7 @@ jobs:
             benchmark-runner-metadata/host.txt
             benchmark-results-*/results.json
             benchmark-results-*/results-repetition-*.json
+            benchmark-results-*/repetition-summary.json
             benchmark-results-*/k6-output-repetition-*.json
             benchmark-results-*/k6-report-*.html
             benchmark-results-*/docker-compose.log
