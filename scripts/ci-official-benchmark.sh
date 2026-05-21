@@ -135,11 +135,11 @@ def parse_cpus(value):
         fail(f"invalid cpus limit {value!r}")
         return 0.0
 
-def parse_memory_mb(value):
+def parse_memory_mib(value):
     if value is None or value == "":
         return 0.0
     if isinstance(value, (int, float)):
-        return float(value) / 1_000_000.0
+        return float(value) / (1024.0 ** 2)
     text = str(value).strip()
     match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)\s*([kmgtp]?i?b?|[KMGTPE]?B?)?", text)
     if not match:
@@ -149,8 +149,8 @@ def parse_memory_mb(value):
     unit = (match.group(2) or "b").lower()
     factors = {
         "": 1, "b": 1,
-        "k": 1_000, "kb": 1_000, "m": 1_000_000, "mb": 1_000_000,
-        "g": 1_000_000_000, "gb": 1_000_000_000,
+        "k": 1024, "kb": 1024, "m": 1024**2, "mb": 1024**2,
+        "g": 1024**3, "gb": 1024**3,
         "ki": 1024, "kib": 1024, "mi": 1024**2, "mib": 1024**2,
         "gi": 1024**3, "gib": 1024**3,
     }
@@ -158,7 +158,7 @@ def parse_memory_mb(value):
     if factor is None:
         fail(f"unsupported memory unit in {value!r}")
         return 0.0
-    return number * factor / 1_000_000.0
+    return number * factor / (1024.0 ** 2)
 
 if len(services) < 3:
     fail("expected at least three services: one load balancer and two API instances")
@@ -174,7 +174,7 @@ if not any("9999" in p for p in port_strings):
     fail("lb service must publish/listen on port 9999")
 
 cpu_total = 0.0
-memory_total = 0.0
+memory_total_mib = 0.0
 for name, service in services.items():
     if service.get("privileged") is True:
         fail(f"{name}: privileged mode is not allowed")
@@ -189,12 +189,12 @@ for name, service in services.items():
     if memory is None:
         fail(f"{name}: missing deploy.resources.limits.memory")
     cpu_total += parse_cpus(cpus)
-    memory_total += parse_memory_mb(memory)
+    memory_total_mib += parse_memory_mib(memory)
 
 if cpu_total > 1.0000001:
     fail(f"CPU limits exceed Rinha cap: {cpu_total:.6g} > 1.0")
-if memory_total > 350.0000001:
-    fail(f"memory limits exceed Rinha cap: {memory_total:.6g}MB > 350MB")
+if memory_total_mib > 350.0000001:
+    fail(f"memory limits exceed Rinha cap: {memory_total_mib:.6g}MiB > 350MiB")
 
 if errors:
     print("Rinha compose rule validation failed:", file=sys.stderr)
@@ -202,7 +202,7 @@ if errors:
         print(f"- {error}", file=sys.stderr)
     sys.exit(1)
 
-print(f"Rinha compose rule validation passed: services={len(services)}, cpu_total={cpu_total:.6g}, memory_total={memory_total:.6g}MB")
+print(f"Rinha compose rule validation passed: services={len(services)}, cpu_total={cpu_total:.6g}, memory_total={memory_total_mib:.6g}MiB")
 PY
 }
 
