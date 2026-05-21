@@ -14,8 +14,8 @@ docker compose up --build
 curl -i http://localhost:9999/ready
 ```
 
-The default compose stack runs `SCORER_MODE=hybrid`: bucket fast path first,
-then IVF fallback when needed. It allocates `0.42` CPU to each WebApi container
+The default compose stack runs `SCORER_MODE=ivf` with `IVF_FAST_NPROBE=2`
+and bounding-box repair for current-main clean `6000` scoring. It allocates `0.42` CPU to each WebApi container
 and `0.16` CPU to the standalone proxy, with fd-pass control sockets and
 `FD_RAW=1` enabled by default.
 

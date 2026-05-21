@@ -15,7 +15,7 @@ The automatic main-branch benchmark runs against the immutable image tag built i
 the same workflow, not a locally rebuilt image. The canonical submission/runtime
 shape is root `docker-compose.yml`: `webapi1` on cpuset `0,1`, `webapi2` on
 `2,3`, and standalone `lb` on `0,2`, while Docker resource limits remain active. The
-current default stack uses `SCORER_MODE=hybrid`, fd-pass API handoff with
+current default stack uses `SCORER_MODE=ivf` with `IVF_FAST_NPROBE=2`, fd-pass API handoff with
 `FD_RAW=1`, `MIN_WORKER_THREADS=128`, API CPU quotas of `0.42` each, and LB
 CPU quota `0.16`.
 
@@ -26,8 +26,8 @@ compose remains the source for official testing.
 
 Manual **Official-like Benchmark** runs can archive experiment reports too. Use
 `report_kind=experiment` for non-default scorer/config tests. The manual workflow
-currently exposes scorer choices `hybrid`, `bucket`, `ivf`, and `exact`; hybrid is
-the default candidate path. It also exposes IVF build/repair knobs, bucket AVX
+currently exposes scorer choices `ivf`, `bucket`, `hybrid`, and `exact`; IVF is
+the default current-main clean candidate path. It also exposes IVF build/repair knobs, bucket AVX
 cutoff, optional compose override, and repetition count for median-p99 screening.
 The manual workflow no longer exposes a separate compose override for fd-pass:
 the root `docker-compose.yml` is the fd-pass topology. Use the `fd_raw` input to

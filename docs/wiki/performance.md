@@ -32,21 +32,20 @@ not official Rinha hardware results.
 ## Accuracy experiments
 
 Earlier non-candidate classifier paths were removed from the default production
-lane. The current default is hybrid bucket/IVF:
+lane. The current default is clean IVF on the official `main` dataset:
 
 - build bucket, IVF, and exact diagnostic data from `references.json.gz`
-- load `references.bucket.bin` and `references.ivf.bin` at startup for hybrid mode
-- try bucket profile/reference fast paths first
-- fall back to IVF when the bucket path cannot decide confidently
-- scan the nearest IVF cluster first with `IVF_FAST_NPROBE=1`
+- load `references.ivf.bin` at startup for default IVF mode
+- keep bucket/hybrid available for explicit latency experiments
+- scan the two nearest IVF clusters first with `IVF_FAST_NPROBE=2`
 - use scalar bbox repair with early exit to scan only clusters whose bounding box can still beat the current top-five bound
 - skip repair for first-cluster `0/5` approval and `5/5` denial candidates below tuned distance bounds
 - rank fallback candidates with rounded int16 squared L2 distance
 
 This path is implemented, unit-tested on focused parser/vector/index cases, and
-under CI benchmarking as the submission default. Exact and IVF-only modes remain
+under CI benchmarking as the clean default. Exact, bucket, and hybrid modes remain
 available for diagnostics and manual benchmark experiments; they are not the
-canonical submission lane.
+canonical current-main clean lane.
 
 Rejected A/Bs: AVX2 bbox repair raised p99 to `5.37ms`; a cluster-major bbox
 copy raised p99 to `6.89ms`; `4096` clusters raised p99 to `16.69ms`; `1024`

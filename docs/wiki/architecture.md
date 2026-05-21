@@ -45,9 +45,9 @@ The `references.ivf.bin` file stores:
 
 ## Classifier
 
-Default submission runtime uses `SCORER_MODE=hybrid`. Hybrid mode queries the bucket index first and returns a fast-path fraud count when the profile/reference rules are confident. If the bucket path cannot decide, `FraudScorer` falls back to the IVF index with the configured repair options.
+Default submission runtime uses `SCORER_MODE=ivf` against the current official `main` dataset. It scans the two nearest IVF centroid clusters, then uses bounding-box repair to preserve exact top-five decisions while keeping the clean `6000` correctness gate.
 
-Current defaults target bucket fast paths plus IVF `nprobe=1`, bounding-box repair, rounded int16 squared L2 ranking, and tuned distance thresholds for safe `0/5` approvals and `5/5` denials. If required bucket or IVF files are missing or invalid, startup fails instead of silently serving with a weaker classifier.
+Current defaults target IVF `nprobe=2`, bounding-box repair, rounded int16 squared L2 ranking, and tuned distance thresholds for safe `0/5` approvals and `5/5` denials. If the required IVF file is missing or invalid, startup fails instead of silently serving with a weaker classifier. The bucket/hybrid path remains available for explicit latency experiments, not as the clean default.
 
 Runtime implementation is split into focused files:
 

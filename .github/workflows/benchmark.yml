@@ -53,7 +53,7 @@ on:
       ivf_fast_nprobe:
         description: IVF first-pass nprobe
         required: true
-        default: "1"
+        default: "2"
       ivf_full_nprobe:
         description: IVF boundary-pass nprobe
         required: true

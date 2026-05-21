@@ -12,7 +12,7 @@ Goal: official-valid, low-p99 backend under `1 CPU / 350 MB`, with correctness p
 - manual request parsing with `Utf8JsonReader`
 - prebuilt HTTP responses for fraud decisions
 - build-time conversion from challenge JSON resources to compact bucket and IVF binary data
-- hybrid scorer: bucket fast path first, IVF fallback for correctness-sensitive decisions
+- IVF scorer with bounding-box repair by default for current-main clean `6000` scoring
 - GitHub Actions benchmark archive and GitHub Pages report history
 
 ## Contract
@@ -55,7 +55,7 @@ Hot path goals:
 - minimal JSON scanning
 - prebuilt response bytes
 - compact int16 vector/index layout
-- fast bucket decisions with IVF fallback/repair when accuracy needs it
+- current-main clean IVF decisions with bounded repair before lower-latency experiments
 
 ## Data and classifier
 
@@ -65,7 +65,7 @@ Challenge data starts in `data/`:
 - `normalization.json`
 - `mcc_risk.json`
 
-`src/DataConverter` builds runtime binary data during the Docker image build. The current hybrid runtime loads `references.bucket.bin` for the bucket fast path and `references.ivf.bin` for fallback search. `references.bin` is still generated for the explicit exact diagnostic mode used by tests and manual benchmark experiments.
+`src/DataConverter` builds runtime binary data during the Docker image build. The current clean runtime loads `references.ivf.bin` for IVF search with bounding-box repair. `references.bucket.bin` remains available for hybrid experiments, and `references.bin` is still generated for the explicit exact diagnostic mode used by tests and manual benchmark experiments.
 
 The request is normalized into the official 14 fraud-vector dimensions, then classified by top-5 nearest reference labels. The response is:
 
@@ -101,7 +101,7 @@ Run one API locally over TCP:
 DATA_DIR=data \
 IVF_PATH=data/references.ivf.bin \
 BUCKET_PATH=data/references.bucket.bin \
-SCORER_MODE=hybrid \
+SCORER_MODE=ivf \
   dotnet run --project src/WebApi/WebApi.csproj -c Release --no-restore
 ```
 

@@ -50,7 +50,7 @@ internal readonly record struct IvfSearchOptions(
             (borderlineMin, borderlineMax) = (borderlineMax, borderlineMin);
 
         return new IvfSearchOptions(
-            EnvPositiveInt("IVF_FAST_NPROBE", 1),
+            EnvPositiveInt("IVF_FAST_NPROBE", 2),
             EnvPositiveInt("IVF_FULL_NPROBE", 1),
             EnvBool("IVF_BOUNDARY_FULL", false),
             EnvBool("IVF_BBOX_REPAIR", true),

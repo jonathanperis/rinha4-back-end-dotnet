@@ -44,7 +44,7 @@ services:
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
       IVF_PATH: /data/references.ivf.bin
-      IVF_FAST_NPROBE: "${IVF_FAST_NPROBE:-1}"
+      IVF_FAST_NPROBE: "${IVF_FAST_NPROBE:-2}"
       IVF_FULL_NPROBE: "${IVF_FULL_NPROBE:-1}"
       IVF_BOUNDARY_FULL: "${IVF_BOUNDARY_FULL:-false}"
       IVF_BBOX_REPAIR: "${IVF_BBOX_REPAIR:-true}"
@@ -113,7 +113,7 @@ services:
       DATA_DIR: /data
       EXACT_PATH: /data/references.bin
       IVF_PATH: /data/references.ivf.bin
-      IVF_FAST_NPROBE: "${IVF_FAST_NPROBE:-1}"
+      IVF_FAST_NPROBE: "${IVF_FAST_NPROBE:-2}"
       IVF_FULL_NPROBE: "${IVF_FULL_NPROBE:-1}"
       IVF_BOUNDARY_FULL: "${IVF_BOUNDARY_FULL:-false}"
       IVF_BBOX_REPAIR: "${IVF_BBOX_REPAIR:-true}"
