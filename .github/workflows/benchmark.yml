@@ -15,7 +15,7 @@ on:
         type: choice
         options:
           - all-comparison
-          - competitor-compose/jonathan-dotnet-stable/docker-compose.yml
+          - competitor-compose/jonathanperis-latest/docker-compose.yml
           - competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml
           - competitor-compose/gabrielrauch-rinha-2026/docker-compose.yml
           - competitor-compose/crepao-da-massa-silent-index/docker-compose.yml
@@ -62,8 +62,8 @@ jobs:
       max-parallel: 2
       matrix:
         participant:
-          - name: jonathan-dotnet-stable
-            compose_file: competitor-compose/jonathan-dotnet-stable/docker-compose.yml
+          - name: jonathanperis-latest
+            compose_file: competitor-compose/jonathanperis-latest/docker-compose.yml
           - name: daniloitagyba-rinha-2026-dotnet
             compose_file: competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml
           - name: gabrielrauch-rinha-2026
@@ -306,7 +306,7 @@ jobs:
             jq . "$results_dir/results.json"
           }
 
-          run_participant "jonathan-dotnet-stable" "competitor-compose/jonathan-dotnet-stable/docker-compose.yml"
+          run_participant "jonathanperis-latest" "competitor-compose/jonathanperis-latest/docker-compose.yml"
           run_participant "daniloitagyba-rinha-2026-dotnet" "competitor-compose/daniloitagyba-rinha-2026-dotnet/docker-compose.yml"
           run_participant "gabrielrauch-rinha-2026" "competitor-compose/gabrielrauch-rinha-2026/docker-compose.yml"
           run_participant "crepao-da-massa-silent-index" "competitor-compose/crepao-da-massa-silent-index/docker-compose.yml"
