@@ -1,0 +1,47 @@
+services:
+  api1: &api
+    image: ghcr.io/gabrielrauch/rinha-2026:4bc2f00aab4ee49138da079f96561d07b0b42fa2
+    environment:
+      - RINHA_FD_SOCK=/run/sock/api1.sock
+    volumes:
+      - sock:/run/sock
+    deploy:
+      resources:
+        limits:
+          cpus: "0.4"
+          memory: "160M"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+
+  api2:
+    <<: *api
+    environment:
+      - RINHA_FD_SOCK=/run/sock/api2.sock
+
+  lb:
+    image: ghcr.io/gabrielrauch/rinha-2026-lb:4bc2f00aab4ee49138da079f96561d07b0b42fa2
+    restart: always
+    depends_on:
+      - api1
+      - api2
+    environment:
+      - PORT=9999
+      - FD_UPSTREAMS=/run/sock/api1.sock,/run/sock/api2.sock
+      - WORKERS=2
+    ports:
+      - "9999:9999"
+    volumes:
+      - sock:/run/sock
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: "30M"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+volumes:
+  sock:

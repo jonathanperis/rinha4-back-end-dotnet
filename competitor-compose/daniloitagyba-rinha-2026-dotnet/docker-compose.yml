@@ -1,0 +1,139 @@
+services:
+  lb:
+    image: ghcr.io/daniloitagyba/rinha-2026-dotnet-tcp:cffb01c7cd84717382890eb21cd06cd29155d8de
+    platform: linux/amd64
+    entrypoint: ["rinha-lb"]
+    environment:
+      LB_MODE: fdpass
+    ports:
+      - "9999:9999"
+    volumes:
+      - backend-sockets:/sockets
+    security_opt:
+      - seccomp=unconfined
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    depends_on:
+      - api1
+      - api2
+    deploy:
+      resources:
+        limits:
+          cpus: "0.12"
+          memory: "32MB"
+
+  api1:
+    image: ghcr.io/daniloitagyba/rinha-2026-dotnet-tcp:cffb01c7cd84717382890eb21cd06cd29155d8de
+    platform: linux/amd64
+    entrypoint: ["rinha-fraud", "serve"]
+    environment:
+      BIND_ADDR: fd:/sockets/api1.sock.ctrl
+      INDEX_PATH: /app/data/references.idx
+      INDEX_HUGEPAGES: "1"
+      SERVER_MODE: raw
+      FD_RAW: "1"
+      TP_MIN_THREADS: "64"
+      WORKERS: "2"
+      EARLY_CANDIDATES: "9800"
+      MIN_CANDIDATES: "9800"
+      MAX_CANDIDATES: "11000"
+      PROFILE_FASTPATH: "1"
+      PROFILE_MIN_COUNT: "15"
+      PROFILE_LEGIT_MIN_COUNT: "5"
+      PROFILE_FRAUD_MIN_COUNT: "15"
+      PROFILE_DOMINANT_FASTPATH: "1"
+      PROFILE_DOMINANT_MIN_COUNT: "15"
+      PROFILE_DOMINANT_MAX_OPPOSITE: "2"
+      EXACT_FALLBACK: "risky"
+      EARLY_EDGE_FALLBACK: "1"
+      RISKY_BUCKETS: "1"
+      RISKY_AMOUNT_MIN: "400"
+      RISKY_AMOUNT_MAX: "3000"
+      RISKY_INSTALLMENTS_MIN: "2200"
+      RISKY_INSTALLMENTS_MAX: "6200"
+      RISKY_RATIO_MIN: "850"
+      RISKY_KM_HOME_MIN: "250"
+      RISKY_KM_HOME_MAX: "4000"
+      RISKY_TX24H_MAX: "5800"
+      RISKY_MERCHANT_AVG_MAX: "420"
+      RISKY_NATIVE_FINE: "1"
+      NATIVE_ANN: "1"
+      KDTREE_INDEX: "1"
+      KDTREE_NATIVE: "1"
+      DOTNET_EnableDiagnostics: "0"
+    volumes:
+      - backend-sockets:/sockets
+    security_opt:
+      - seccomp=unconfined
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    deploy:
+      resources:
+        limits:
+          cpus: "0.44"
+          memory: "156MB"
+
+  api2:
+    image: ghcr.io/daniloitagyba/rinha-2026-dotnet-tcp:cffb01c7cd84717382890eb21cd06cd29155d8de
+    platform: linux/amd64
+    entrypoint: ["rinha-fraud", "serve"]
+    environment:
+      BIND_ADDR: fd:/sockets/api2.sock.ctrl
+      INDEX_PATH: /app/data/references.idx
+      INDEX_HUGEPAGES: "1"
+      SERVER_MODE: raw
+      FD_RAW: "1"
+      TP_MIN_THREADS: "64"
+      WORKERS: "2"
+      EARLY_CANDIDATES: "9800"
+      MIN_CANDIDATES: "9800"
+      MAX_CANDIDATES: "11000"
+      PROFILE_FASTPATH: "1"
+      PROFILE_MIN_COUNT: "15"
+      PROFILE_LEGIT_MIN_COUNT: "5"
+      PROFILE_FRAUD_MIN_COUNT: "15"
+      PROFILE_DOMINANT_FASTPATH: "1"
+      PROFILE_DOMINANT_MIN_COUNT: "15"
+      PROFILE_DOMINANT_MAX_OPPOSITE: "2"
+      EXACT_FALLBACK: "risky"
+      EARLY_EDGE_FALLBACK: "1"
+      RISKY_BUCKETS: "1"
+      RISKY_AMOUNT_MIN: "400"
+      RISKY_AMOUNT_MAX: "3000"
+      RISKY_INSTALLMENTS_MIN: "2200"
+      RISKY_INSTALLMENTS_MAX: "6200"
+      RISKY_RATIO_MIN: "850"
+      RISKY_KM_HOME_MIN: "250"
+      RISKY_KM_HOME_MAX: "4000"
+      RISKY_TX24H_MAX: "5800"
+      RISKY_MERCHANT_AVG_MAX: "420"
+      RISKY_NATIVE_FINE: "1"
+      NATIVE_ANN: "1"
+      KDTREE_INDEX: "1"
+      KDTREE_NATIVE: "1"
+      DOTNET_EnableDiagnostics: "0"
+    volumes:
+      - backend-sockets:/sockets
+    security_opt:
+      - seccomp=unconfined
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    deploy:
+      resources:
+        limits:
+          cpus: "0.44"
+          memory: "156MB"
+
+volumes:
+  backend-sockets:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=4m,mode=0777
