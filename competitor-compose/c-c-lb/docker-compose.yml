@@ -1,0 +1,129 @@
+services:
+  lb:
+    image: "${LB_C_IMAGE:-ghcr.io/jonathanperis/rinha4-lb-yolo-mode:c-ci-3a76d8925d0bed0088a17c0b3223774221571a0e}"
+    platform: linux/amd64
+    pull_policy: always
+    user: root
+    environment:
+      LB_MODE: "fdpass"
+      LB_FDPASS_SOCKET_TYPE: "seqpacket"
+      LB_FDPASS_SNDBUF: "${LB_FDPASS_SNDBUF:-262144}"
+      PORT: "9999"
+      UPSTREAMS: "/run/rinha/api1.sock,/run/rinha/api2.sock"
+      BACKLOG: "65535"
+    ports:
+      - "9999:9999"
+    depends_on:
+      - api1
+      - api2
+    volumes:
+      - sockets:/run/rinha
+    networks:
+      - rinha
+    logging:
+      driver: "none"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    deploy:
+      resources:
+        limits:
+          cpus: "0.06"
+          memory: "30M"
+
+  api1:
+    image: "ghcr.io/jonathanperis/rinha4-back-end-c:ci-1627848e02cf55e3d5e3b5a21b8a38a4ccdce382"
+    command: ["/app/api"]
+    user: root
+    environment:
+      API_FD_SOCK: "/run/rinha/api1.sock"
+      INDEX_PATH: "/app/resources/index.bin"
+      # Search/repair knobs are coupled to the current mmaped index layout.
+      # They trade extra list scans for zero FP/FN near the top-5 boundary.
+      INDEX_NPROBE: "${INDEX_NPROBE:-3}"
+      INDEX_REPAIR_NPROBE: "${INDEX_REPAIR_NPROBE:-24}"
+      INDEX_REPAIR_MIN_FRAUD: "${INDEX_REPAIR_MIN_FRAUD:-1}"
+      INDEX_REPAIR_MAX_FRAUD: "${INDEX_REPAIR_MAX_FRAUD:-4}"
+      INDEX_REPAIR0_WORST_THRESHOLD: "${INDEX_REPAIR0_WORST_THRESHOLD:-4021242}"
+      INDEX_REPAIR5_WORST_THRESHOLD: "${INDEX_REPAIR5_WORST_THRESHOLD:-3748534}"
+      INDEX_EXACT_FALLBACK: "${INDEX_EXACT_FALLBACK:-1}"
+      API_RT_PRIORITY: "${API_RT_PRIORITY:-10}"
+      API_RT_MODE: "${API_RT_MODE:-wakeup}"
+      API_MLOCKALL: "${API_MLOCKALL:-1}"
+      INDEX_MAP_POPULATE: "${INDEX_MAP_POPULATE:-1}"
+      INDEX_MLOCK: "${INDEX_MLOCK:-1}"
+      MALLOC_ARENA_MAX: "1"
+    volumes:
+      - sockets:/run/rinha
+    networks:
+      - rinha
+    logging:
+      driver: "none"
+    security_opt:
+      - seccomp:unconfined
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+      rtprio: 99
+      memlock: -1
+    deploy:
+      resources:
+        limits:
+          cpus: "0.47"
+          memory: "160M"
+
+  api2:
+    image: "ghcr.io/jonathanperis/rinha4-back-end-c:ci-1627848e02cf55e3d5e3b5a21b8a38a4ccdce382"
+    command: ["/app/api"]
+    user: root
+    environment:
+      API_FD_SOCK: "/run/rinha/api2.sock"
+      INDEX_PATH: "/app/resources/index.bin"
+      # Search/repair knobs are coupled to the current mmaped index layout.
+      # They trade extra list scans for zero FP/FN near the top-5 boundary.
+      INDEX_NPROBE: "${INDEX_NPROBE:-3}"
+      INDEX_REPAIR_NPROBE: "${INDEX_REPAIR_NPROBE:-24}"
+      INDEX_REPAIR_MIN_FRAUD: "${INDEX_REPAIR_MIN_FRAUD:-1}"
+      INDEX_REPAIR_MAX_FRAUD: "${INDEX_REPAIR_MAX_FRAUD:-4}"
+      INDEX_REPAIR0_WORST_THRESHOLD: "${INDEX_REPAIR0_WORST_THRESHOLD:-4021242}"
+      INDEX_REPAIR5_WORST_THRESHOLD: "${INDEX_REPAIR5_WORST_THRESHOLD:-3748534}"
+      INDEX_EXACT_FALLBACK: "${INDEX_EXACT_FALLBACK:-1}"
+      API_RT_PRIORITY: "${API_RT_PRIORITY:-10}"
+      API_RT_MODE: "${API_RT_MODE:-wakeup}"
+      API_MLOCKALL: "${API_MLOCKALL:-1}"
+      INDEX_MAP_POPULATE: "${INDEX_MAP_POPULATE:-1}"
+      INDEX_MLOCK: "${INDEX_MLOCK:-1}"
+      MALLOC_ARENA_MAX: "1"
+    volumes:
+      - sockets:/run/rinha
+    networks:
+      - rinha
+    logging:
+      driver: "none"
+    security_opt:
+      - seccomp:unconfined
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+      rtprio: 99
+      memlock: -1
+    deploy:
+      resources:
+        limits:
+          cpus: "0.47"
+          memory: "160M"
+
+networks:
+  rinha:
+    driver: bridge
+
+volumes:
+  sockets:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=10m
