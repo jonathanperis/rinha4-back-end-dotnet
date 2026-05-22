@@ -41,6 +41,10 @@ services:
     user: "0:0"
     ports:
       - "9999:9999"
+    environment:
+      PORT: "9999"
+      FD_UPSTREAMS: /sockets/api1.sock,/sockets/api2.sock
+      WORKERS: "2"
     logging:
       driver: "none"
     volumes:
