@@ -1,17 +1,15 @@
 services:
   api1: &api
-    image: mxlange/c-api-rinha2026:latest
-    pull_policy: always
+    image: ghcr.io/gabrielrauch/rinha-2026:ed38fb4fbace6a473863ecf3ece455c5523063e1
     environment:
-      - FD_SOCKET=/run/sock/api1.sock
-      - INDEX_PATH=/app/data/knn.idx
+      - RINHA_FD_SOCK=/run/sock/api1.sock
     volumes:
       - sock:/run/sock
     deploy:
       resources:
         limits:
-          cpus: "0.45"
-          memory: "165M"
+          cpus: "0.4"
+          memory: "160M"
     ulimits:
       nofile:
         soft: 65535
@@ -20,38 +18,30 @@ services:
   api2:
     <<: *api
     environment:
-      - FD_SOCKET=/run/sock/api2.sock
-      - INDEX_PATH=/app/data/knn.idx
+      - RINHA_FD_SOCK=/run/sock/api2.sock
 
   lb:
-    image: mxlange/c-api-rinha2026:latest
-    pull_policy: always
-    command: ["/app/lb"]
+    image: ghcr.io/gabrielrauch/rinha-2026-lb:ed38fb4fbace6a473863ecf3ece455c5523063e1
+    restart: always
     depends_on:
       - api1
       - api2
-    ports:
-      - "9999:9999"
     environment:
       - PORT=9999
       - FD_UPSTREAMS=/run/sock/api1.sock,/run/sock/api2.sock
       - WORKERS=2
+    ports:
+      - "9999:9999"
     volumes:
       - sock:/run/sock
     deploy:
       resources:
         limits:
-          cpus: "0.10"
-          memory: "20M"
+          cpus: "0.2"
+          memory: "30M"
     ulimits:
       nofile:
         soft: 65535
         hard: 65535
-
 volumes:
   sock:
-    driver: local
-    driver_opts:
-      type: tmpfs
-      device: tmpfs
-      o: size=10m
