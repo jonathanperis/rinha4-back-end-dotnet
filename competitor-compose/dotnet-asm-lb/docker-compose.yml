@@ -4,7 +4,6 @@ services:
   webapi1: &webapi
     image: "ghcr.io/jonathanperis/rinha4-back-end-dotnet:ci-cee898aca96cb322ca2c807750a80eab787e700f"
     container_name: webapi-1
-    cpuset: "0,1"
     security_opt:
       - seccomp=unconfined
     user: root
@@ -78,7 +77,6 @@ services:
   webapi2:
     <<: *webapi
     container_name: webapi-2
-    cpuset: "2,3"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
@@ -138,7 +136,6 @@ services:
     image: "${LB_ASM_IMAGE:-ghcr.io/jonathanperis/rinha4-lb-yolo-mode:asm-ci-3a76d8925d0bed0088a17c0b3223774221571a0e}"
     container_name: rinha-lb
     platform: linux/amd64
-    cpuset: "0,2"
     user: root
     restart: always
     pull_policy: always
