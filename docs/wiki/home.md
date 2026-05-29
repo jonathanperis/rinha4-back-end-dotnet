@@ -8,9 +8,9 @@ The current build is optimized for latency first:
 - Unix Domain Sockets behind the standalone `rinha4-lb-yolo-mode` proxy
 - manual JSON request parsing
 - prebuilt HTTP responses
-- hybrid bucket fast path with rounded int16 IVF fallback
+- default clean IVF scorer with bounded bbox repair
 - archived official-like k6 results after each main build
-- optional manual CI experiments for scorer modes, CPU splits, and fdpass diagnostics
+- optional manual CI experiments for scorer modes, bucket/hybrid paths, CPU splits, and fd-pass diagnostics
 
 The project target is explicit: lead the .NET entries, keep score `6000`, and keep 0 failures.
 
@@ -29,9 +29,12 @@ when diagnosing official-preview mismatch.
 
 ## Active lane
 
-Transport is currently stable in CI. The active lane is the hybrid bucket/IVF
-scorer built from the allowed reference dataset and loaded at startup. The bucket
-index handles fast decisions first; IVF remains the correctness fallback.
+Transport is currently stable in CI. The active lane is the clean IVF scorer
+built from the allowed reference dataset and loaded at startup with
+`SCORER_MODE=ivf`. It scans the nearest IVF clusters first and uses bounded
+bounding-box repair to protect the clean `6000` correctness gate. Bucket,
+hybrid, and exact modes remain available for explicit experiments and diagnostics;
+they are not the default candidate path.
 
 ## Repository map
 

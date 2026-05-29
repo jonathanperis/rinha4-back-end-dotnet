@@ -4,7 +4,7 @@
 
 `rinha4-back-end-dotnet` is Jonathan Peris's .NET 10 NativeAOT implementation for Rinha de Backend 2026 fraud detection. The public website is a performance proof surface: it explains the runtime, exposes official and official-like benchmark evidence, and gives technical visitors fast routes to docs, reports, source, and upstream result provenance.
 
-The implementation competes under a `1 CPU / 350 MB` envelope with a standalone `rinha4-lb-yolo-mode` load balancer, two .NET NativeAOT API instances, fd-pass control sockets, raw HTTP/1 parsing, prebuilt HTTP responses, and a hybrid bucket plus IVF scorer.
+The implementation competes under a `1 CPU / 350 MB` envelope with a standalone `rinha4-lb-yolo-mode` load balancer, two .NET NativeAOT API instances, fd-pass control sockets, raw HTTP/1 parsing, prebuilt HTTP responses, and a clean IVF scorer with bounded repair by default. Bucket/hybrid paths remain available for explicit experiments.
 
 ## Register
 

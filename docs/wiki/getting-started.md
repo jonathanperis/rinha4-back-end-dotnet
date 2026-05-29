@@ -15,9 +15,9 @@ curl -i http://localhost:9999/ready
 ```
 
 The default compose stack runs `SCORER_MODE=ivf` with `IVF_FAST_NPROBE=2`
-and bounding-box repair for current-main clean `6000` scoring. It allocates `0.42` CPU to each WebApi container
-and `0.16` CPU to the standalone proxy, with fd-pass control sockets and
-`FD_RAW=1` enabled by default.
+and bounding-box repair for current-main clean `6000` scoring. It allocates
+`0.425 CPU / 165 MB` to each WebApi container and `0.15 CPU / 20 MB` to the
+standalone proxy, with fd-pass control sockets and `FD_RAW=1` enabled by default.
 
 Tune IVF image-build parameters with `IVF_CLUSTERS`, `IVF_TRAIN_SAMPLE`,
 `IVF_ITERATIONS`, and `IVF_SCALE` when testing alternatives. Runtime IVF repair
@@ -36,6 +36,21 @@ Generate runtime data without Docker:
 dotnet run --project src/DataConverter/DataConverter.csproj -c Release -- data/
 ```
 
+Run one API directly over local TCP `:8080` without the load balancer:
+
+```bash
+DATA_DIR=data \
+IVF_PATH=data/references.ivf.bin \
+BUCKET_PATH=data/references.bucket.bin \
+SCORER_MODE=ivf \
+  dotnet run --project src/WebApi/WebApi.csproj -c Release --no-restore
+
+curl -i http://localhost:8080/ready
+```
+
+The public contest shape remains the compose stack on `:9999`; direct TCP is for
+parser/scorer smoke tests and local debugging.
+
 Run focused tests:
 
 ```bash
@@ -52,10 +67,13 @@ bash scripts/ci-official-benchmark.sh
 Full compose and benchmark validation require Docker daemon access. If local
 Docker is unavailable, use the GitHub Actions benchmark workflow.
 
-Run docs locally:
+Run docs locally. CI builds the Astro 6 site with Node 24 and Bun, so use Node
+24 locally when reproducing Pages failures:
 
 ```bash
 cd docs
 bun install
 bun run dev
 ```
+
+For production parity, run `bun run build` before pushing documentation changes.

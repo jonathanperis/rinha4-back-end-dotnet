@@ -130,7 +130,7 @@ GitHub Pages lives under `docs/`:
 - `/docs/` long-form system notes from `docs/wiki/*.md`
 - `/reports/` benchmark archive
 
-The site uses GitHub Linguist's C# language color (`#178600`) as its accent.
+The source-backed wiki includes a tuning reference for runtime, scorer, image-build, and benchmark environment variables. The site uses GitHub Linguist's C# language color (`#178600`) as its accent.
 
 ## Branches
 

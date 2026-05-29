@@ -108,9 +108,9 @@ const shortSha = metadata.short_sha?.slice(0, 12) ?? metadata.sha?.slice(0, 12);
   </div>
   <ol class="trace-list">
     <li><span>01 ingress</span><strong>k6 / judge reaches :9999</strong><p>The public boundary is the yolo load balancer, not ASP.NET Core.</p></li>
-    <li><span>02 transport</span><strong>UDS fanout to two APIs</strong><p>Raw HTTP is forwarded through Unix Domain Sockets to NativeAOT containers.</p></li>
+    <li><span>02 transport</span><strong>fd-pass fanout to two APIs</strong><p>The LB sends accepted client fds over Unix control sockets; APIs serve the client socket directly.</p></li>
     <li><span>03 parse</span><strong>minimal field extraction</strong><p>The app scans enough JSON to build the 14-dimensional fraud vector.</p></li>
-    <li><span>04 score</span><strong>bucket first, IVF fallback</strong><p>Fast bucket decisions handle easy cases, rounded int16 IVF protects correctness.</p></li>
+    <li><span>04 score</span><strong>IVF first pass, bounded repair</strong><p>The default clean lane uses rounded int16 IVF plus repair; bucket/hybrid modes stay available for experiments.</p></li>
     <li><span>05 respond</span><strong>prebuilt bytes out</strong><p>The decision returns a small HTTP response without framework ceremony.</p></li>
   </ol>
 </section>

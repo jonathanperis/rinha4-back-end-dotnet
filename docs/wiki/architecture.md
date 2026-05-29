@@ -21,19 +21,20 @@ rinha4-lb-yolo-mode :9999
 4. `HttpWire` parses method, path, headers, and `Content-Length`.
 5. `FraudRequestParser` reads only required JSON fields.
 6. `FraudScorer` builds a normalized 14-dimensional vector.
-7. `FraudScorer` tries the bucket fast path and falls back to IVF search when needed.
+7. `FraudScorer` runs the default IVF path, then bounded repair when configured. Bucket/hybrid fast paths are available only when `SCORER_MODE=bucket` or `SCORER_MODE=hybrid` is selected for experiments.
 8. `HttpResponses` writes a prebuilt HTTP/JSON response.
 
 ## Data pipeline
 
 `src/DataConverter` converts `data/references.json.gz` into runtime binary data during image build.
 
-The current hybrid runtime uses:
+The current clean runtime uses `references.ivf.bin` for IVF search and repair.
+The image also carries:
 
-- `references.bucket.bin` for the coarse bucket fast path
-- `references.ivf.bin` for IVF fallback search and repair
+- `references.bucket.bin` for bucket or hybrid experiment modes
+- `references.bin` for the explicit exact diagnostic mode used by tests and manual benchmark experiments
 
-`references.bin` is also generated for the explicit exact diagnostic mode used by tests and manual benchmark experiments; it is not the default submission scorer.
+Only the IVF file is required by the default submission scorer; missing or invalid default scorer data fails startup instead of silently degrading correctness.
 
 The `references.ivf.bin` file stores:
 

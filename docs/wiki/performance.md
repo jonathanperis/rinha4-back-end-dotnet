@@ -10,15 +10,15 @@ Hot path choices:
 - manual request parsing
 - no model binding
 - prebuilt response bytes
-- hybrid bucket fast path with rounded int16 IVF fallback
+- clean IVF first pass with bounded bbox repair; bucket/hybrid paths are experiment modes
 - no fraud-payload parsing in the proxy layer
 
 ## Current bottleneck
 
 Transport is fast enough for the current target. Recent yolo-LB CI runs have
-shown `0` HTTP errors; p99 work is now mostly inside bucket fast-path coverage,
-fallback frequency, IVF repair/vector scan cost, and CPU split between the API
-containers and the standalone proxy.
+shown `0` HTTP errors; p99 work is now mostly inside IVF repair/vector scan cost, first-pass fast-decision
+coverage, and CPU split between the API containers and the standalone proxy.
+Bucket fast-path coverage remains an experiment-mode topic, not the default candidate path.
 
 The reports page is the source of truth for the newest archived candidate and
 calibrated runs because every main build can append fresh benchmark artifacts.
@@ -63,5 +63,5 @@ handoff in a managed `Socket`; set `FD_RAW=0` to fall back to the safer managed
 Socket path for diagnostics.
 
 The benchmark workflow runs the canonical root `docker-compose.yml` used by the
-submission. The compose file allocates `0.42 CPU / 160 MB` to each API container
-and `0.16 CPU / 30 MB` to the LB while keeping the total at `1.00 CPU / 350 MB`.
+submission. The compose file allocates `0.425 CPU / 165 MB` to each API container
+and `0.15 CPU / 20 MB` to the LB while keeping the total at `1.00 CPU / 350 MB`.

@@ -1,7 +1,7 @@
 export const SECTION_CATEGORIES = [
   { label: '', ids: ['home'] },
   { label: 'System', ids: ['challenge', 'architecture', 'rules'] },
-  { label: 'Operate', ids: ['getting-started', 'performance', 'ci-cd-pipeline'] },
+  { label: 'Operate', ids: ['getting-started', 'performance', 'tuning', 'ci-cd-pipeline'] },
 ] as const;
 
 export const SECTION_ORDER = SECTION_CATEGORIES.flatMap(({ ids }) => ids);
@@ -36,6 +36,11 @@ export const DOC_META: Record<string, { label: string; intent: string; signal: s
     label: 'Performance',
     intent: 'Read the latency tactics, scoring tradeoffs, and benchmark caveats.',
     signal: 'hot path',
+  },
+  tuning: {
+    label: 'Tuning Knobs',
+    intent: 'Map source-backed environment variables to runtime, scorer, build, and benchmark controls.',
+    signal: 'configuration',
   },
   'ci-cd-pipeline': {
     label: 'CI/CD Pipeline',
