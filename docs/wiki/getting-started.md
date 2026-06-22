@@ -67,13 +67,13 @@ bash scripts/ci-official-benchmark.sh
 Full compose and benchmark validation require Docker daemon access. If local
 Docker is unavailable, use the GitHub Actions benchmark workflow.
 
-Run docs locally. CI builds the Astro 6 site with Node 24 and Bun, so use Node
+Run docs locally. CI builds the Astro 7 site with Node 24 and npm, so use Node
 24 locally when reproducing Pages failures:
 
 ```bash
 cd docs
-bun install
-bun run dev
+npm ci
+npm run dev
 ```
 
-For production parity, run `bun run build` before pushing documentation changes.
+For production parity, run `npm run build` before pushing documentation changes.

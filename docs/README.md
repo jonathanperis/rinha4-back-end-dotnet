@@ -8,10 +8,10 @@ Run from this directory (`docs/`):
 
 | Command | Action |
 |---|---|
-| `bun install` | Install dependencies |
-| `bun run dev` | Start dev server |
-| `bun run build` | Build to `./out/` |
-| `bun run preview` | Preview production build locally |
+| `npm ci` | Install dependencies from `package-lock.json` |
+| `npm run dev` | Start dev server |
+| `npm run build` | Build to `./out/` |
+| `npm run preview` | Preview production build locally |
 
 ## Environment
 

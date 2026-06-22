@@ -83,7 +83,7 @@ Preserve the wide technical-cockpit feel, but introduce stronger content lanes:
 
 ## Current rendered evaluation
 
-Verified production build with Bun and a local static server under the production base path `/rinha4-back-end-dotnet/`.
+Verified production build with npm and a local static server under the production base path `/rinha4-back-end-dotnet/`.
 
 ### Strengths
 
@@ -363,7 +363,7 @@ a.action::after { content: " ↗"; }
 - Every benchmark number has a lane label and link or source reference.
 - Same aesthetic is preserved: dark terminal, C# green, amber, hot-pink, monospace, CRT influence.
 - No unsupported official ranking claims are added.
-- `bun run build` passes in `docs/`.
+- `npm run build` passes in `docs/`.
 - Production base path works under `/rinha4-back-end-dotnet/`.
 - Keyboard focus is visible.
 - Reduced motion removes flicker and line reveal animation.
