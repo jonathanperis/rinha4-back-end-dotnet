@@ -7,8 +7,6 @@ on:
       - 'docs/**'
       - 'scripts/sync-official-rinha-result.mjs'
       - '.github/workflows/pages.yml'
-  schedule:
-    - cron: '17 * * * *'
   workflow_dispatch:
 
 permissions:
